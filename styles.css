@@ -1,0 +1,252 @@
+body {
+    background-color: #F5F5DC; /* Beige background */
+}
+
+.custom-button {
+    background-color: #A0522D; /* Darker brown */
+    color: white;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.custom-button:hover {
+    background-color: #8B4513; /* Even darker brown on hover */
+    transform: scale(1.05);
+}
+
+.custom-header {
+    color: #A0522D; /* Darker brown */
+}
+
+#dataTable td, #dataTable th {
+    padding: 0.3rem 0.5rem; /* Reduced padding */
+    font-size: 0.85rem; /* Smaller font */
+    transition: background-color 0.2s ease;
+}
+
+#dataTable tr:hover {
+    background-color: #f9f9f9; /* Hover effect */
+}
+
+#resultsTable td, #resultsTable th {
+    padding: 0.3rem 0.5rem; /* Reduced padding */
+    font-size: 0.85rem; /* Smaller font */
+}
+
+#resultsTable tr:hover {
+    background-color: #f9f9f9;
+}
+
+#resultsTable .judge-scores {
+    white-space: normal; /* Allow text wrapping */
+    max-width: 200px; /* Limit width to prevent overflow */
+}
+
+select {
+    transition: border-color 0.2s ease;
+    width: 80px; /* Reduced dropdown width */
+}
+
+select:focus {
+    border-color: #A0522D;
+    outline: none;
+}
+
+.table-container {
+    max-width: 100%; /* Ensure container fits viewport */
+    overflow-x: auto; /* Keep for very narrow screens */
+}
+
+/* Add CSS for responsive table and highlight */
+#resultsTable th.total-score, #resultsTable td.total-score {
+    background-color: #ffe4b5 !important;
+    font-weight: bold;
+    color: #8B4513;
+}
+
+@media (max-width: 900px) {
+    #resultsTable td, #resultsTable th {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.2rem;
+    }
+}
+
+/* Stronger table borders for clarity */
+#dataTable, #dataTable th, #dataTable td,
+#resultsTable, #resultsTable th, #resultsTable td,
+table, th, td {
+    border: 1px solid #bfa16b !important;
+    border-collapse: collapse !important;
+}
+
+#dataTable th, #dataTable td, #resultsTable th, #resultsTable td {
+    background-clip: padding-box;
+}
+
+#resultsTable th.total-score, #resultsTable td.total-score,
+table th.total-score, table td.total-score {
+    background-color: #ffe4b5 !important;
+    font-weight: bold;
+    color: #8B4513;
+}
+
+/* Responsive font and padding for many judges */
+#dataTable td, #dataTable th, #resultsTable td, #resultsTable th, table td, table th {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.3rem;
+    min-width: 70px;
+    max-width: 160px;
+    word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+    #dataTable td, #dataTable th, #resultsTable td, #resultsTable th, table td, table th {
+        font-size: 0.7rem;
+        padding: 0.12rem 0.15rem;
+        min-width: 60px;
+    }
+}
+
+/* Make table containers scroll only if absolutely needed */
+.table-container {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1.5px solid #bfa16b;
+    background: #fff8ee;
+}
+
+.incomplete-row-highlight {
+    background-color: #ffe4e1 !important;
+    transition: background-color 0.3s;
+}
+
+.empty-row-contestant {
+    color: #b91c1c !important;
+    font-weight: bold;
+    background-color: #fff0f0 !important;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+th, .results-division-table th, .final-winners-table th {
+    font-weight: bold !important;
+}
+
+.judge-score-select option {
+    font-weight: bold;
+}
+
+.custom-button:hover {
+    background-color: #8B4513; /* Even darker brown on hover */
+    transform: scale(1.05);
+}
+
+.custom-header {
+    color: #A0522D; /* Darker brown */
+}
+
+/* Table styles */
+#dataTable td, #dataTable th {
+    padding: 0.3rem 0.5rem; /* Reduced padding */
+    font-size: 0.85rem; /* Smaller font */
+    transition: background-color 0.2s ease;
+}
+
+#dataTable tr:hover {
+    background-color: #f9f9f9; /* Hover effect */
+}
+
+#resultsTable td, #resultsTable th {
+    padding: 0.3rem 0.5rem; /* Reduced padding */
+    font-size: 0.85rem; /* Smaller font */
+}
+
+#resultsTable tr:hover {
+    background-color: #f9f9f9;
+}
+
+#resultsTable .judge-scores {
+    white-space: normal; /* Allow text wrapping */
+    max-width: 200px; /* Limit width to prevent overflow */
+}
+
+select {
+    transition: border-color 0.2s ease;
+    width: 80px; /* Reduced dropdown width */
+}
+
+select:focus {
+    border-color: #A0522D;
+    outline: none;
+}
+
+.table-container {
+    max-width: 100%; /* Ensure container fits viewport */
+    overflow-x: auto; /* Keep for very narrow screens */
+    border-radius: 0.5rem;
+    border: 1.5px solid #bfa16b;
+    background: #fff8ee;
+}
+
+/* Table highlights and borders */
+#resultsTable th.total-score, 
+#resultsTable td.total-score,
+table th.total-score, 
+table td.total-score {
+    background-color: #ffe4b5 !important;
+    font-weight: bold;
+    color: #8B4513;
+}
+
+#dataTable, #dataTable th, #dataTable td,
+#resultsTable, #resultsTable th, #resultsTable td,
+table, th, td {
+    border: 1px solid #bfa16b !important;
+    border-collapse: collapse !important;
+}
+
+#dataTable th, #dataTable td, 
+#resultsTable th, #resultsTable td {
+    background-clip: padding-box;
+}
+
+/* Responsive font and padding for many judges */
+#dataTable td, #dataTable th, 
+#resultsTable td, #resultsTable th, 
+table td, table th {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.3rem;
+    min-width: 70px;
+    max-width: 160px;
+    word-break: break-word;
+}
+
+/* Status indicators */
+.incomplete-row-highlight {
+    background-color: #fff0f0 !important; /* Light red for partially filled rows */
+    font-weight: bold;
+    transition: background-color 0.3s, font-weight 0.3s;
+}
+
+.empty-row-contestant {
+    color: #b91c1c !important;
+    font-weight: bold;
+    background-color: #fff0f0 !important;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 900px) {
+    #resultsTable td, #resultsTable th {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.2rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    #dataTable td, #dataTable th, 
+    #resultsTable td, #resultsTable th, 
+    table td, table th {
+        font-size: 0.7rem;
+        padding: 0.12rem 0.15rem;
+        min-width: 60px;
+    }
+}

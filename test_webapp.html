@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Apps Script Web App Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { background: #4285f4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 10px 0; }
+        button:hover { background: #3367d6; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Google Apps Script Web App Test</h1>
+    <p>This page will help you test if your Google Apps Script web app is working correctly.</p>
+    
+    <h2>Step 1: Test GET Request</h2>
+    <p>This should return a simple message if the web app is deployed correctly.</p>
+    <button onclick="testGet()">Test GET Request</button>
+    <div id="getResult"></div>
+    
+    <h2>Step 2: Test POST Request</h2>
+    <p>This will send sample data to your web app to test the publishing functionality.</p>
+    <button onclick="testPost()">Test POST Request</button>
+    <div id="postResult"></div>
+    
+    <script>
+        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyCH-wLvlTmeRErAo99INVfibeCu5_yDnE1PasPVeWTO7iBjrg6QlIAdqS5GOEAIPmMTw/exec";
+        
+        async function testGet() {
+            const resultDiv = document.getElementById('getResult');
+            resultDiv.innerHTML = '<div class="info">Testing GET request...</div>';
+            
+            try {
+                const response = await fetch(WEBAPP_URL, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                console.log('GET Response status:', response.status);
+                console.log('GET Response ok:', response.ok);
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ GET request successful!</div>
+                        <pre>${text}</pre>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ GET request failed (HTTP ${response.status})</div>
+                        <pre>${errorText}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('GET Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">❌ GET request failed</div>
+                    <pre>Error: ${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testPost() {
+            const resultDiv = document.getElementById('postResult');
+            resultDiv.innerHTML = '<div class="info">Testing POST request...</div>';
+            
+            // Sample test data
+            const testData = [
+                ['Test Division', '', '', '', ''],
+                ['Total Score', 'Division', 'Lead', 'Follow', 'Lead Number'],
+                ['50', 'Beginner', 'John Doe', 'Jane Smith', '123'],
+                ['45', 'Beginner', 'Bob Wilson', 'Alice Brown', '124'],
+                ['', '', '', '', ''],
+                ['Top 3 Winners - Test'],
+                ['Place', 'Total Score', 'Division', 'Lead', 'Follow', 'Lead Number'],
+                ['1st', '50', 'Beginner', 'John Doe', 'Jane Smith', '123'],
+                ['2nd', '45', 'Beginner', 'Bob Wilson', 'Alice Brown', '124']
+            ];
+            
+            try {
+                const formData = new FormData();
+                formData.append('results', JSON.stringify(testData));
+                
+                console.log('POST Data:', testData);
+                
+                const response = await fetch(WEBAPP_URL, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+                
+                console.log('POST Response status:', response.status);
+                console.log('POST Response ok:', response.ok);
+                
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('POST Response data:', responseData);
+                    
+                    if (responseData.success) {
+                        resultDiv.innerHTML = `
+                            <div class="success">✅ POST request successful!</div>
+                            <pre>${JSON.stringify(responseData, null, 2)}</pre>
+                            <p><strong>Check your Google Sheet for the test data!</strong></p>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="error">❌ POST request returned error</div>
+                            <pre>${JSON.stringify(responseData, null, 2)}</pre>
+                        `;
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('POST Response error text:', errorText);
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ POST request failed (HTTP ${response.status})</div>
+                        <pre>${errorText}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('POST Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">❌ POST request failed</div>
+                    <pre>Error: ${error.message}
+                    
+Error type: ${error.name}
+Error stack: ${error.stack}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
