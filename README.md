@@ -11,7 +11,7 @@ A local-first judging desk for Strictly and Jack & Jill competitions. The app ke
 - Incomplete-ballot checks and shared-place tie handling
 - Timestamped result revisions
 - CSV roster import, CSV results export, print layout, and full JSON backup/restore
-- Optional Google Apps Script publishing endpoint
+- Optional publishing-key-protected Google Apps Script endpoint
 
 ## CSV formats
 
@@ -40,9 +40,11 @@ Templates are also downloadable from the Data screen.
 
 ## Google Apps Script publishing
 
-The connector is optional. Configure a deployed HTTPS web-app `/exec` URL on the Data screen. Completed results are sent as a form field named `results` containing an array-of-arrays JSON payload, which remains compatible with the existing `doPost(e)` contract.
+The connector is optional; the app never contacts Google unless an organizer configures it and presses **Send completed results**. Configure a deployed HTTPS web-app `/exec` URL and its publishing key on the Data screen. Completed results are sent as a form field named `results` containing an array-of-arrays JSON payload, plus `publishingKey`.
 
-Do not use the Apps Script editor URL or a private spreadsheet CSV URL as the publishing endpoint. Deploy the script intentionally and review its access settings before use.
+Use the secured template in [`google-apps-script/Do_Post.gs`](google-apps-script/Do_Post.gs) and follow [`google-apps-script/README.md`](google-apps-script/README.md). Do not use the Apps Script editor URL or a private spreadsheet CSV URL as the publishing endpoint.
+
+The endpoint URL and publishing key stay in local browser storage and are excluded from event backup files.
 
 ## Local development
 

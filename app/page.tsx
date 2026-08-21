@@ -14,6 +14,7 @@ import {
 import { ballotProgress, calculateResults, hasTies, MARKS, MARK_VALUES, scoreTotal } from '@/lib/scoring';
 
 const STORAGE_KEY = 'country-dance-judging:v2';
+const PUBLISHER_KEY_STORAGE_KEY = 'country-dance-judging:publisher-key';
 type View = 'event' | 'scoring' | 'results' | 'data';
 
 const navigation: Array<{ id: View; number: string; label: string; caption: string }> = [
@@ -55,6 +56,7 @@ export default function Home() {
   const [newJudge, setNewJudge] = useState('');
   const [entryDraft, setEntryDraft] = useState({ number: '', first: '', second: '', role: 'Lead' as 'Lead' | 'Follow' });
   const [publishing, setPublishing] = useState(false);
+  const [publisherKey, setPublisherKey] = useState('');
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -64,6 +66,7 @@ export default function Home() {
           const parsed: unknown = JSON.parse(stored);
           if (isAppState(parsed)) setState(parsed);
         }
+        setPublisherKey(localStorage.getItem(PUBLISHER_KEY_STORAGE_KEY) ?? '');
       } catch {
         setNotice('The saved event could not be read, so a safe starter event was opened.');
       } finally {
@@ -90,6 +93,15 @@ export default function Home() {
       window.clearTimeout(saveTimer);
     };
   }, [state, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(PUBLISHER_KEY_STORAGE_KEY, publisherKey);
+    } catch {
+      // The event remains usable when private browser storage is unavailable.
+    }
+  }, [publisherKey, hydrated]);
 
   const competition = state.competitions.find((item) => item.id === state.activeCompetitionId) ?? state.competitions[0];
   const progress = useMemo(() => ballotProgress(competition, state.judges), [competition, state.judges]);
@@ -230,7 +242,13 @@ export default function Home() {
   }
 
   function exportBackup() {
-    downloadText(`${safeFilename(state.event.name)}-backup.json`, JSON.stringify(state, null, 2), 'application/json');
+    const backup = {
+      format: 'country-dance-judging-backup',
+      backupVersion: 1,
+      exportedAt: new Date().toISOString(),
+      event: { ...state, publisherUrl: '' },
+    };
+    downloadText(`${safeFilename(state.event.name)}-backup.json`, JSON.stringify(backup, null, 2), 'application/json');
   }
 
   function downloadEntrantTemplate() {
@@ -250,10 +268,15 @@ export default function Home() {
     if (!file) return;
     try {
       const parsed: unknown = JSON.parse(await file.text());
-      if (!isAppState(parsed)) throw new Error('This is not a Country Dance Judging v2 backup.');
-      if (!window.confirm(`Replace the current local event with “${parsed.event.name}”?`)) return;
-      setState(parsed);
-      setNotice('Backup restored and saved on this device.');
+      const candidate = parsed && typeof parsed === 'object'
+        && 'format' in parsed && parsed.format === 'country-dance-judging-backup'
+        && 'event' in parsed
+        ? parsed.event
+        : parsed;
+      if (!isAppState(candidate)) throw new Error('This is not a Country Dance Judging v2 backup.');
+      if (!window.confirm(`Replace the current local event with “${candidate.event.name}”?`)) return;
+      setState((current) => ({ ...candidate, publisherUrl: current.publisherUrl }));
+      setNotice('Backup restored. Publishing settings on this device were preserved.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'The backup could not be restored.');
     }
@@ -319,9 +342,13 @@ export default function Home() {
     let endpoint: URL;
     try {
       endpoint = new URL(state.publisherUrl);
-      if (endpoint.protocol !== 'https:') throw new Error();
+      if (endpoint.protocol !== 'https:' || endpoint.hostname !== 'script.google.com' || !endpoint.pathname.startsWith('/macros/s/')) throw new Error();
     } catch {
       setNotice('Enter a valid HTTPS Google Apps Script web-app URL.');
+      return;
+    }
+    if (!publisherKey.trim()) {
+      setNotice('Enter the publishing key configured in the Google Apps Script project.');
       return;
     }
     const rows: Array<Array<string | number>> = [
@@ -333,7 +360,7 @@ export default function Home() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ results: JSON.stringify(rows) }),
+        body: new URLSearchParams({ results: JSON.stringify(rows), publishingKey: publisherKey.trim() }),
       });
       if (!response.ok) throw new Error(`The endpoint returned ${response.status}.`);
       const text = await response.text();
@@ -479,9 +506,9 @@ export default function Home() {
             <div className="data-grid">
               <section className="data-card"><span className="data-number">01</span><h3>Contestants</h3><p>Replace the active {competition.format === 'Strictly' ? 'couple roster with Number, Lead, Follow.' : 'dancer roster with Number, Name, Role.'}</p><div className="card-actions"><label className="file-button">Import entrant CSV<input type="file" accept=".csv,text/csv" onChange={importEntrants} /></label><button type="button" className="quiet-button" onClick={downloadEntrantTemplate}>Template</button></div><small>Active: {competition.name} · {competition.division}</small></section>
               <section className="data-card"><span className="data-number">02</span><h3>Judges</h3><p>Import a Name column, or a one-column list. Replacing judges resets active ballots.</p><div className="card-actions"><label className="file-button">Import judge CSV<input type="file" accept=".csv,text/csv" onChange={importJudges} /></label><button type="button" className="quiet-button" onClick={downloadJudgeTemplate}>Template</button></div><small>{state.judges.length} judges across the event</small></section>
-              <section className="data-card"><span className="data-number">03</span><h3>Event backup</h3><p>Download everything—including ballots and revisions—or restore it on another device.</p><div className="card-actions"><button type="button" className="quiet-button" onClick={exportBackup}>Download JSON</button><label className="file-button secondary">Restore JSON<input type="file" accept=".json,application/json" onChange={restoreBackup} /></label></div><small>Schema v{state.version} · stored locally</small></section>
+              <section className="data-card"><span className="data-number">03</span><h3>Event backup</h3><p>Download ballots and revisions, then restore them on another device. Publishing settings and keys are never included.</p><div className="card-actions"><button type="button" className="quiet-button" onClick={exportBackup}>Download JSON</button><label className="file-button secondary">Restore JSON<input type="file" accept=".json,application/json" onChange={restoreBackup} /></label></div><small>Schema v{state.version} · stored locally</small></section>
             </div>
-            <section className="publisher-panel"><div className="publisher-copy"><p className="kicker">Optional publisher</p><h2>Google Apps Script endpoint</h2><p>The connector is not required for judging. Add a deployed web-app URL only if you want to send completed results to a Google Sheet you control.</p></div><div className="publisher-form"><label><span>Web-app URL</span><input type="url" placeholder="https://script.google.com/macros/s/…/exec" value={state.publisherUrl} onChange={(event) => setState((current) => ({ ...current, publisherUrl: event.target.value }))} /></label><button type="button" className="primary-button" onClick={publishResults} disabled={publishing || !state.publisherUrl}>{publishing ? 'Sending…' : 'Send completed results'}</button><small>This sends the current results and judge marks. Use only an endpoint you own and have deployed intentionally.</small></div></section>
+            <section className="publisher-panel"><div className="publisher-copy"><p className="kicker">Optional publisher</p><h2>Secured Google Apps Script endpoint</h2><p>The connector is not required for judging. Organizers can send completed results to a Google Sheet after configuring the secured connector included with this project.</p></div><div className="publisher-form"><label><span>Web-app URL</span><input type="url" placeholder="https://script.google.com/macros/s/…/exec" value={state.publisherUrl} onChange={(event) => setState((current) => ({ ...current, publisherUrl: event.target.value }))} /></label><label><span>Publishing key</span><input type="password" autoComplete="off" placeholder="Organizer key" value={publisherKey} onChange={(event) => setPublisherKey(event.target.value)} /></label><button type="button" className="primary-button" onClick={publishResults} disabled={publishing || !state.publisherUrl || !publisherKey}>{publishing ? 'Sending…' : 'Send completed results'}</button><small>The URL and key stay only in this browser. Event backups exclude both. Use the deployed <code>/exec</code> URL from an Apps Script project you control.</small></div></section>
           </div>
         )}
       </section>
