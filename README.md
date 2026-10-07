@@ -1,5 +1,9 @@
 # Country Dance Judging
 
+## Project reference
+
+Read [PROJECT_SPEC.md](PROJECT_SPEC.md) for the product design, implemented behavior, scoring/data contracts, file map, deployment notes, and known limitations. [AGENTS.md](AGENTS.md) is the compact starting point for coding assistants and links each task to the relevant source.
+
 A local-first judging desk for Strictly and Jack & Jill competitions. The app keeps event setup, ballots, and result revisions in the browser on the current device. An internet connection is not required while judging.
 
 ## Core behavior
