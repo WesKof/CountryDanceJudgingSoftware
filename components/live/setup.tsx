@@ -1,0 +1,108 @@
+'use client';
+
+import { useState, type FormEvent } from 'react';
+import { parseCsv } from '@/lib/csv';
+import type { LiveRound, LiveSetup, LiveSubject, Performance } from '@/lib/live/types';
+
+const newId = () => crypto.randomUUID();
+const song = (number: number): Performance => ({ id: newId(), title: `Song ${number}`, artist: '', tempo: '', notes: '', partners: [] });
+const heat = (number: number) => ({ id: newId(), name: `Heat ${number}`, subjectIds: [] as string[], songs: [song(1), song(2)] });
+
+export default function SetupEditor({ setup, update, frozenIds, correction }: { setup: LiveSetup; update: (s: LiveSetup) => void; frozenIds: string[]; correction: boolean }) {
+  const [selected, setSelected] = useState(''); const [issue, setIssue] = useState('');
+  const round = setup.rounds.find((r) => r.id === selected) ?? setup.rounds[0];
+  const competition = setup.competitions.find((c) => c.id === round?.competitionId);
+  const locked = Boolean(round && frozenIds.includes(round.id) && !correction);
+  const panelLocked = frozenIds.length > 0 && !correction;
+  function editRound(fn: (r: LiveRound) => LiveRound) { update({ ...setup, rounds: setup.rounds.map((r) => r.id === round.id ? fn(r) : r) }); }
+  function addCompetition(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = new FormData(e.currentTarget);
+    const format = f.get('format') as 'Strictly' | 'Jack & Jill', division = String(f.get('division'));
+    if (setup.competitions.some((c) => c.format === format && c.division === division)) { setIssue('This format and division are already scheduled.'); return; }
+    const id = newId(); const prelimId = newId(), finalsId = newId();
+    const blocks = setup.blocks.length ? structuredClone(setup.blocks) : [{ id: newId(), label: 'Prelims discussion block', kind: 'prelims' as const, roundIds: [] }, { id: newId(), label: 'Finals discussion block', kind: 'finals' as const, roundIds: [] }];
+    const pre = blocks.find((b) => b.kind === 'prelims')!, fin = blocks.find((b) => b.kind === 'finals')!;
+    pre.roundIds.push(prelimId); fin.roundIds.push(finalsId);
+    const common = { competitionId: id, subjects: [], judgeIds: [], finalistIds: [], finalistCount: 0 };
+    update({ ...setup, competitions: [...setup.competitions, { id, format, division }], blocks, rounds: [...setup.rounds,
+      { ...common, id: prelimId, kind: 'prelims', blockId: pre.id, heats: [heat(1)] },
+      { ...common, id: finalsId, kind: 'finals', blockId: fin.id, prelimRoundId: prelimId, heats: [heat(1)] }] }); setSelected(prelimId); setIssue('');
+  }
+  function addSubject(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = new FormData(e.currentTarget); const number = Number(f.get('number'));
+    if (round.subjects.some((s) => s.number === number)) { setIssue('That bib is already in this round.'); return; }
+    const subject: LiveSubject = { id: newId(), number, primary: String(f.get('primary')).trim(), secondary: String(f.get('secondary') ?? '').trim(), ...(competition!.format === 'Jack & Jill' ? { role: f.get('role') as 'Lead' | 'Follow' } : {}) };
+    editRound((r) => ({ ...r, subjects: [...r.subjects, subject].sort((a, b) => a.number - b.number), heats: r.heats.map((h, i) => i === 0 ? { ...h, subjectIds: [...h.subjectIds, subject.id] } : h) })); e.currentTarget.reset(); setIssue('');
+  }
+  function removeCompetition(competitionId: string) {
+    if (panelLocked) return;
+    const removed = setup.competitions.find((c) => c.id === competitionId)!;
+    if (!window.confirm(`Remove ${removed.format} · ${removed.division} from the program, including its prelims, finals, rosters, heats and songs? Save setup to apply the change. Any previously saved judging work stays in event history.`)) return;
+    const removedRoundIds = new Set(setup.rounds.filter((r) => r.competitionId === competitionId).map((r) => r.id));
+    const rounds = setup.rounds.filter((r) => !removedRoundIds.has(r.id));
+    update({ ...setup, competitions: setup.competitions.filter((c) => c.id !== competitionId), rounds, blocks: setup.blocks.map((b) => ({ ...b, roundIds: b.roundIds.filter((id) => !removedRoundIds.has(id)) })) });
+    if (removedRoundIds.has(round?.id)) setSelected(rounds[0]?.id ?? '');
+    setIssue(`${removed.format} · ${removed.division} removed from the setup draft. Save setup to apply the change.`);
+  }
+  function assign(subjectId: string, heatId: string) {
+    editRound((r) => ({ ...r, heats: r.heats.map((h) => {
+      const subjectIds = [...h.subjectIds.filter((id) => id !== subjectId), ...(h.id === heatId ? [subjectId] : [])];
+      return { ...h, subjectIds, songs: h.songs.map((song) => ({ ...song, partners: song.partners.filter((pair) => pair.every((id) => subjectIds.includes(id))) })) };
+    }) }));
+  }
+  function removeHeat(heatId: string) {
+    const removed = round.heats.find((h) => h.id === heatId)!;
+    if (round.heats.length === 1) return;
+    if ((removed.subjectIds.length || removed.songs.some((p) => p.title !== 'Song 1' && p.title !== 'Song 2' || p.artist || p.tempo || p.notes || p.partners.length)) && !window.confirm(`Remove ${removed.name} and its songs/partner maps? Its contestants will stay in the roster and become unassigned. Save setup to apply this change.`)) return;
+    editRound((r) => ({ ...r, heats: r.heats.filter((h) => h.id !== heatId) }));
+    setIssue(removed.subjectIds.length ? `${removed.name} removed from setup. Reassign its contestants to a remaining heat before starting judging.` : 'Heat removed from setup. Save setup to apply the change.');
+  }
+  function addHeat() {
+    const usedNames = new Set(round.heats.map((h) => h.name));
+    let number = 1; while (usedNames.has(`Heat ${number}`)) number++;
+    editRound((r) => ({ ...r, heats: [...r.heats, heat(number)] }));
+  }
+  function importRoster(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const value = String(new FormData(e.currentTarget).get('csv'));
+    const rows = parseCsv(value); const jj = competition!.format === 'Jack & Jill';
+    if (!rows.length || rows[0].join(',').toLowerCase() !== (jj ? 'number,name,role' : 'number,lead,follow')) { setIssue('Use the displayed CSV header.'); return; }
+    const subjects: LiveSubject[] = rows.slice(1).map((row) => ({ id: newId(), number: Number(row[0]), primary: row[1] ?? '', secondary: jj ? '' : row[2] ?? '', ...(jj ? { role: row[2] as 'Lead' | 'Follow' } : {}) }));
+    if (subjects.some((s) => !Number.isSafeInteger(s.number) || s.number < 1 || !s.primary || (jj ? !['Lead', 'Follow'].includes(s.role!) : !s.secondary)) || new Set(subjects.map((s) => s.number)).size !== subjects.length) { setIssue('Every row needs a unique positive bib, names, and a valid role or partner.'); return; }
+    if (round.subjects.length && !window.confirm('Replace this unopened roster and its heat assignments?')) return;
+    editRound((r) => ({ ...r, subjects: subjects.sort((a, b) => a.number - b.number), heats: r.heats.map((h, i) => ({ ...h, subjectIds: i === 0 ? subjects.map((s) => s.id) : [], songs: h.songs.map((s) => ({ ...s, partners: [] })) })) })); setIssue('');
+  }
+  function updateFinalists(ids: string[]) {
+    const prelim = setup.rounds.find((r) => r.id === round.prelimRoundId)!;
+    const subjects = competition!.format === 'Strictly' ? prelim.subjects.filter((s) => ids.includes(s.id)) : round.subjects.filter((s) => s.members?.every((id) => ids.includes(id)));
+    editRound((r) => ({ ...r, finalistIds: ids, subjects, heats: r.heats.map((h, i) => ({ ...h, subjectIds: i === 0 ? subjects.map((s) => s.id) : [], songs: h.songs.map((s) => ({ ...s, partners: [] })) })) }));
+  }
+  function pairFinalist(leadId: string, followId: string) {
+    const prelim = setup.rounds.find((r) => r.id === round.prelimRoundId)!;
+    const lead = prelim.subjects.find((s) => s.id === leadId)!; const follow = prelim.subjects.find((s) => s.id === followId);
+    const previous = round.subjects.find((s) => s.members?.[0] === leadId);
+    const subjects = round.subjects.filter((s) => s.members?.[0] !== leadId);
+    if (follow) subjects.push({ id: previous?.id ?? newId(), number: previous?.number ?? lead.number, primary: lead.primary, secondary: follow.primary, members: [lead.id, follow.id] });
+    editRound((r) => ({ ...r, subjects, heats: r.heats.map((h, i) => ({ ...h, subjectIds: i === 0 ? subjects.map((s) => s.id) : [] })) }));
+  }
+  return <>
+    {issue && <p className="notice" role="alert">{issue}</p>}
+    <div className="shared-grid">
+      <section className="form-panel"><div className="panel-heading"><h2>Event &amp; judges</h2></div><div className="form-body">
+        <label><span>Event name</span><input value={setup.name} onChange={(e) => update({ ...setup, name: e.target.value })} /></label><label><span>Venue</span><input value={setup.venue} onChange={(e) => update({ ...setup, venue: e.target.value })} /></label><label><span>Date</span><input type="date" value={setup.date} onChange={(e) => update({ ...setup, date: e.target.value })} /></label>
+        <fieldset disabled={panelLocked}><legend>Event panel</legend>{setup.judges.map((j) => <label key={j.id}><span>Judge name</span><div className="shared-inline"><input aria-label={`Judge ${j.name}`} value={j.name} onChange={(e) => update({ ...setup, judges: setup.judges.map((item) => item.id === j.id ? { ...item, name: e.target.value } : item) })} /><button className="quiet-button" onClick={() => update({ ...setup, judges: setup.judges.filter((item) => item.id !== j.id), headJudgeId: setup.headJudgeId === j.id ? '' : setup.headJudgeId, rounds: setup.rounds.map((r) => ({ ...r, judgeIds: r.judgeIds.filter((id) => id !== j.id) })) })}>Remove</button></div></label>)}<button className="quiet-button" onClick={() => update({ ...setup, judges: [...setup.judges, { id: newId(), name: `Judge ${setup.judges.length + 1}` }] })}>Add judge</button><label><span>Event head judge</span><select value={setup.headJudgeId} onChange={(e) => update({ ...setup, headJudgeId: e.target.value })}><option value="">Choose the head judge</option>{setup.judges.map((j) => <option key={j.id} value={j.id}>{j.name}</option>)}</select></label></fieldset>
+      </div></section>
+      <section className="form-panel"><div className="panel-heading"><h2>Program &amp; discussion blocks</h2></div><div className="form-body"><form className="shared-inline" onSubmit={addCompetition}><label><span>Format</span><select name="format"><option>Jack &amp; Jill</option><option>Strictly</option></select></label><label><span>Division</span><select name="division"><option>Beginner / Intermediate</option><option>Advanced</option></select></label><button className="quiet-button" disabled={panelLocked}>Add competition</button></form><div className="shared-roster"><p>Removing a competition removes both rounds from the program. Save setup to apply changes.</p>{panelLocked && <p>Started competitions are protected. Use a versioned setup correction to remove one while retaining its judging history.</p>}{setup.competitions.map((c) => <div className="shared-inline" key={c.id}><strong className="shared-grow">{c.format} · {c.division}</strong><button type="button" className="quiet-button" aria-label={`Remove ${c.format} ${c.division} competition`} disabled={panelLocked} onClick={() => removeCompetition(c.id)}>Remove competition</button></div>)}</div>{setup.blocks.map((b) => <div key={b.id}><h3>{b.label}</h3>{b.roundIds.map((id, i) => { const r = setup.rounds.find((r) => r.id === id)!; const c = setup.competitions.find((c) => c.id === r.competitionId)!; return <div key={id} className="shared-inline"><span>{i + 1}. {c.format} · {c.division}</span><button className="quiet-button" disabled={panelLocked || i === 0} onClick={() => { const order = [...b.roundIds]; [order[i - 1], order[i]] = [order[i], order[i - 1]]; update({ ...setup, blocks: setup.blocks.map((x) => x.id === b.id ? { ...x, roundIds: order } : x) }); }}>Move up</button></div>; })}</div>)}</div></section>
+    </div>
+    {round && <section className="form-panel"><div className="panel-heading"><h2>Round setup</h2><label><span className="sr-only">Select round to configure</span><select value={round.id} onChange={(e) => setSelected(e.target.value)}>{setup.rounds.map((r) => { const c = setup.competitions.find((c) => c.id === r.competitionId)!; return <option key={r.id} value={r.id}>{c.format} · {c.division} · {r.kind}</option>; })}</select></label></div><div className="form-body">
+      {locked && <p>Assignments and songs are frozen. Use a versioned setup correction to change them.</p>}
+      <fieldset disabled={locked}><legend>Required judges</legend><div className="shared-inline">{setup.judges.map((j) => { const panel = round.judgeIds.length ? round.judgeIds : setup.judges.map((j) => j.id); return <label className="check-label" key={j.id}><input type="checkbox" checked={panel.includes(j.id)} onChange={(e) => { const next = e.target.checked ? [...panel, j.id] : panel.filter((id) => id !== j.id); if (next.length) editRound((r) => ({ ...r, judgeIds: next })); }} />{j.name}</label>; })}</div></fieldset>
+      {round.kind === 'finals' && <fieldset disabled={locked}><legend>Explicit finalist selection &amp; pairings</legend><label><span>{competition!.format === 'Jack & Jill' ? 'Finalists per role / number of pairs' : 'Number of finalist couples'}</span><input type="number" min={1} max={100} value={round.finalistCount || ''} onChange={(e) => editRound((r) => ({ ...r, finalistCount: Number(e.target.value) }))} /></label><p>Save the selected finalists and enter the random draw pairs. Matching prelims must be head approved before opening finals.</p><div className="shared-roster">{setup.rounds.find((r) => r.id === round.prelimRoundId)?.subjects.map((s) => <label className="check-label" key={s.id}><input type="checkbox" checked={round.finalistIds.includes(s.id)} onChange={(e) => updateFinalists(e.target.checked ? [...round.finalistIds, s.id] : round.finalistIds.filter((id) => id !== s.id))} />#{s.number} {s.primary} {s.role ?? `& ${s.secondary}`}</label>)}</div>{competition!.format === 'Jack & Jill' && setup.rounds.find((r) => r.id === round.prelimRoundId)?.subjects.filter((s) => round.finalistIds.includes(s.id) && s.role === 'Lead').map((lead) => <label key={lead.id}><span>#{lead.number} {lead.primary} pairs with</span><select value={round.subjects.find((s) => s.members?.[0] === lead.id)?.members?.[1] ?? ''} onChange={(e) => pairFinalist(lead.id, e.target.value)}><option value="">Choose assigned follow</option>{setup.rounds.find((r) => r.id === round.prelimRoundId)?.subjects.filter((s) => round.finalistIds.includes(s.id) && s.role === 'Follow').map((s) => <option key={s.id} value={s.id}>#{s.number} {s.primary}</option>)}</select></label>)}</fieldset>}
+      <fieldset disabled={locked}><legend>{round.kind === 'finals' ? 'Finals couples & heat assignments' : 'Roster & heat assignments'}</legend>
+        {round.kind === 'prelims' && <form className="shared-inline" onSubmit={addSubject}><label><span>Bib</span><input name="number" type="number" min={1} required /></label><label><span>{competition!.format === 'Strictly' ? 'Lead' : 'Name'}</span><input name="primary" required /></label>{competition!.format === 'Strictly' ? <label><span>Follow</span><input name="secondary" required /></label> : <label><span>Role</span><select name="role"><option>Lead</option><option>Follow</option></select></label>}<button className="quiet-button">Add entrant</button></form>}
+        {round.subjects.map((s) => <div className="shared-inline" key={s.id}><span className="number-badge">{s.number}</span><span className="shared-grow">{s.primary} · {s.role ?? s.secondary}</span><label><span className="sr-only">Heat for bib {s.number}</span><select value={round.heats.find((h) => h.subjectIds.includes(s.id))?.id ?? ''} onChange={(e) => assign(s.id, e.target.value)}><option value="">Unassigned</option>{round.heats.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>{round.kind === 'prelims' && <button className="quiet-button" onClick={() => editRound((r) => ({ ...r, subjects: r.subjects.filter((x) => x.id !== s.id), heats: r.heats.map((h) => ({ ...h, subjectIds: h.subjectIds.filter((id) => id !== s.id), songs: h.songs.map((p) => ({ ...p, partners: p.partners.filter((pair) => !pair.includes(s.id)) })) })) }))}>Remove</button>}</div>)}
+        {round.kind === 'prelims' && <details><summary>Import roster CSV</summary><form onSubmit={importRoster}><label><span>{competition!.format === 'Strictly' ? 'Number,Lead,Follow' : 'Number,Name,Role'}</span><textarea name="csv" rows={5} required /></label><button className="quiet-button">Replace unopened roster</button></form></details>}
+      </fieldset>
+      <fieldset disabled={locked}><legend>Heats, songs &amp; partner rotations</legend><p>A heat is the group of contestants on the floor. Assign each entrant to one heat; each heat dances its own 2–3 songs. In J&amp;J prelims, partners rotate between songs and marks stay with each dancer.</p>{round.heats.map((h) => <section key={h.id} className="shared-heat"><div className="shared-inline"><h3>{h.name} · {h.subjectIds.length} entrants</h3><button type="button" className="quiet-button" aria-label={`Remove ${h.name}`} disabled={round.heats.length === 1} title={round.heats.length === 1 ? 'Keep at least one heat in this round.' : undefined} onClick={() => removeHeat(h.id)}>Remove heat</button><button className="quiet-button" onClick={() => editRound((r) => ({ ...r, heats: r.heats.map((x) => x.id === h.id ? { ...x, songs: [...x.songs, song(x.songs.length + 1)] } : x) }))}>Add song</button></div>{h.songs.map((p, i) => <div key={p.id} className="shared-song"><span className="kicker">Performance {i + 1}</span><div className="shared-inline">{(['title', 'artist', 'tempo', 'notes'] as const).map((field) => <label key={field}><span>{field === 'notes' ? 'Selection notes (organizer only)' : field}</span><input maxLength={field === 'notes' ? 2000 : 160} value={p[field]} onChange={(e) => editRound((r) => ({ ...r, heats: r.heats.map((x) => x.id === h.id ? { ...x, songs: x.songs.map((s) => s.id === p.id ? { ...s, [field]: e.target.value } : s) } : x) }))} /></label>)}<button className="quiet-button" disabled={h.songs.length === 1} onClick={() => editRound((r) => ({ ...r, heats: r.heats.map((x) => x.id === h.id ? { ...x, songs: x.songs.filter((s) => s.id !== p.id) } : x) }))}>Remove song</button></div>{competition!.format === 'Jack & Jill' && round.kind === 'prelims' && <details><summary>Partner map for this song (optional)</summary><p>Enter the rotated partners for each song. Individual marks remain attached to each dancer and bib.</p>{round.subjects.filter((s) => s.role === 'Lead' && h.subjectIds.includes(s.id)).map((lead) => <label key={lead.id}><span>#{lead.number} {lead.primary}</span><select value={p.partners.find(([l]) => l === lead.id)?.[1] ?? ''} onChange={(e) => editRound((r) => ({ ...r, heats: r.heats.map((x) => x.id === h.id ? { ...x, songs: x.songs.map((s) => s.id === p.id ? { ...s, partners: [...s.partners.filter(([l]) => l !== lead.id), ...(e.target.value ? [[lead.id, e.target.value] as [string, string]] : [])] } : s) } : x) }))}><option value="">Partner context unavailable</option>{round.subjects.filter((s) => s.role === 'Follow' && h.subjectIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>#{s.number} {s.primary}</option>)}</select></label>)}</details>}</div>)}</section>)}<button className="quiet-button" disabled={round.heats.length >= 6} onClick={addHeat}>Add heat</button></fieldset>
+    </div></section>}
+  </>;
+}

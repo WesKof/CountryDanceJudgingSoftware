@@ -10,7 +10,11 @@
     "build": "vinext build",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:live": "node --experimental-strip-types --test tests/live-api.test.mts",
+    "test:browser": "playwright test",
+    "db:generate": "drizzle-kit generate",
+    "db:local": "node scripts/migrate-local.mjs"
   },
   "dependencies": {
     "next": "16.2.6",
@@ -18,6 +22,9 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "drizzle-kit": "0.31.10",
+    "drizzle-orm": "0.45.2",
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
     "@openai/sites-vite-plugin": "0.2.0",

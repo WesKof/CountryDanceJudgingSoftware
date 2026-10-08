@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import Link from 'next/link';
 import { normalizeHeader, parseCsv, serializeCsv } from '@/lib/csv';
 import {
   createDefaultState,
@@ -406,7 +407,7 @@ export default function Home() {
 
         {view === 'event' && (
           <div className="page-stack">
-            <section className="hero-panel"><div><p className="kicker">Event foundation</p><h2>Set up the desk once</h2><p>Event details, competitions, judges, and contestants stay on this device and feed every ballot.</p></div><span className="format-stamp">{state.competitions.length} competitions</span></section>
+            <section className="hero-panel"><div><p className="kicker">Event foundation</p><h2>Set up the desk once</h2><p>Event details, competitions, judges, and contestants stay on this device and feed every ballot.</p><Link className="quiet-button" href="/live/new" prefetch={false}>Create a shared live event</Link></div><span className="format-stamp">{state.competitions.length} competitions</span></section>
 
             <div className="setup-grid">
               <section className="form-panel">

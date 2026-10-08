@@ -2,13 +2,12 @@ packages:
   - .
 
 allowBuilds:
-  esbuild: set this to true or false
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
-  workerd: set this to true or false
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
 
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
-  - unrs-resolver
-  - workerd
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.64.0'
+  - playwright-core@1.64.0
+  - playwright@1.64.0

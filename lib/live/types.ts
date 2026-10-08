@@ -1,0 +1,30 @@
+export type LiveMark = '' | 'Yes' | 'A1' | 'A2' | 'No';
+export type LiveSubject = { id: string; number: number; primary: string; secondary: string; role?: 'Lead' | 'Follow'; members?: [string, string] };
+export type Performance = { id: string; title: string; artist: string; tempo: string; notes: string; partners: [string, string][] };
+export type LiveHeat = { id: string; name: string; subjectIds: string[]; songs: Performance[] };
+export type LiveRound = { id: string; competitionId: string; kind: 'prelims' | 'finals'; blockId: string; subjects: LiveSubject[]; heats: LiveHeat[]; judgeIds: string[]; prelimRoundId?: string; finalistIds: string[]; finalistCount: number };
+export type LiveSetup = {
+  name: string; venue: string; date: string; headJudgeId: string;
+  judges: { id: string; name: string }[];
+  competitions: { id: string; format: 'Strictly' | 'Jack & Jill'; division: string }[];
+  rounds: LiveRound[];
+  blocks: { id: string; label: string; kind: 'prelims' | 'finals'; roundIds: string[] }[];
+};
+export type FrozenRound = LiveRound & { format: 'Strictly' | 'Jack & Jill'; division: string; judges: { id: string; name: string }[] };
+export type LiveContext = { blockId: string | null; performanceId: string | null; visited: string[] };
+export type Cell = { mark: LiveMark; note: string; revision: number; mutationId: string; savedAt?: string };
+export type Cells = Record<string, Cell>;
+export type LiveBallot = { roundKey: string; judgeId: string; version: number; cells: Cells; locked: boolean };
+export type LiveSubmission = { id: string; roundKey: string; judgeId: string; ballotVersion: number; cells: Cells; createdAt: string };
+export type TieDecision = { key: string; order: string[]; shared: boolean; explanation: string; decidedAt: string; judgeId: string; role: 'head'; fingerprint: string };
+export type LiveResult = { subjectId: string; number: number; primary: string; secondary: string; group: string; average: number; sumTenths: number; denominator: number; place: number; tied: boolean; decided: boolean; songs: { id: string; title: string; sumTenths: number; denominator: number; average: number }[] };
+export type LiveStandings = { rows: LiveResult[]; ties: { key: string; group: string; subjectIds: string[] }[]; complete: boolean; submitted: number; required: number; fingerprint: string; decisions: TieDecision[]; approved: boolean; approvedAt?: string };
+export type RoundView = { id: string; key: string; generation: number; version: number; phase: 'dancing' | 'discussion' | 'approved' | 'setup'; definition: FrozenRound; standings?: LiveStandings; submissions?: Omit<LiveSubmission, 'cells'>[]; submittedMarks?: { judgeId: string; performanceId: string; subjectId: string; mark: LiveMark }[]; draftProgress?: { judgeId: string; filled: number; required: number; ballotVersion: number; savedAt?: string; locked: boolean }[] };
+export type LiveView = {
+  eventId: string; version: number; status: 'active' | 'archived'; setup: LiveSetup; context: LiveContext;
+  role: 'organizer' | 'judge' | 'head'; judgeId: string | null; rounds: RoundView[]; ballots: LiveBallot[];
+  judgeLinks?: { id: string; name: string; path: string; revoked: boolean }[];
+  restoredHistory?: unknown;
+};
+export const cellKey = (performanceId: string, subjectId: string) => `${performanceId}:${subjectId}`;
+export const roundKey = (id: string, generation: number) => `${id}:${generation}`;

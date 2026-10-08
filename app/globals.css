@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+/* Shared judging keeps the established palette/rail, with a separate phone ballot. */
+
 :root {
   --ink: #17221d;
   --muted: #69746e;
@@ -427,3 +429,84 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .page-stack, .results-layout { display: block; margin: 0; }
   .result-sheet { border: 0; box-shadow: none; }
 }
+
+.shared-shell { font-size: 16px; }
+.shared-shell .workspace { min-width: 0; }
+.shared-shell .topbar { flex-wrap: wrap; }
+.shared-shell .save-state { font-size: 14px; }
+.shared-shell .rail-copy strong { font-size: 14px; }
+.shared-shell button, .shared-shell .quiet-button, .shared-shell .primary-button, .shared-shell .file-button { min-height: 44px; font-size: 14px; }
+.shared-shell a.brand-mark { text-decoration: none; }
+.shared-shell h3 { font-family: Georgia, serif; font-size: 20px; font-weight: 500; }
+.shared-shell p { line-height: 1.5; }
+.shared-shell label { display: grid; gap: 6px; min-width: 0; }
+.shared-shell label > span { font-size: 14px; }
+.shared-shell input, .shared-shell select, .shared-shell textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: white; font: inherit; }
+.shared-shell input[type='checkbox'] { width: 20px; min-height: 20px; flex: 0 0 20px; }
+.shared-shell input:focus, .shared-shell select:focus, .shared-shell textarea:focus, .shared-shell button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.shared-shell button:disabled { opacity: .55; cursor: default; }
+.shared-shell fieldset { min-width: 0; margin: 0; padding: 16px; display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.shared-shell legend { color: var(--forest); font-weight: 700; font-size: 16px; }
+.shared-shell .shared-unframed { padding: 0; border: 0; }
+.shared-shell .shared-unframed > * { margin-bottom: 20px; }
+.shared-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 20px; }
+.shared-inline { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.shared-inline > label { flex: 1 1 140px; }
+.shared-grow { min-width: 0; flex: 1; }
+.shared-roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.shared-shell .check-label { display: flex; align-items: center; gap: 9px; }
+.shared-shell .shared-heat { border-top: 1px solid var(--line); padding-top: 12px; }
+.shared-song { margin: 10px 0; padding: 12px; border-radius: 10px; background: var(--paper); }
+.shared-shell details { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.shared-shell summary { cursor: pointer; min-height: 36px; font-weight: 600; }
+.shared-shell .notice { font-size: 14px; overflow-wrap: anywhere; }
+.shared-shell .context-change { position: sticky; top: 4px; z-index: 4; flex-wrap: wrap; }
+.shared-shell .context-change button { width: auto; height: auto; border-radius: 8px; padding: 8px 12px; color: white; background: var(--forest); }
+.shared-shell .pending-panel { margin-top: 16px; border-color: var(--copper); }
+.phone-ballot .panel-heading { align-items: start; }
+.phone-ballot .panel-heading p { margin: 6px 0 0; font-size: 14px; }
+.phone-filters { display: flex; gap: 8px; padding: 12px; flex-wrap: wrap; }
+.phone-filters [aria-pressed='true'] { border-color: var(--forest); background: var(--sage); }
+.phone-row { border-top: 1px solid var(--line); padding: 12px 16px; }
+.phone-identity { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.phone-identity strong, .phone-identity small { display: block; overflow-wrap: anywhere; }
+.phone-identity strong { font-size: 16px; }
+.phone-identity small { margin-top: 3px; color: var(--muted); font-size: 14px; }
+.phone-identity .note-toggle { padding: 5px 9px; flex: 0 0 auto; }
+.phone-marks { grid-template-columns: repeat(4, minmax(44px, 1fr)); gap: 6px; }
+.phone-marks .mark-button { height: 44px; font-size: 14px; }
+.phone-note { margin-top: 10px; }
+.phone-note p { margin: 6px 0; font-size: 14px; }
+.shared-shell .result-letterhead p, .shared-shell .result-group th { font-size: 14px; }
+.shared-shell .result-group td { font-size: 16px; }
+.shared-shell .result-group td small { font-size: 14px; }
+.shared-shell .result-group table { min-width: 430px; }
+.shared-shell .submitted-marks { max-height: 350px; overflow-y: auto; padding-left: 20px; font-size: 14px; }
+.shared-shell .tie-editor { margin: 16px 0; }
+.shared-json { max-height: 400px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .shared-grid { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+  .shared-shell { grid-template-columns: 64px minmax(0, 1fr); }
+  .shared-shell .side-rail { padding: 16px 6px; }
+  .shared-shell .rail-item { justify-content: center; padding: 10px 2px; }
+  .shared-shell .rail-copy, .shared-shell .rail-kicker, .shared-shell .rail-footer { display: none; }
+  .shared-shell .workspace { padding: 18px 10px 28px; }
+  .shared-shell .topbar h1 { font-size: 26px; overflow-wrap: anywhere; }
+  .shared-shell .form-body { padding: 14px; }
+  .shared-shell .panel-heading { padding: 16px 12px; flex-wrap: wrap; }
+  .shared-shell .panel-heading h2 { font-size: 23px; }
+  .shared-shell fieldset { padding: 10px; }
+  .shared-shell .shared-unframed { padding: 0; }
+  .shared-shell .result-sheet { padding: 14px; }
+  .phone-row { padding: 10px; }
+  .phone-identity { gap: 7px; }
+  .phone-identity .number-badge { width: 38px; height: 38px; font-size: 16px; }
+  .shared-shell .page-stack { gap: 14px; margin-top: 18px; }
+}
+@media print {
+  .shared-shell .side-rail, .shared-shell button, .shared-shell .file-button, .shared-shell input, .shared-shell details, .shared-shell .notice { display: none !important; }
+  .shared-shell { display: block; }
+  .shared-shell .result-group table { min-width: 0; }
+}
+
+.shared-shell .result-sheet, .shared-shell .page-stack { min-width: 0; }

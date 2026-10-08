@@ -1,0 +1,27 @@
+'use client';
+
+import { useState } from 'react';
+import type { LiveView, RoundView, LiveStandings } from '@/lib/live/types';
+
+type Action = (input: Record<string, unknown>) => Promise<boolean>;
+function TieEditor({ round, tie, action }: { round: RoundView; tie: LiveStandings['ties'][number]; action: Action }) {
+  const saved = round.standings!.decisions.find((d) => d.key === tie.key);
+  const [order, setOrder] = useState(saved?.order ?? tie.subjectIds);
+  const [shared, setShared] = useState(saved?.shared ?? false);
+  const [explanation, setExplanation] = useState(saved?.explanation ?? '');
+  return <fieldset className="tie-editor"><legend>{tie.group} · equal averages</legend>{order.map((id, i) => { const subject = round.definition.subjects.find((s) => s.id === id)!; return <div key={id} className="shared-inline"><span>{i + 1}. #{subject.number} {subject.primary} {subject.secondary}</span><button className="quiet-button" disabled={i === 0 || shared} onClick={() => { const next = [...order]; [next[i], next[i - 1]] = [next[i - 1], next[i]]; setOrder(next); }}>Move up</button></div>; })}<label className="check-label"><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />Award an explicit shared place</label><label><span>Decision explanation (optional)</span><input value={explanation} maxLength={500} onChange={(e) => setExplanation(e.target.value)} /></label><button className="primary-button" onClick={() => void action({ action: 'tie', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint, tieKey: tie.key, order, shared, explanation })}>Save head judge decision</button></fieldset>;
+}
+
+export function LiveResults({ data, action, head = false }: { data: LiveView; action: Action; head?: boolean }) {
+  return <div className="page-stack">{data.rounds.filter((r) => r.standings).map((round) => {
+    const result = round.standings!;
+    return <section className="result-sheet" key={round.key}><div className="result-letterhead"><span>{round.definition.format} · {round.definition.division} · {round.definition.kind}</span><h2>{result.approved ? 'Head-approved results' : 'Provisional submitted standings'}</h2><p>{result.submitted} / {result.required} judges submitted · version {round.generation}{result.approvedAt ? ` · approved ${new Date(result.approvedAt).toLocaleString()}` : ''}</p></div>
+      {result.rows.length === 0 && <p>Standings appear when every required judge has finalized the required songs. Drafts are excluded.</p>}
+      {[...new Set(result.rows.map((r) => r.group))].map((group) => <div className="result-group" key={group}><h3>{group}</h3><div className="table-wrap"><table><thead><tr><th>{result.approved ? 'Approved place' : 'Provisional place'}</th><th>Bib / entrant</th><th>Average score</th><th>Required marks</th></tr></thead><tbody>{result.rows.filter((r) => r.group === group).map((row) => <tr key={row.subjectId}><td>{row.place}{row.tied && !row.decided ? ' · tie pending' : row.tied ? ' · head decided' : ''}</td><td><strong>#{row.number} {row.primary}</strong><small>{row.secondary}</small></td><td>{row.average.toFixed(4)}</td><td>{row.denominator}</td></tr>)}</tbody></table></div></div>)}
+      <details><summary>Per-song averages and submitted marks</summary>{result.rows.map((row) => <div key={row.subjectId}><h4>#{row.number} {row.primary}</h4>{row.songs.map((song) => <p key={song.id}>{song.title}: {song.average.toFixed(4)} · {song.denominator} judges</p>)}</div>)}<ul className="submitted-marks">{round.submittedMarks?.map((cell) => { const judge = round.definition.judges.find((j) => j.id === cell.judgeId); const subject = round.definition.subjects.find((s) => s.id === cell.subjectId); const song = round.definition.heats.flatMap((h) => h.songs).find((p) => p.id === cell.performanceId); return <li key={`${cell.judgeId}/${cell.performanceId}/${cell.subjectId}`}>{judge?.name} · #{subject?.number} · {song?.title}: <strong>{cell.mark}</strong></li>; })}</ul></details>
+      {result.decisions.length > 0 && <details><summary>Head judge decisions</summary>{result.decisions.map((d) => <p key={d.key}>{d.shared ? 'Shared place' : 'Ordered placement'} · {d.explanation || 'No explanation added'} · {new Date(d.decidedAt).toLocaleString()}</p>)}</details>}
+      {head && data.status === 'active' && round.phase === 'discussion' && result.complete && <>{result.ties.map((tie) => <TieEditor key={`${round.key}/${result.fingerprint}/${tie.key}`} round={round} tie={tie} action={action} />)}<button className="primary-button" disabled={result.rows.some((r) => !r.decided)} onClick={() => void action({ action: 'approve', roundKey: round.key, roundVersion: round.version, fingerprint: result.fingerprint })}>Approve these exact submissions</button></>}
+      {(head || data.role === 'organizer') && data.status === 'active' && ['discussion', 'approved'].includes(round.phase) && <button className="quiet-button" onClick={() => { const reason = window.prompt('Reason for reopening this round? Prior submissions and approvals stay in history. Reopening prelims also invalidates dependent finals.'); if (reason?.trim()) void action({ action: 'reopen', roundKey: round.key, reason }); }}>Reopen for a correction</button>}
+    </section>;
+  })}</div>;
+}
