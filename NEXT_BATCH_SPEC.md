@@ -1,8 +1,12 @@
 # Next batch: private judging access and owner-controlled public results
 
-Version 1.0 — 2026-10-09. **Specification only; not implemented.** The completed stage/setup batch is committed and pushed as `f589b7c6f5a0cde60c29b689019bed2137f19d4d` on `github/codex/stage-heat-workflow`. See [closeout](BATCH_CLOSEOUT.md), [timeline](PROJECT_TIMELINE.md), [existing implementation](PROJECT_SPEC.md) and [future chat prompt](IMPLEMENTATION_HANDOFF.md).
+Version 1.1 — 2026-10-09. **Specification only; not implemented.** The completed stage/setup batch is committed and pushed as `f589b7c6f5a0cde60c29b689019bed2137f19d4d` on `github/codex/stage-heat-workflow`. See [closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery), [timeline](PROJECT_SPEC.md#project-timeline), [existing implementation](PROJECT_SPEC.md) and [future chat prompt](NEXT_BATCH_SPEC.md#fresh-implementation-chat-prompt).
 
 The owner answered the material policy questions below on 2026-10-09. These are settled requirements. Implementation still waits for the owner to finish specification review and authorize a fresh GPT-6.1 Sol High chat. No code, schema, dependency, website or hosted service is changed by this document. Deployment, public publication and purchases require separate authorization even after local implementation is authorized.
+
+## Document lifecycle
+
+This is the temporary next-batch specification. After implementation, fold actual behavior and settled decisions into PROJECT_SPEC.md, verification into LOCAL_TEST_REPORT.md, then remove this temporary file. Git retains prior specifications. Do not create separate timeline, closeout, branding or handoff files.
 
 ## Confirmed experience and access
 
@@ -106,7 +110,42 @@ Suggested transparent event arrangement: “Event judging remains available thro
 
 ## Branding direction
 
-Use the confirmed Interskate/Lewisville community, not the mistakenly supplied UK Facebook business. The owner confirms permission to reuse its branding/logo/photos. See [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md) for inspected sources, usable asset scope and a text-only public-site proposal. Preserve the judging app's appearance. Exact licensed asset files and final public color/type choices are implementation inputs, not approval to download arbitrary reposts or publish a website now.
+Use the confirmed Interskate/Lewisville community, not the mistakenly supplied UK Facebook business. The owner confirms permission to reuse its branding/logo/photos. The research below records inspected sources, usable asset scope and a text-only public-site proposal. Preserve the judging app's appearance. Exact licensed asset files and final public color/type choices are implementation inputs, not approval to download arbitrary reposts or publish a website now.
+
+2026-10-09. Research and text-only proposal; no website or asset download created. The judging application's existing appearance remains unchanged.
+
+### Verified sources
+
+- [Instagram — kickinitcountrydance](https://www.instagram.com/kickinitcountrydance/): inspected live in the browser without signing in. The profile identifies the Interskate dance community and welcomes different experience levels. Its black-and-white boot/longhorn emblem has horizontal stripes and curved lettering. Visible posts emphasize group photographs and social dancing. The colored profile ring belongs to Instagram's interface, not a verified brand palette.
+- [Facebook — Kickin' It Country Dance group](https://www.facebook.com/groups/984536000183510/): the owner supplied this corrected URL. Inspected live without joining or signing in. The public group identifies Lewisville, Texas. Its cover matches the emblem and uses dark wood, warm lights, cream display lettering, red accents and stars around Interskate information. These are observed cues, not a formal brand guide.
+
+Web text retrieval failed for Instagram and returned a blocked page for the group. The observations above come from visible browser pages after dismissing optional login prompts. No private/member-only content was accessed. The originally supplied `facebook.com/kickinitcountryclub/` represents a UK party business with different artwork; exclude it from this project.
+
+### Asset permission
+
+The owner explicitly confirmed permission to use the intended community's branding/logo/photos on 2026-10-09. Do not reask that permission. Select original assets covered by it; social visibility alone does not make every repost a usable project asset.
+
+| Asset | Proposed use |
+| --- | --- |
+| Correct community boot/longhorn logo | Use the original transparent/vector or suitable high-resolution file; preserve proportions. Do not substitute the UK business's logo. |
+| Authorized community/event photographs | Optional event or winners imagery; use original files within the owner's permission and retain any required credit. Results pages work without photos. |
+| Community cover graphic | Reference for visual direction. Avoid copying its venue prices/schedules into competition results. |
+| Third-party reposts, music, platform interface | Not selected. No copying of Instagram/Facebook interface or downloading videos/music. |
+| Fonts/textures | Inspect licenses when selecting exact assets. No paid asset purchase authorized; do not claim a typeface identified from a screenshot. |
+
+### Proposed public-site direction
+
+Use the black/cream emblem with restrained warm brown and dark red accents. These are a design interpretation, not official color values. Keep score tables on plain light surfaces with high-contrast dark text. Reserve texture and Western display lettering for the masthead and small headings; use a readable normal face for names, marks and explanations.
+
+Public navigation: Winners, Leaderboard, About scoring. This is separate from the judging application's unchanged Set-Up → Score → Results → Publish navigation.
+
+- Winners: event identity/date, clear final placements, optional authorized event photo, and visible revision/Under review status. Equal placements receive equal treatment.
+- Leaderboard: readable event/division/stage rows, clickable contestant names, Withdrawn/shared-place labels and published revision. Maintain name/rank context on phones.
+- Contestant cards: bib/person/pair context, applicable stages and expandable heat/song details, named judge means/counts and explicit blanks. Blank reads Not observed; No remains zero.
+- Judge cards: named judge and head designation, stage/heat/song marks and counts, matching revision, no private notes.
+- About scoring/service: actual averaging/tiebreak explanations, publication/revision meaning, owner-operated service terms and acknowledgment that visible results can be copied, printed or captured. Link to the correct community pages.
+
+The specification and implementation start must be approved before building. Domain registration, hosted deployment and real publication remain separately unauthorized. See [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md).
 
 ## Acceptance criteria and required verification
 
@@ -163,3 +202,21 @@ There are **no unanswered core policy questions** from the October 9 decision ro
 - Per-event free-entry quantity and support terms are event-arrangement details, not software permissions. No automatic billing or organizer self-hosting handoff is in scope.
 
 Preserve existing data/uncommitted work, legacy scoring, v2 backups, local/shared parity and visual template throughout. No deployment, public publication or purchases without authorization.
+
+## Fresh implementation chat prompt
+
+Use **GPT-6.1 Sol, High**. This prompt is saved for the owner to send after reviewing the specification; it does not authorize this documentation task to implement anything or create a new chat. Sending it in the fresh chat supplies the implementation approval, so that chat need not ask again merely because this document records the earlier review gate.
+
+---
+
+I approve NEXT_BATCH_SPEC.md for local implementation. Use the preferred checkout `C:\Users\Iam\Projects\Country Dance Judging App\app`. Read AGENTS.md, PROJECT_SPEC.md (Quick context, stage workflow and timeline), LOCAL_TEST_REPORT.md and all of NEXT_BATCH_SPEC.md, including branding, acceptance criteria and the complete isolated mock. This message authorizes implementation; do not reopen settled decisions or ask again for permission to begin.
+
+Inspect branch/status/remotes and compare affected files with `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app` before edits or sync. Repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`, branch `codex/stage-heat-workflow`. Preserve later commits, unrelated/uncommitted work, existing data/browser state, legacy scoring/revisions, v2 backups, local/shared parity and the visual template with collapsed setup sections.
+
+Implement the documented access separation, single judge page, view-only organizer Score, setup imports, organizer-initiated corrections, dual-approved contestant/couple withdrawals, and separate owner-controlled public-results workflow. Preserve acknowledgement, coverage, equal-judge scoring, voting, head decisions, author-only notes and history. Public judge names are allowed; private notes are not. Use approved immutable snapshots, separate organizer/owner approvals and numbered revisions. Keep competition operation available when publication is disabled. Use the correct Interskate/Lewisville branding and the recorded asset permission.
+
+Follow the implementation order and full mock in NEXT_BATCH_SPEC.md. Use synthetic fixtures, isolated role sessions, local D1 and a fake local publisher. Verify actual controls, permissions, persistence, scoring and revision outcomes with meaningful unit, local API, compiled Worker and browser tests; run lint, TypeScript, build and whitespace checks. Fix reproducible gaps within scope. Do not invent the deferred post-Finals replacement/redance policy.
+
+Do not deploy, provision hosted services, publish real results or purchase anything. Keep the local preview available. Update the master spec/timeline and test report with implemented behavior, evidence and unperformed checks. Fold the temporary next-batch spec into those documents when complete; keep three permanent documents and one temporary next-batch spec only when needed. Finish with a concise reviewable handoff.
+
+---

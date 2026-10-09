@@ -1,6 +1,6 @@
 # Country Dance Judging — master design, specification, and operating reference
 
-Document version: 1.15. Stage/heat implementation resumed at the owner's request and built/tested locally on 2026-10-08. Earlier work was preserved in checkpoint `d9ea167`; the completed stage/setup batch was verified and pushed as `f589b7c` on 2026-10-09 to `github/codex/stage-heat-workflow`. The owner renamed the GitHub account to `WesKof`; the authorized repository is now `https://github.com/WesKof/CountryDanceJudgingSoftware.git`. See [BATCH_CLOSEOUT.md](BATCH_CLOSEOUT.md) and [PROJECT_TIMELINE.md](PROJECT_TIMELINE.md). Baseline release: `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; documentation baseline: `e70bc46`. No deployment, hosted provisioning or paid service was performed.
+Document version: 1.16. Stage/heat implementation resumed at the owner's request and built/tested locally on 2026-10-08. Earlier work was preserved in checkpoint `d9ea167`; the completed stage/setup batch was verified and pushed as `f589b7c` on 2026-10-09 to `github/codex/stage-heat-workflow`. The owner renamed the GitHub account to `WesKof`; the authorized repository is now `https://github.com/WesKof/CountryDanceJudgingSoftware.git`. See [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) and [project timeline](PROJECT_SPEC.md#project-timeline). Baseline release: `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; documentation baseline: `e70bc46`. No deployment, hosted provisioning or paid service was performed.
 
 This describes the inspected implementation and the owner's decisions. It is intended for people and coding assistants. Source links are relative to the application repository. External hosting and Google configuration are dated observations, not live guarantees. If code and this document disagree, investigate and update the document; do not silently change behavior to fit stale prose.
 
@@ -13,16 +13,18 @@ This describes the inspected implementation and the owner's decisions. It is int
 - **Architecture:** React 19 + TypeScript, Next-compatible App Router on Vinext/Vite; Cloudflare-compatible Sites deployment. Most application behavior is in `app/page.tsx`; scoring is separated into `lib/scoring.ts`.
 - **Storage:** the public/demo page retains browser localStorage and legacy v2 state. Deliberately created shared events use server API routes and a logical Sites D1 `DB` binding. This is implemented and tested with local D1; hosted provisioning, allowance and production migration checks remain pending. No custom accounts were added.
 - **Shared judging:** new events use `stage-v1`: separate song drafts, acknowledged heat snapshots, whole-stage read-only review, equal judge means, panel advancement voting, head deadlock/finals decisions and exact result approval. Corrections and started withdrawals require both distinct organizer and head approvals. Older shared events retain their block workflow. See [Stage workflow revision](#stage-workflow-revision--implemented-locally).
-- **Current work boundary (2026-10-09):** verify/document and push the completed batch to the existing authorized repository/branch, then specification work only. Next-batch implementation is on hold until the owner settles the spec. Preserve legacy scoring, v2 data, the visual template and existing work. Do not publish or purchase services. The settled averaging, voting, missing-coverage, identity, note and correction/withdrawal rules below must not be reasked.
+- **Current work boundary (2026-10-09):** the completed batch and next-batch planning documents are pushed; current work is documentation consolidation only. Next-batch implementation is on hold until the owner settles the spec. Preserve legacy scoring, v2 data, the visual template and existing work. Do not publish or purchase services. The settled averaging, voting, missing-coverage, identity, note and correction/withdrawal rules below must not be reasked.
 - **Legacy/demo scoring:** Yes=10, A1=4.5, A2=4.3, No=0; incomplete entries excluded; ties share place with skipped ranks; Jack & Jill roles ranked separately. These legacy completeness rules do not define the revised heat-coverage/blank-song policy.
 - **Setup parity:** local `/` and shared organizer setup reuse `SetupEditor`, including competition/heat removal and an editable empty program. The local richer setup is an optional v2 extension; local score/result views still use legacy totals. Its enabled organizer/judge link buttons explicitly open a persistent local D1 rehearsal using the same stage routes as shared events. See [Local/demo and shared setup parity](#localdemo-and-shared-setup-parity).
 - **Google:** optional outgoing results publisher only. No automatic contestant fetch, no configured default endpoint. The secured script is a repository template; updating it here does not update Google.
 - **Sharing:** public access was enabled and Sites version 3 deployed on 2026-08-21. The current public URL and GitHub branch are listed below; live access was not rechecked for this documentation pass.
 - **Important limits:** local/demo saves and legacy backup validation retain their earlier limitations. Shared pending edits recover on an online reload, but neither mode has a service worker or guaranteed offline first load/reload. Physical-phone, venue-connectivity, hosted D1/quota and real Google delivery checks remain unperformed.
 - **How to work:** read `AGENTS.md`, this Quick context and the affected section/source. Inspect preferred-checkout branch/status and compare mirror files before edits/sync. Keep implemented behavior, remaining decisions and external checks distinct.
-- **Next batch (specification only):** [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) records the owner's October 9 answers about private access, view-only organizer Score, organizer-only requests, individual/couple withdrawal, named-judge/no-note snapshots, owner-only publication, revisions, service suspension and corrected branding. See [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md) and [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md). These future rules do not claim current source has changed. Owner review/start authorization remains pending.
+- **Next batch (specification only):** [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) records the owner's October 9 answers about private access, view-only organizer Score, organizer-only requests, individual/couple withdrawal, named-judge/no-note snapshots, owner-only publication, revisions, service suspension and corrected branding. See [branding direction](NEXT_BATCH_SPEC.md#branding-direction) and [future chat prompt](NEXT_BATCH_SPEC.md#fresh-implementation-chat-prompt). These future rules do not claim current source has changed. Owner review/start authorization remains pending.
 
 ## Reference index
+
+- [Project timeline](#project-timeline)
 
 - [Product and workflow](#product-and-workflow)
 - [Scoring contract](#scoring-contract)
@@ -35,6 +37,25 @@ This describes the inspected implementation and the owner's decisions. It is int
 - [Live judging implementation target](#live-judging-implementation-target)
 - [Implementation handoff](#implementation-handoff)
 - [Maintenance and handoff](#maintenance-and-handoff)
+
+## Project timeline
+
+Updated 2026-10-09. Status distinguishes code verification, Git delivery and public deployment.
+
+| Date | Milestone | Evidence / status |
+| --- | --- | --- |
+| 2026-08-21 | Public competition release | Git `4416e2f`; recorded Sites version 3. Hosted availability was not reverified during closeout. |
+| 2026-10-07 | Master specification and agent routing | Git `e70bc46`; PROJECT_SPEC.md and AGENTS.md became the durable project references. |
+| 2026-10-08 | Earlier shared judging checkpoint | Git `d9ea167`, pushed to `github/codex/stage-heat-workflow` with explicit authorization. |
+| 2026-10-08 | Stage/heat implementation | Equal judge means, acknowledged heat submissions, whole-stage review, panel votes, head decisions, dual corrections/withdrawals and retained history; local D1/API/mock competition verification. |
+| 2026-10-08 | Local/shared setup and judge links | Reused setup editor; competition removal; persistent local D1 rehearsal links; head labels; v2 score/history preservation. |
+| 2026-10-08–09 | Consolidated setup presentation | One editor with original cards/bibs/theme and native expandable sections collapsed by default; duplicate legacy overview removed. |
+| 2026-10-09 | Completed-batch closeout | Pushed `f589b7c`; local/remote hashes match. Fresh 17 unit + 17 D1/API + 8 browser scenarios, lint, TypeScript and build passed. See [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery). |
+| 2026-10-09 | Next-batch policy and branding research | Confirmed organizer-only requests, individual/couple withdrawal, public judge names/no notes, owner-approved snapshots/revisions, continued operation without publishing, archive/shutdown policy and corrected community branding. Saved in [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) and [branding direction](NEXT_BATCH_SPEC.md#branding-direction). No implementation. |
+| 2026-10-09 | Repository account rename | Owner supplied `WesKof/CountryDanceJudgingSoftware`; verified its branch contains `f589b7c`. Same authorized branch and project. |
+| 2026-10-09 | Documentation consolidation | Four working documents: short agent instructions, master spec/timeline, verification/closeout report and temporary next-batch spec/branding/prompt. No application changes. |
+| Next, after owner spec review | Fresh GPT-6.1 Sol High local implementation | [Prepared prompt](NEXT_BATCH_SPEC.md#fresh-implementation-chat-prompt). Access/UI → requests/withdrawals → snapshots → local public pages → revisions/suspension → complete mock verification. Not started. |
+| Later, separately authorized | Hosted preparation and public release | Real domain/provider/auth setup, hosted migrations, venue/physical-device/capacity checks, deployment and publication. No date, purchase or deployment commitment. |
 
 ## Product and workflow
 
@@ -353,7 +374,7 @@ D1 is recommended for active structured judging; object storage is an alternativ
 
 ### Starting state and scope
 
-The owner resumed implementation on 2026-10-08 and settled the rules above. Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; Documents is a mirror. Branch: `codex/stage-heat-workflow`, tracking `github/codex/stage-heat-workflow`. Earlier uncommitted work was committed and explicitly pushed as `d9ea167`; the completed stage/setup batch is documented in [BATCH_CLOSEOUT.md](BATCH_CLOSEOUT.md). Fresh 2026-10-09 checks passed 17 unit, 17 local D1/API and all 8 browser scenarios plus lint, TypeScript and build. Next-batch work is specification only until the owner settles it. Inspect branch/status and compare affected files before any further sync. Never commit the parent Documents workspace as the app repository.
+The owner resumed implementation on 2026-10-08 and settled the rules above. Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; Documents is a mirror. Branch: `codex/stage-heat-workflow`, tracking `github/codex/stage-heat-workflow`. Earlier uncommitted work was committed and explicitly pushed as `d9ea167`; the completed stage/setup batch is documented in [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery). Fresh 2026-10-09 checks passed 17 unit, 17 local D1/API and all 8 browser scenarios plus lint, TypeScript and build. Next-batch work is specification only until the owner settles it. Inspect branch/status and compare affected files before any further sync. Never commit the parent Documents workspace as the app repository.
 
 No public deployment, hosted D1 provisioning/migration, service purchase or real results publication is authorized. Generated migrations are append-only. `pnpm db:local` applies local-only migrations through an ignored hash ledger after a build; it does not provision a database. Keep the local preview available and user data/open browser sessions intact.
 

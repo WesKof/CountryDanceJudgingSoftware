@@ -1,6 +1,6 @@
 # Local implementation verification — 2026-10-09
 
-Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`, branch `codex/stage-heat-workflow`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [BATCH_CLOSEOUT.md](BATCH_CLOSEOUT.md) for this batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
+Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`, branch `codex/stage-heat-workflow`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) for this batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
 
 ## Fresh closeout checks — 2026-10-09
 
@@ -78,3 +78,20 @@ This supersedes the preceding follow-up’s separate legacy overview: only one s
 Browser tests use actual summary clicks/keyboard activation before operating controls. The equivalent local/shared setup test verifies every section starts collapsed, only one Event name field exists, the duplicate overview is absent, Enter toggles a section, collapsing hides its fields, and the existing edit/save/reload/remove/import/backup sequence still works. Local-link tests continue through the collapsed access section and reopen the same persisted event. The final phone (390px) and desktop (1440px) collapsed-state screenshots were inspected. Section headers, arrows, counts and fields fit without horizontal overflow. Competition-card selection opens the matching round, and expanding/collapsing alone leaves Save setup disabled. Two prior test steps were updated to expand the new sections after a reload/new round; a subsequent connection-refused run was traced to the stopped preview and rerun after restarting it. Full workflow regression completion is recorded below. Unit tests (17), lint, TypeScript and build passed after consolidation.
 
 Final consolidation verification: all 8 distinct browser scenarios passed (7 in the final broad run, then the complete stage rehearsal passed on its targeted rerun after updating the removed-heading assertion). The full mock completed setup, multiple heats/songs, acknowledged submissions, stage review, exact dual correction approvals, panel votes, advancement, fixed-pair finals, final results, exports, withdrawal and backup restore. The final source also passed 17 unit tests, lint, TypeScript, build and whitespace checks. The preview was restarted on 127.0.0.1:3000 without resetting its local D1 or the owner’s browser state. Documentation and affected sources were compared/synced to the preferred checkout. Hosted deployment, physical-phone/venue checks and real publishing remain unperformed.
+
+
+## Batch closeout and Git delivery
+
+Completed implementation committed and pushed as [`f589b7c6f5a0cde60c29b689019bed2137f19d4d`](https://github.com/WesKof/CountryDanceJudgingSoftware/commit/f589b7c6f5a0cde60c29b689019bed2137f19d4d). The remote branch hash matched local HEAD after push; the preferred working tree was clean. The commit contains the 43 explicitly staged implementation/test/documentation files and detailed notes. The renamed repository was subsequently verified to contain that same branch/commit. Subsequent closeout changes are documentation/specification only.
+
+### Preservation and handoff
+
+All 41 pre-closeout modified/untracked batch files matched the Documents mirror before edits. The index was initially empty. No unrelated dirty tracked file was identified; ignored local D1, credentials, build output, test artifacts and work files remain outside the commit. Commit only the captured batch file list plus closeout documentation, never blanket-stage a parent workspace.
+
+Current implementation deliberately still includes legacy local Score/Results and existing result exports/optional Sheets publishing. The newly requested organizer-only screen, single judge page, view-only organizer Score, reorganized imports and separately controlled public-results service are future specification work. They are not implemented by this closeout.
+
+Read AGENTS.md and PROJECT_SPEC.md first; use the test report and timeline for evidence. The owner answered the next batch's access, withdrawal, public disclosure, revision, service-continuity and branding questions on October 9. See [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) for confirmed rules and the remaining review gate. Do not implement that batch or create an implementation chat until the owner finishes specification review and authorizes it. Deployment, public publication and purchases remain separately unauthorized.
+
+### Documentation follow-up — 2026-10-09
+
+Planning documents were pushed as `3401ce0`. The owner then requested consolidation into four working files: AGENTS.md, PROJECT_SPEC.md, LOCAL_TEST_REPORT.md and NEXT_BATCH_SPEC.md. Timeline, closeout evidence, branding research and the future prompt are retained within those files. Application code and historical test evidence are unchanged. Documentation link/anchor, reference, mirror-content and Git whitespace checks apply; runtime tests are not repeated for documentation-only edits.
