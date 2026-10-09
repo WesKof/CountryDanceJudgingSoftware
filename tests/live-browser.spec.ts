@@ -1,3 +1,4 @@
+import { expandSetup } from './setup-browser-helpers';
 import { test, expect, type APIRequestContext, type Page, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { liveFixture } from './live-fixture';
@@ -104,7 +105,7 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
   await expect(desk.getByRole('heading', { name: lastSong.title, exact: true }).first()).toBeVisible({ timeout: 10000 });
   await clickCommand(desk, desk.getByRole('button', { name: 'Start discussion after all songs' }));
   await submitAndApprove([judge, second, head], head);
-  await desk.reload(); await desk.getByLabel('Select round to configure').selectOption(setup.rounds[5].id);
+  await desk.reload(); await expandSetup(desk); await desk.getByLabel('Select round to configure').selectOption(setup.rounds[5].id); await expandSetup(desk);
   await desk.getByLabel('Finalists per role / number of pairs').fill('2');
   for (const s of setup.rounds[4].subjects) await desk.getByRole('checkbox', { name: `#${s.number} ${s.primary} ${s.role}` }).check();
   await desk.getByLabel('#201 Dancer 1 pairs with').selectOption(setup.rounds[4].subjects[2].id); await desk.getByLabel('#202 Dancer 2 pairs with').selectOption(setup.rounds[4].subjects[3].id);
@@ -160,7 +161,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   advanced.subjects = []; advanced.heats.forEach((h) => { h.subjectIds = []; h.songs.forEach((p) => { p.partners = []; }); });
   const created = await api<{ path: string }>(request, '', { action: 'create', requestId: crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', ''), name: 'Heat editing regression', venue: 'Local test', date: '' });
   const organizer = created.path.split('/').at(-1)!;
-  await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`);
+  await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`); await expandSetup(page);
   await expect(page.getByRole('heading', { name: 'Event-long private judge links', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '02 Score', exact: true }).click();
   const start = page.getByRole('button', { name: 'Start prelims judging', exact: true });
@@ -168,7 +169,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   await expect(page.getByText('Strictly · Beginner / Intermediate · prelims: Heat 2 has no entrants. Assign contestants or remove this heat.', { exact: true })).toBeVisible();
   await expect(page.getByText('Jack & Jill · Advanced · prelims: Add entrants to this round.', { exact: true })).toBeVisible();
   expect((await api<LiveView>(request, organizer)).rounds).toHaveLength(0);
-  await page.getByRole('button', { name: '01 Set up', exact: true }).click();
+  await page.getByRole('button', { name: '01 Set up', exact: true }).click(); await expandSetup(page);
   page.once('dialog', (d) => void d.dismiss());
   await page.getByRole('button', { name: 'Remove Heat 1', exact: true }).click();
   await expect(page.locator('.shared-heat')).toHaveCount(3);
@@ -209,7 +210,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   for (let i = 1; i < count; i++) await clickCommand(page, page.getByRole('button', { name: 'Next song / heat', exact: true }));
   await expect(discussion).toBeEnabled(); await clickCommand(page, discussion);
   expect((await api<LiveView>(request, organizer)).rounds.every((r) => r.phase === 'discussion')).toBe(true);
-  await page.getByRole('button', { name: '01 Set up', exact: true }).click();
+  await page.getByRole('button', { name: '01 Set up', exact: true }).click(); await expandSetup(page);
   await expect(page.getByRole('button', { name: 'Remove Heat 2', exact: true })).toBeDisabled();
 });
 
@@ -217,7 +218,7 @@ test('competition removal updates both blocks, persists, protects live work and 
   const setup = liveFixture(2);
   const created = await api<{ path: string }>(request, '', { action: 'create', requestId: crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', ''), name: 'Competition editing regression', venue: 'Local test', date: '' });
   const organizer = created.path.split('/').at(-1)!;
-  await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`);
+  await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`); await expandSetup(page);
   await expect(page.getByRole('heading', { name: 'Event-long private judge links', exact: true })).toBeVisible();
   const removed = setup.competitions[0], removedRounds = setup.rounds.filter((r) => r.competitionId === removed.id);
   const originalLinks = (await api<LiveView>(request, organizer)).judgeLinks;
@@ -235,7 +236,7 @@ test('competition removal updates both blocks, persists, protects live work and 
   expect(saved.setup.rounds.some((r) => r.competitionId === removed.id)).toBe(false);
   expect(saved.setup.blocks.flatMap((b) => b.roundIds).some((id) => removedRounds.some((r) => r.id === id))).toBe(false);
   expect(saved.judgeLinks).toEqual(originalLinks);
-  await page.reload(); await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(3);
+  await page.reload(); await expandSetup(page); await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(3);
   // Empty programs remain editable; default blocks can be reused when adding a new competition.
   for (const c of setup.competitions.slice(1)) {
     page.once('dialog', (d) => void d.accept());
@@ -243,12 +244,12 @@ test('competition removal updates both blocks, persists, protects live work and 
   }
   await clickCommand(page, page.getByRole('button', { name: 'Save setup', exact: true }));
   expect((await api<LiveView>(request, organizer)).setup.rounds).toHaveLength(0);
-  await page.getByRole('button', { name: 'Add competition', exact: true }).click();
+  await page.getByRole('button', { name: 'Add competition', exact: true }).click(); await expandSetup(page);
   await expect(page.getByRole('combobox', { name: 'Select round to configure', exact: true }).locator('option')).toHaveCount(2);
   await clickCommand(page, page.getByRole('button', { name: 'Save setup', exact: true }));
   const fresh = await api<LiveView>(request, organizer); expect(fresh.setup.competitions).toHaveLength(1); expect(fresh.setup.blocks.every((b) => b.roundIds.length === 1)).toBe(true);
   await command(request, organizer, { action: 'setup', setup }); await command(request, organizer, { action: 'open-block', blockId: setup.blocks[0].id });
-  await page.reload(); await expect(page.getByRole('button', { name: /^Remove .* competition$/ }).first()).toBeDisabled();
+  await page.reload(); await expandSetup(page); await expect(page.getByRole('button', { name: /^Remove .* competition$/ }).first()).toBeDisabled();
   await page.getByText('Versioned setup correction', { exact: true }).click();
   await page.getByRole('checkbox', { name: 'Unlock frozen setup for an explicit correction', exact: true }).check();
   await page.getByRole('textbox', { name: 'Correction reason', exact: true }).fill('Remove a cancelled competition');

@@ -11,4 +11,7 @@ test('delayed reads cannot roll back an acknowledged cell or room version; new r
   delayed.version = 1; delayed.context.performanceId = 'song1'; assert.equal(mergeLiveView(current, delayed).context.performanceId, 'song2');
   const reopened = structuredClone(current); reopened.version = 3; reopened.ballots[0].roundKey = 'r:2'; reopened.ballots[0].version = 0; reopened.ballots[0].cells = {};
   assert.deepEqual(mergeLiveView(current, reopened).ballots[0].cells, {});
+  current.heatSubmissions = [{ id: 'heat-submission', roundKey: 'r:1', judgeId: 'j', heatId: 'h', version: 1, ballotVersion: 3, createdAt: '' }];
+  const oldPoll = structuredClone(current); oldPoll.heatSubmissions = [];
+  assert.equal(mergeLiveView(current, oldPoll).heatSubmissions?.[0].id, 'heat-submission');
 });

@@ -510,3 +510,26 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 }
 
 .shared-shell .result-sheet, .shared-shell .page-stack { min-width: 0; }
+
+/* The embedded setup uses shared fields, without the standalone shell rail column. */
+.shared-shell.local-setup { grid-template-columns: minmax(0, 1fr); }
+
+/* One setup editor retains the original cards and exposes compact native accordions. */
+.setup-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.setup-editor-grid > :last-child { grid-column: 1 / -1; }
+.shared-shell details.setup-section { padding: 0; border-radius: 16px; }
+.shared-shell .setup-section > summary { display: flex; align-items: center; gap: 12px; justify-content: flex-start; list-style: none; margin: 0; cursor: pointer; }
+.shared-shell .setup-section > summary::-webkit-details-marker { display: none; }
+.shared-shell .setup-section > summary::before { content: '▸'; color: var(--forest); font-size: 20px; flex: 0 0 16px; }
+.shared-shell .setup-section[open] > summary::before { content: '▾'; }
+.shared-shell .setup-section > summary .count-pill { margin-left: auto; }
+.shared-shell .setup-section > summary h2 { margin: 0; }
+.shared-shell .setup-section > summary:focus-visible { outline: 3px solid var(--gold); outline-offset: -4px; }
+.shared-shell .setup-section[open] > summary { border-bottom: 1px solid var(--line); }
+.setup-competition { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.setup-competition .competition-card { width: 100%; }
+@media (max-width: 900px) { .setup-editor-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.shared-shell .setup-section > summary { flex-wrap: nowrap; }
+.shared-shell .setup-section > summary > div { min-width: 0; }
+@media (max-width: 600px) { .shared-shell .setup-section > summary h2 { font-size: 21px; } }

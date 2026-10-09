@@ -38,7 +38,7 @@ function subject(value: unknown): LiveSubject {
 }
 export function validateSetup(value: unknown): LiveSetup {
   const s = record(value);
-  const judges = array(s.judges, 15).map((value) => { const j = record(value); return { id: id(j.id), name: text(j.name, 'judge name', 160, true) }; });
+  const judges = array(s.judges, 15).map((value) => { const j = record(value); return { id: id(j.id), name: text(j.name, 'judge name', 160, true), ...(j.participantId !== undefined ? { participantId: text(j.participantId, 'participant identifier', 160).trim().toLowerCase() } : {}) }; });
   const competitions: LiveSetup['competitions'] = array(s.competitions, 8).map((value) => {
     const c = record(value); requireRule(c.format === 'Strictly' || c.format === 'Jack & Jill', 'Invalid competition format.');
     return { id: id(c.id), format: c.format, division: text(c.division, 'division', 120, true) };
@@ -66,6 +66,14 @@ export function validateSetup(value: unknown): LiveSetup {
     return { id: id(b.id), label: text(b.label, 'block label', 120, true), kind: b.kind, roundIds: array(b.roundIds, 16).map(id) };
   });
   const setup: LiveSetup = { name: text(s.name, 'event name', 160, true), venue: text(s.venue, 'venue'), date: text(s.date, 'date', 10), headJudgeId: s.headJudgeId ? id(s.headJudgeId) : '', judges, competitions, rounds, blocks };
+  if (s.workflow === 'stage-v1') {
+    Object.assign(setup, { workflow: 'stage-v1', organizerName: text(s.organizerName ?? '', 'organizer name', 160), organizerParticipantId: text(s.organizerParticipantId ?? '', 'organizer participant identifier', 160).trim().toLowerCase(), separationAttested: s.separationAttested === true });
+    const identities = judges.map((j) => j.participantId).filter((p): p is string => Boolean(p));
+    unique(identities, 'participant identifier');
+    requireRule(!identities.includes(setup.organizerParticipantId!), 'The organizer cannot serve as a judge or head judge. Use distinct participant identifiers.');
+    unique(blocks.map((b) => b.kind), 'stage');
+    requireRule(rounds.every((r) => r.heats.every((h) => h.songs.length >= 2 && h.songs.length <= 3)), 'Schedule 2–3 songs for every heat.');
+  }
   unique(judges.map((s) => s.id), 'judge'); unique(competitions.map((s) => s.id), 'competition'); unique(rounds.map((s) => s.id), 'round'); unique(blocks.map((s) => s.id), 'block');
   const ordered = blocks.flatMap((b) => b.roundIds); unique(ordered, 'scheduled round');
   requireRule(ordered.length === rounds.length && rounds.every((r) => blocks.some((b) => b.id === r.blockId && b.kind === r.kind && b.roundIds.includes(r.id))), 'Every round must be scheduled exactly once in its matching block.');
@@ -88,6 +96,8 @@ export function roundOpeningIssues(setup: LiveSetup, round: LiveRound): string[]
   const prefix = `${competition.format} · ${competition.division} · ${round.kind}: `;
   const issues: string[] = [];
   if (!setup.judges.length || !setup.headJudgeId) issues.push('Add judges and designate the event head judge.');
+  if (setup.workflow === 'stage-v1' && (!setup.organizerName?.trim() || !setup.organizerParticipantId || !setup.separationAttested || setup.judges.some((j) => !j.participantId))) issues.push('Enter distinct organizer/panel participant identifiers and confirm separation of duties.');
+  if (setup.workflow === 'stage-v1' && round.judgeIds.length && !round.judgeIds.includes(setup.headJudgeId)) issues.push('Include the event head judge among this stage’s required judges.');
   if (!round.subjects.length) issues.push('Add entrants to this round.');
   if (!round.heats.length) issues.push('Add a heat and its songs.');
   for (const heat of round.heats) {

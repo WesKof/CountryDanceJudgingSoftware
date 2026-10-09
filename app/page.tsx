@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { normalizeHeader, parseCsv, serializeCsv } from '@/lib/csv';
 import {
   createDefaultState,
@@ -13,6 +12,8 @@ import {
   type Mark,
 } from '@/lib/domain';
 import { ballotProgress, calculateResults, hasTies, MARKS, MARK_VALUES, scoreTotal } from '@/lib/scoring';
+import LocalSetup from '@/components/live/local-setup';
+import { emptyCompetition, reconcileLocalSetup } from '@/lib/demo-setup';
 
 const STORAGE_KEY = 'country-dance-judging:v2';
 const PUBLISHER_KEY_STORAGE_KEY = 'country-dance-judging:publisher-key';
@@ -48,14 +49,15 @@ function safeFilename(value: string) {
 }
 
 export default function Home() {
-  const [state, setState] = useState<AppState>(createDefaultState);
+  const [state, setStoredState] = useState<AppState>(createDefaultState);
+  const setState = useCallback((value: AppState | ((current: AppState) => AppState)) => {
+    setStoredState((current) => reconcileLocalSetup(typeof value === 'function' ? value(current) : value));
+  }, []);
   const [view, setView] = useState<View>('scoring');
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState('Loading local event…');
   const [notice, setNotice] = useState('');
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [newJudge, setNewJudge] = useState('');
-  const [entryDraft, setEntryDraft] = useState({ number: '', first: '', second: '', role: 'Lead' as 'Lead' | 'Follow' });
   const [publishing, setPublishing] = useState(false);
   const [publisherKey, setPublisherKey] = useState('');
 
@@ -76,7 +78,7 @@ export default function Home() {
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [setState]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -104,7 +106,7 @@ export default function Home() {
     }
   }, [publisherKey, hydrated]);
 
-  const competition = state.competitions.find((item) => item.id === state.activeCompetitionId) ?? state.competitions[0];
+  const competition = state.competitions.find((item) => item.id === state.activeCompetitionId) ?? state.competitions[0] ?? emptyCompetition;
   const progress = useMemo(() => ballotProgress(competition, state.judges), [competition, state.judges]);
   const results = useMemo(() => calculateResults(competition, state.judges), [competition, state.judges]);
   const resultGroups = useMemo(() => Array.from(new Set(results.map((row) => row.group))), [results]);
@@ -145,75 +147,6 @@ export default function Home() {
     if (!window.confirm(`Clear every mark for ${competition.name} · ${competition.division}?`)) return;
     updateCompetition((current) => ({ ...current, scores: {} }));
     setNotice('The active ballot was cleared. Existing result revisions were preserved.');
-  }
-
-  function addJudge(event: FormEvent) {
-    event.preventDefault();
-    const name = newJudge.trim();
-    if (!name) return;
-    setState((current) => ({ ...current, judges: [...current.judges, { id: createId('judge'), name }] }));
-    setNewJudge('');
-  }
-
-  function removeJudge(id: string) {
-    if (!window.confirm('Remove this judge and their marks from every active ballot?')) return;
-    setState((current) => ({
-      ...current,
-      judges: current.judges.filter((judge) => judge.id !== id),
-      competitions: current.competitions.map((item) => ({
-        ...item,
-        scores: Object.fromEntries(Object.entries(item.scores).map(([entryId, marks]) => {
-          const nextMarks = { ...marks };
-          delete nextMarks[id];
-          return [entryId, nextMarks];
-        })),
-      })),
-    }));
-  }
-
-  function addEntry(event: FormEvent) {
-    event.preventDefault();
-    const number = Number(entryDraft.number);
-    const first = entryDraft.first.trim();
-    const second = entryDraft.second.trim();
-    if (!Number.isFinite(number) || !first || (competition.format === 'Strictly' && !second)) {
-      setNotice('Add a valid contestant number and all required names.');
-      return;
-    }
-    if (competition.entries.some((entry) => entry.number === number)) {
-      setNotice(`Contestant number ${number} is already in this competition.`);
-      return;
-    }
-    const entry: Entry = competition.format === 'Strictly'
-      ? { id: createId('entry'), number, lead: first, follow: second }
-      : { id: createId('entry'), number, name: first, role: entryDraft.role };
-    updateCompetition((current) => ({ ...current, entries: [...current.entries, entry].sort((a, b) => a.number - b.number) }));
-    setEntryDraft({ number: '', first: '', second: '', role: entryDraft.role });
-  }
-
-  function removeEntry(id: string) {
-    if (!window.confirm('Remove this contestant from the active competition?')) return;
-    updateCompetition((current) => {
-      const scores = { ...current.scores };
-      delete scores[id];
-      return { ...current, entries: current.entries.filter((entry) => entry.id !== id), scores };
-    });
-  }
-
-  function addCompetition(format: Competition['format']) {
-    const id = createId('competition');
-    const next: Competition = {
-      id,
-      name: format,
-      format,
-      division: 'Open',
-      round: 'Finals',
-      entries: [],
-      scores: {},
-      revisions: [],
-    };
-    setState((current) => ({ ...current, competitions: [...current.competitions, next], activeCompetitionId: id }));
-    setNotice(`${format} competition added. Add its contestants below or import a CSV.`);
   }
 
   function finalizeResults() {
@@ -382,13 +315,13 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${view === 'event' ? 'shared-shell' : ''}`}>
       <aside className="side-rail" aria-label="Primary navigation">
-        <button className="brand-mark" type="button" onClick={() => setView('event')} aria-label="Country Dance Judging home">CDJ</button>
+        <button className="brand-mark" type="button" disabled={!hydrated} onClick={() => setView('event')} aria-label="Country Dance Judging home">CDJ</button>
         <nav className="rail-nav">
           <p className="rail-kicker">Competition flow</p>
           {navigation.map((item) => (
-            <button key={item.id} type="button" className={`rail-item ${view === item.id ? 'active' : ''}`} aria-current={view === item.id ? 'step' : undefined} onClick={() => setView(item.id)}>
+            <button key={item.id} type="button" disabled={!hydrated} className={`rail-item ${view === item.id ? 'active' : ''}`} aria-current={view === item.id ? 'step' : undefined} onClick={() => setView(item.id)}>
               <span className="rail-step">{item.number}</span>
               <span className="rail-copy"><strong>{item.label}</strong><small>{item.caption}</small></span>
             </button>
@@ -407,50 +340,13 @@ export default function Home() {
 
         {view === 'event' && (
           <div className="page-stack">
-            <section className="hero-panel"><div><p className="kicker">Event foundation</p><h2>Set up the desk once</h2><p>Event details, competitions, judges, and contestants stay on this device and feed every ballot.</p><Link className="quiet-button" href="/live/new" prefetch={false}>Create a shared live event</Link></div><span className="format-stamp">{state.competitions.length} competitions</span></section>
 
-            <div className="setup-grid">
-              <section className="form-panel">
-                <div className="panel-heading compact"><div><p className="kicker">Event</p><h2>Details</h2></div></div>
-                <div className="form-body three-fields">
-                  <label><span>Event name</span><input value={state.event.name} onChange={(event) => setState((current) => ({ ...current, event: { ...current.event, name: event.target.value } }))} /></label>
-                  <label><span>Venue</span><input value={state.event.venue} onChange={(event) => setState((current) => ({ ...current, event: { ...current.event, venue: event.target.value } }))} /></label>
-                  <label><span>Date</span><input type="date" value={state.event.date} onChange={(event) => setState((current) => ({ ...current, event: { ...current.event, date: event.target.value } }))} /></label>
-                </div>
-              </section>
 
-              <section className="form-panel">
-                <div className="panel-heading compact"><div><p className="kicker">Competitions</p><h2>Program</h2></div><div className="button-pair"><button type="button" className="quiet-button" onClick={() => addCompetition('Strictly')}>+ Strictly</button><button type="button" className="quiet-button" onClick={() => addCompetition('Jack & Jill')}>+ J&amp;J</button></div></div>
-                <div className="competition-list">
-                  {state.competitions.map((item) => <button type="button" key={item.id} className={`competition-card ${item.id === competition.id ? 'selected' : ''}`} onClick={() => switchCompetition(item.id)}><span className="competition-monogram">{item.format === 'Strictly' ? 'ST' : 'J&J'}</span><span><strong>{item.name}</strong><small>{item.division} · {item.round} · {item.entries.length} entries</small></span><b>→</b></button>)}
-                </div>
-                <div className="form-body four-fields inset-form">
-                  <label><span>Name</span><input value={competition.name} onChange={(event) => updateCompetition((current) => ({ ...current, name: event.target.value }))} /></label>
-                  <label><span>Format</span><input value={competition.format} disabled /></label>
-                  <label><span>Division</span><input value={competition.division} onChange={(event) => updateCompetition((current) => ({ ...current, division: event.target.value }))} /></label>
-                  <label><span>Round</span><input value={competition.round} onChange={(event) => updateCompetition((current) => ({ ...current, round: event.target.value }))} /></label>
-                </div>
-              </section>
-            </div>
-
-            <div className="setup-grid lower-grid">
-              <section className="form-panel">
-                <div className="panel-heading compact"><div><p className="kicker">Officials</p><h2>Judges</h2></div><span className="count-pill">{state.judges.length}</span></div>
-                <form className="inline-form" onSubmit={addJudge}><label className="sr-only" htmlFor="judge-name">Judge name</label><input id="judge-name" placeholder="Judge name" value={newJudge} onChange={(event) => setNewJudge(event.target.value)} /><button className="primary-button" type="submit">Add judge</button></form>
-                <ul className="manage-list">{state.judges.map((judge, index) => <li key={judge.id}><span className="list-index">{String(index + 1).padStart(2, '0')}</span><strong>{judge.name}</strong><button type="button" onClick={() => removeJudge(judge.id)}>Remove</button></li>)}</ul>
-              </section>
-
-              <section className="form-panel">
-                <div className="panel-heading compact"><div><p className="kicker">Active competition</p><h2>{competition.format === 'Strictly' ? 'Couples' : 'Dancers'}</h2></div><span className="count-pill">{competition.entries.length}</span></div>
-                <form className={`entry-form ${competition.format === 'Strictly' ? 'strictly' : ''}`} onSubmit={addEntry}>
-                  <label><span>Number</span><input inputMode="numeric" placeholder="128" value={entryDraft.number} onChange={(event) => setEntryDraft((current) => ({ ...current, number: event.target.value }))} /></label>
-                  <label><span>{competition.format === 'Strictly' ? 'Lead' : 'Name'}</span><input placeholder="Full name" value={entryDraft.first} onChange={(event) => setEntryDraft((current) => ({ ...current, first: event.target.value }))} /></label>
-                  {competition.format === 'Strictly' ? <label><span>Follow</span><input placeholder="Full name" value={entryDraft.second} onChange={(event) => setEntryDraft((current) => ({ ...current, second: event.target.value }))} /></label> : <label><span>Role</span><select value={entryDraft.role} onChange={(event) => setEntryDraft((current) => ({ ...current, role: event.target.value as 'Lead' | 'Follow' }))}><option>Lead</option><option>Follow</option></select></label>}
-                  <button className="primary-button" type="submit">Add</button>
-                </form>
-                <ul className="manage-list entrant-list">{competition.entries.map((entry) => <li key={entry.id}><span className="number-badge small">{entry.number}</span><span><strong>{entryPrimary(entry, competition)}</strong><small>{entrySecondary(entry, competition)}</small></span><button type="button" onClick={() => removeEntry(entry.id)}>Remove</button></li>)}</ul>
-              </section>
-            </div>
+            <LocalSetup state={state} save={(next) => {
+              const saved = reconcileLocalSetup(next);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+              setState(saved);
+            }} />
           </div>
         )}
 

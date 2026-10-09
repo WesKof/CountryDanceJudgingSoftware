@@ -4,7 +4,13 @@ import type { LiveView } from './types.ts';
 export function mergeLiveView(current: LiveView | null, incoming: LiveView): LiveView {
   if (!current || current.eventId !== incoming.eventId) return incoming;
   if (current.version > incoming.version) return current;
-  return { ...incoming, ballots: incoming.ballots.map((ballot) => {
+  const heatSubmissions = incoming.heatSubmissions ? [...incoming.heatSubmissions] : undefined;
+  if (heatSubmissions && current.version === incoming.version) for (const previous of current.heatSubmissions ?? []) {
+    const i = heatSubmissions.findIndex((s) => s.roundKey === previous.roundKey && s.heatId === previous.heatId && s.judgeId === previous.judgeId);
+    if (i < 0) heatSubmissions.push(previous);
+    else if (heatSubmissions[i].version < previous.version) heatSubmissions[i] = previous;
+  }
+  return { ...incoming, heatSubmissions, ballots: incoming.ballots.map((ballot) => {
     const previous = current.ballots.find((b) => b.roundKey === ballot.roundKey && b.judgeId === ballot.judgeId);
     if (!previous) return ballot;
     const cells = { ...ballot.cells };

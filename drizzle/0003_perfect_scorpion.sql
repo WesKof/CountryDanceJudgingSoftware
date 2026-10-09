@@ -1,0 +1,1 @@
+ALTER TABLE `live_heat_submissions` ADD `acknowledged_at` text DEFAULT '' NOT NULL;

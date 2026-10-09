@@ -41,7 +41,7 @@ export const approvals = sqliteTable('live_approvals', {
   id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   roundKey: text('round_key').notNull(), fingerprint: text('fingerprint').notNull(), snapshot: text('snapshot').notNull(),
   createdAt: text('created_at').notNull(), judgeId: text('judge_id').notNull(),
-}, (t) => [uniqueIndex('idx_live_approval_round').on(t.roundKey), index('idx_live_approvals_event').on(t.eventId)]);
+}, (t) => [uniqueIndex('idx_live_approval_version').on(t.roundKey, t.fingerprint), index('idx_live_approvals_event').on(t.eventId)]);
 export const receipts = sqliteTable('live_receipts', {
   id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   inputHash: text('input_hash').notNull(), response: text('response').notNull(),
@@ -50,3 +50,22 @@ export const receipts = sqliteTable('live_receipts', {
 export const guards = sqliteTable('live_mutation_guards', {
   id: text('id').primaryKey(), passed: integer('passed').notNull(),
 }, (t) => [check('live_guard_passed', sql`${t.passed} = 1`)]);
+
+export const heatSubmissions = sqliteTable('live_heat_submissions', {
+  id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  roundKey: text('round_key').notNull().references(() => roundVersions.key), heatId: text('heat_id').notNull(), judgeId: text('judge_id').notNull(),
+  version: integer('version').notNull(), ballotVersion: integer('ballot_version').notNull(), snapshot: text('snapshot').notNull(),
+  supersedes: text('supersedes'), createdAt: text('created_at').notNull(),
+  acknowledgedAt: text('acknowledged_at').notNull().default(''),
+}, (t) => [uniqueIndex('idx_live_heat_submission_version').on(t.roundKey, t.heatId, t.judgeId, t.version), index('idx_live_heat_submissions_event').on(t.eventId)]);
+
+export const stageVotes = sqliteTable('live_stage_votes', {
+  id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  roundKey: text('round_key').notNull(), fingerprint: text('fingerprint').notNull(), tieKey: text('tie_key').notNull(), judgeId: text('judge_id').notNull(),
+  selected: text('selected').notNull(), createdAt: text('created_at').notNull(),
+}, (t) => [uniqueIndex('idx_live_stage_vote_scope').on(t.roundKey, t.fingerprint, t.tieKey, t.judgeId), index('idx_live_stage_votes_event').on(t.eventId)]);
+
+export const reviewRequests = sqliteTable('live_review_requests', {
+  id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  requestId: text('request_id').notNull(), version: integer('version').notNull(), data: text('data').notNull(),
+}, (t) => [uniqueIndex('idx_live_request_version').on(t.requestId, t.version), index('idx_live_review_requests_event').on(t.eventId)]);

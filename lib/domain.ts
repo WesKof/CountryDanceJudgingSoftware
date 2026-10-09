@@ -1,3 +1,5 @@
+import type { LiveSetup } from './live/types.ts';
+
 export type Mark = '' | 'Yes' | 'A1' | 'A2' | 'No';
 
 export type Judge = {
@@ -55,6 +57,9 @@ export type AppState = {
   competitions: Competition[];
   activeCompetitionId: string;
   publisherUrl: string;
+  // Optional setup-only extension. Legacy totals and revisions retain their v2 meaning.
+  demoSetup?: LiveSetup;
+  removedCompetitions?: Competition[];
 };
 
 export function createId(prefix: string) {
@@ -130,7 +135,8 @@ export function isAppState(value: unknown): value is AppState {
     && Boolean(candidate.event)
     && Array.isArray(candidate.judges)
     && Array.isArray(candidate.competitions)
-    && candidate.competitions.length > 0
     && typeof candidate.activeCompetitionId === 'string'
-    && candidate.competitions.some((competition) => competition.id === candidate.activeCompetitionId);
+    && (candidate.competitions.length === 0
+      ? candidate.activeCompetitionId === ''
+      : candidate.competitions.some((competition) => competition.id === candidate.activeCompetitionId));
 }

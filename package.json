@@ -11,7 +11,7 @@
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "test:live": "node --experimental-strip-types --test tests/live-api.test.mts",
+    "test:live": "node --experimental-strip-types --test tests/*api.test.mts",
     "test:browser": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:local": "node scripts/migrate-local.mjs"
