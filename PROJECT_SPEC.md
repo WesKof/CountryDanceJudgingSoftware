@@ -1,6 +1,6 @@
 # Country Dance Judging — master design, specification, and operating reference
 
-Document version: 1.14. Stage/heat implementation resumed at the owner’s request and built/tested locally on 2026-10-08. Earlier uncommitted implementation was preserved in checkpoint `d9ea167`, pushed with explicit destination approval to `github/codex/stage-heat-workflow`. The completed stage batch is being closed out on that branch; see [BATCH_CLOSEOUT.md](BATCH_CLOSEOUT.md) and [PROJECT_TIMELINE.md](PROJECT_TIMELINE.md). Baseline release: `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; documentation baseline: `e70bc46`. No deployment, hosted provisioning or paid service was performed.
+Document version: 1.15. Stage/heat implementation resumed at the owner's request and built/tested locally on 2026-10-08. Earlier work was preserved in checkpoint `d9ea167`; the completed stage/setup batch was verified and pushed as `f589b7c` on 2026-10-09 to `github/codex/stage-heat-workflow`. The owner renamed the GitHub account to `WesKof`; the authorized repository is now `https://github.com/WesKof/CountryDanceJudgingSoftware.git`. See [BATCH_CLOSEOUT.md](BATCH_CLOSEOUT.md) and [PROJECT_TIMELINE.md](PROJECT_TIMELINE.md). Baseline release: `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; documentation baseline: `e70bc46`. No deployment, hosted provisioning or paid service was performed.
 
 This describes the inspected implementation and the owner's decisions. It is intended for people and coding assistants. Source links are relative to the application repository. External hosting and Google configuration are dated observations, not live guarantees. If code and this document disagree, investigate and update the document; do not silently change behavior to fit stale prose.
 
@@ -20,6 +20,7 @@ This describes the inspected implementation and the owner's decisions. It is int
 - **Sharing:** public access was enabled and Sites version 3 deployed on 2026-08-21. The current public URL and GitHub branch are listed below; live access was not rechecked for this documentation pass.
 - **Important limits:** local/demo saves and legacy backup validation retain their earlier limitations. Shared pending edits recover on an online reload, but neither mode has a service worker or guaranteed offline first load/reload. Physical-phone, venue-connectivity, hosted D1/quota and real Google delivery checks remain unperformed.
 - **How to work:** read `AGENTS.md`, this Quick context and the affected section/source. Inspect preferred-checkout branch/status and compare mirror files before edits/sync. Keep implemented behavior, remaining decisions and external checks distinct.
+- **Next batch (specification only):** [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) records the owner's October 9 answers about private access, view-only organizer Score, organizer-only requests, individual/couple withdrawal, named-judge/no-note snapshots, owner-only publication, revisions, service suspension and corrected branding. See [BRANDING_RESEARCH.md](BRANDING_RESEARCH.md) and [IMPLEMENTATION_HANDOFF.md](IMPLEMENTATION_HANDOFF.md). These future rules do not claim current source has changed. Owner review/start authorization remains pending.
 
 ## Reference index
 
@@ -210,8 +211,8 @@ Inspected pins: React 19.2.6, Next 16.2.6, Vinext 1.0.0-beta.3, Vite 8.0.13, Typ
 
 ### Repository and local working copies
 
-- Repository: [wesleycoffman/CountryDanceJudgingSoftware](https://github.com/wesleycoffman/CountryDanceJudgingSoftware).
-- Current app branch: [`codex/stage-heat-workflow`](https://github.com/wesleycoffman/CountryDanceJudgingSoftware/tree/codex/stage-heat-workflow); pre-update checkpoint `d9ea167` is pushed, new changes are local.
+- Repository: [WesKof/CountryDanceJudgingSoftware](https://github.com/WesKof/CountryDanceJudgingSoftware), renamed by the owner on 2026-10-09.
+- Current app branch: [`codex/stage-heat-workflow`](https://github.com/WesKof/CountryDanceJudgingSoftware/tree/codex/stage-heat-workflow); checkpoint `d9ea167` and completed stage/setup batch `f589b7c` are pushed. Next-batch documents are specification only.
 - Local branch tracks `github/codex/stage-heat-workflow`. The prior local `main` tracked `github/codex/country-dance-judging-app`; GitHub historical `main` and `StrictlyMaster` are separate legacy branches.
 - Preferred development checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app` (uncompressed, separate app Git repository).
 - This task's workspace mirror: `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app`. Its parent Git repository is not the app repository. Check paths before commits or copies.
