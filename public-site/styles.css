@@ -4,3 +4,29 @@
 .admin-login{max-width:600px}.admin-login label{display:grid;gap:8px;margin-bottom:20px}input{padding:12px;border:1px solid var(--line);font:16px system-ui;max-width:100%;min-width:0}button:disabled{opacity:.5;cursor:default}.admin-request>form{margin:18px 0}.admin-request>div{margin-top:28px}.admin-request td:first-child{width:auto}.card form{margin:16px 0}.admin-request{scroll-margin-top:20px}
 
 main:has(.admin-request)>.page-title{padding:20px 0 10px}main:has(.admin-request)>.page-title h1{font-size:32px;margin:10px 0 14px}main:has(.admin-request)>.page-title p:not(.eyebrow){font-size:14px;margin:8px 0}main:has(.admin-request)>.filters{flex-direction:row;align-items:end;gap:12px;margin-bottom:18px}main:has(.admin-request)>.filters button{padding:12px;font-size:13px;flex-shrink:0}.admin-request h2{font-size:28px;margin:8px 0 10px}.admin-request>p{margin-bottom:10px}.admin-request>form{margin:12px 0}
+
+/* Match review clarity to the judging desk without changing the community identity. */
+.card, .winner-card { box-shadow: 0 5px 20px #23352e06; }
+.card table th { color: var(--ink); background: #edf0e7; border-top: 1px solid var(--line); }
+.card table tbody tr:nth-child(even) { background: #f8f6ef; }
+.card table td:first-child { color: var(--ink); font-weight: 650; }
+.card table td a { font-weight: 600; text-decoration-thickness: 1px; }
+.card table th:first-child { width: 24%; }
+.card table th:last-child { width: 24%; }
+.card table td:last-child { font-variant-numeric: tabular-nums; }
+.card details > summary { color: var(--ink); font-weight: 600; }
+.card details[open] > summary { border-bottom-color: var(--accent); margin-bottom: 12px; }
+.admin-request > form { padding: 14px; border: 1px solid #c6d6c9; border-left: 4px solid var(--ink); background: #edf0e7; }
+.admin-request > [role='status'] { font-size: 14px; }
+.admin-request > table th:first-child { width: 52%; }
+.admin-request > table th:nth-child(2) { width: 16%; }
+.admin-request > table th:last-child { width: 32%; }
+input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+button:disabled:hover { background: var(--ink); color: var(--white); }
+@media (max-width: 760px) {
+  .card table td { font-size: 14px; line-height: 1.45; padding: 12px 6px; }
+  .card table th { font-size: 10px; }
+  .card table td small { font-size: 12px; margin-top: 4px; }
+  .admin-request > form { padding: 10px; }
+  .admin-request > form button { width: 100%; justify-content: center; padding: 12px 10px; }
+}
