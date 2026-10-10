@@ -1,26 +1,24 @@
 # Country Dance Judging — master design, specification, and operating reference
 
-Document version: 1.16. Stage/heat implementation resumed at the owner's request and built/tested locally on 2026-10-08. Earlier work was preserved in checkpoint `d9ea167`; the completed stage/setup batch was verified and pushed as `f589b7c` on 2026-10-09 to `github/codex/stage-heat-workflow`. The owner renamed the GitHub account to `WesKof`; the authorized repository is now `https://github.com/WesKof/CountryDanceJudgingSoftware.git`. See [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) and [project timeline](PROJECT_SPEC.md#project-timeline). Baseline release: `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; documentation baseline: `e70bc46`. No deployment, hosted provisioning or paid service was performed.
+Document version: 1.26. Current local implementation: organizer Set up → Run → Results → Publish, private judge pages, automatic approved-Prelims finalists and inline actual J&J Finals draw. Publish now sends the complete event for approval; the separate results website’s admin approves and publishes all its competition results with one top action. Technical detail and history remain collapsed. Work is uncommitted on `codex/stage-heat-workflow` (baseline HEAD `c872aa9`). No deployment, hosted provisioning, real publication or purchase occurred. See [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) for verification and the timeline below for earlier changes.
 
 This describes the inspected implementation and the owner's decisions. It is intended for people and coding assistants. Source links are relative to the application repository. External hosting and Google configuration are dated observations, not live guarantees. If code and this document disagree, investigate and update the document; do not silently change behavior to fit stale prose.
 
 ## Quick context
 
-- **Purpose:** run friendly, relatively low-stakes country dance competitions and showcase a useful community project to potential employers through LinkedIn.
-- **Owner:** Wesley Coffman. Users include event organizers, friends in the dance community, and visitors exploring the demo.
-- **Product:** one competition desk with multiple competitions inside one locally saved event; Strictly couples and Jack & Jill individuals are supported.
-- **Experience:** numbered vertical navigation: Set up → Score → Results → Publish. The initial screen is Score with seeded example data. Publish also contains imports and backups.
-- **Architecture:** React 19 + TypeScript, Next-compatible App Router on Vinext/Vite; Cloudflare-compatible Sites deployment. Most application behavior is in `app/page.tsx`; scoring is separated into `lib/scoring.ts`.
-- **Storage:** the public/demo page retains browser localStorage and legacy v2 state. Deliberately created shared events use server API routes and a logical Sites D1 `DB` binding. This is implemented and tested with local D1; hosted provisioning, allowance and production migration checks remain pending. No custom accounts were added.
-- **Shared judging:** new events use `stage-v1`: separate song drafts, acknowledged heat snapshots, whole-stage read-only review, equal judge means, panel advancement voting, head deadlock/finals decisions and exact result approval. Corrections and started withdrawals require both distinct organizer and head approvals. Older shared events retain their block workflow. See [Stage workflow revision](#stage-workflow-revision--implemented-locally).
-- **Current work boundary (2026-10-09):** the completed batch and next-batch planning documents are pushed; current work is documentation consolidation only. Next-batch implementation is on hold until the owner settles the spec. Preserve legacy scoring, v2 data, the visual template and existing work. Do not publish or purchase services. The settled averaging, voting, missing-coverage, identity, note and correction/withdrawal rules below must not be reasked.
-- **Legacy/demo scoring:** Yes=10, A1=4.5, A2=4.3, No=0; incomplete entries excluded; ties share place with skipped ranks; Jack & Jill roles ranked separately. These legacy completeness rules do not define the revised heat-coverage/blank-song policy.
-- **Setup parity:** local `/` and shared organizer setup reuse `SetupEditor`, including competition/heat removal and an editable empty program. The local richer setup is an optional v2 extension; local score/result views still use legacy totals. Its enabled organizer/judge link buttons explicitly open a persistent local D1 rehearsal using the same stage routes as shared events. See [Local/demo and shared setup parity](#localdemo-and-shared-setup-parity).
-- **Google:** optional outgoing results publisher only. No automatic contestant fetch, no configured default endpoint. The secured script is a repository template; updating it here does not update Google.
-- **Sharing:** public access was enabled and Sites version 3 deployed on 2026-08-21. The current public URL and GitHub branch are listed below; live access was not rechecked for this documentation pass.
-- **Important limits:** local/demo saves and legacy backup validation retain their earlier limitations. Shared pending edits recover on an online reload, but neither mode has a service worker or guaranteed offline first load/reload. Physical-phone, venue-connectivity, hosted D1/quota and real Google delivery checks remain unperformed.
-- **How to work:** read `AGENTS.md`, this Quick context and the affected section/source. Inspect preferred-checkout branch/status and compare mirror files before edits/sync. Keep implemented behavior, remaining decisions and external checks distinct.
-- **Next batch (specification only):** [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) records the owner's October 9 answers about private access, view-only organizer Score, organizer-only requests, individual/couple withdrawal, named-judge/no-note snapshots, owner-only publication, revisions, service suspension and corrected branding. See [branding direction](NEXT_BATCH_SPEC.md#branding-direction) and [future chat prompt](NEXT_BATCH_SPEC.md#fresh-implementation-chat-prompt). These future rules do not claim current source has changed. Owner review/start authorization remains pending.
+- Owner: Wesley Coffman. The tool conducts Strictly couples and Jack & Jill competitions for the local community.
+- Organizer navigation remains Set up → Run → Results → Publish, with the original theme, cards, bibs and collapsed setup sections. Set up is the initial organizer screen. Run contains room controls and submission/coverage progress; Results contains review, amendments and withdrawals. Judge score entry stays on private links. Imports remain in Set up; private judge access is in Run and Data & recovery is in Publish.
+- Each private judge/head route has one Score page with assigned ballots, own notes and relevant review duties inline. Server role gates and explicit payload allowlists prevent organizer-page access or organizer configuration disclosure through judge links. Organizer distribution/testing access to judge links remains intentional.
+- Configure the finalist count from either Prelims or Finals setup. Exact head-approved advancement automatically populates unopened Finals: Strictly couples copy directly; J&J advancing leads/follows require the actual draw pairs before judging. Cutoff votes and frozen Finals protections remain.
+- New events use stage-v1: acknowledged heat snapshots, all-required-judge coverage/quorum, whole-stage review, equal judge means, full-panel advancement votes, head deadlock/finals placement decisions and exact head approvals. Organizer alone initiates/revises/cancels versioned corrections and withdrawals; distinct organizer and head explicitly approve the same exact version.
+- `/` is the working organizer desk, with real Set up → Run → Results → Publish tabs. It reopens the saved D1 event directly; new visitors get a fictional ready-to-start sample. Judges use separate private links. Legacy v2 bytes/scores/revisions remain untouched on startup; only preparation may be copied, with fresh IDs and no score conversion. Legacy backup/history/restore is nested in Data & recovery.
+- React 19 + TypeScript, Vinext/Vite App Router and logical D1 `DB`; four-second polling and revision/CAS guards remain. Operational data, local fake publisher storage and owner administration are separate. Publication is optional and never a scoring dependency.
+- Only completed competitions with current matching head-approved advancement/Finals can prepare an immutable public snapshot. Organizer reviews the exact complete-event preview and sends it for approval; the separate results website’s authenticated admin approves and publishes the event with one top action. Public judge names, marks, blanks and counts are included; private notes, participant IDs, access credentials, setup notes and internal reasons are excluded.
+- The separate local public site has Winners, Leaderboard, contestant/pair and named judge cards, Under review notices, immutable numbered revisions, stable current URLs and Superseded history. A durable outbox retries authorized local deliveries; the receiver validates current source, scope, ordering and independent numeric expectations before its atomic current-pointer change.
+- Publication suspension/shutdown retain operational judging and recovery. Post-Finals changed-membership replacement/redance, reinstatement/substitutes and legacy-only publication remain deferred; invalidate/block rather than invent policy.
+- Branding is the authorized Interskate/Lewisville community. A verified original 150×150 profile emblem is used only at a small size; cream/forest/copper public styling is an interpretation, with system/Georgia fonts and two credited original community photos. The judging template is preserved.
+- Physical devices, venue Wi-Fi, hosted D1/auth/domain/provisioning/migrations/deployment, production capacity/uptime and real publication remain unperformed. There is no service worker or guaranteed offline reload.
+- Read AGENTS.md and task-specific sections; inspect branch/status and compare mirror before edits/sync. Preserve existing/uncommitted data/work. Local success does not authorize public release or purchases.
 
 ## Reference index
 
@@ -29,13 +27,14 @@ This describes the inspected implementation and the owner's decisions. It is int
 - [Product and workflow](#product-and-workflow)
 - [Scoring contract](#scoring-contract)
 - [Data and persistence](#data-and-persistence)
-- [Optional Google Sheets connector](#optional-google-sheets-connector)
+- [Inert Google compatibility source](#inert-google-compatibility-source)
 - [Visual design](#visual-design)
 - [Architecture and file map](#architecture-and-file-map)
 - [Development and release](#development-and-release)
 - [Known limitations and proposed improvements](#known-limitations-and-proposed-improvements)
 - [Live judging implementation target](#live-judging-implementation-target)
 - [Implementation handoff](#implementation-handoff)
+- [Access, withdrawals and owner publication](#access-withdrawals-and-owner-publication--implemented-locally)
 - [Maintenance and handoff](#maintenance-and-handoff)
 
 ## Project timeline
@@ -51,10 +50,19 @@ Updated 2026-10-09. Status distinguishes code verification, Git delivery and pub
 | 2026-10-08 | Local/shared setup and judge links | Reused setup editor; competition removal; persistent local D1 rehearsal links; head labels; v2 score/history preservation. |
 | 2026-10-08–09 | Consolidated setup presentation | One editor with original cards/bibs/theme and native expandable sections collapsed by default; duplicate legacy overview removed. |
 | 2026-10-09 | Completed-batch closeout | Pushed `f589b7c`; local/remote hashes match. Fresh 17 unit + 17 D1/API + 8 browser scenarios, lint, TypeScript and build passed. See [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery). |
-| 2026-10-09 | Next-batch policy and branding research | Confirmed organizer-only requests, individual/couple withdrawal, public judge names/no notes, owner-approved snapshots/revisions, continued operation without publishing, archive/shutdown policy and corrected community branding. Saved in [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md) and [branding direction](NEXT_BATCH_SPEC.md#branding-direction). No implementation. |
+| 2026-10-09 | Next-batch policy and branding research | Confirmed organizer-only requests, individual/couple withdrawal, public judge names/no notes, owner-approved snapshots/revisions, continued operation without publishing, archive/shutdown policy and corrected community branding. Initially saved in the temporary specification; now folded into the implemented contract below. |
 | 2026-10-09 | Repository account rename | Owner supplied `WesKof/CountryDanceJudgingSoftware`; verified its branch contains `f589b7c`. Same authorized branch and project. |
 | 2026-10-09 | Documentation consolidation | Four working documents: short agent instructions, master spec/timeline, verification/closeout report and temporary next-batch spec/branding/prompt. No application changes. |
-| Next, after owner spec review | Fresh GPT-6.1 Sol High local implementation | [Prepared prompt](NEXT_BATCH_SPEC.md#fresh-implementation-chat-prompt). Access/UI → requests/withdrawals → snapshots → local public pages → revisions/suspension → complete mock verification. Not started. |
+| 2026-10-09 | Owner-authorized local next-batch implementation | Access separation, view-only Score, setup imports, organizer requests, dual-approved entrant/couple withdrawal, separate local owner/fake-publication workflow, revisions and suspension implemented. See current verification report. No commit/push/deployment or real publication. |
+| 2026-10-09 | Organizer-home and setup cleanup | Main page is the working desk; ready fictional sample, saved event reopening, fresh sample/blank event controls, fresh copy identities and more organized collapsed setup. Old organizer URLs remain compatible. See current test report. No hosted work. |
+| 2026-10-09 | Organizer Run / Results clarification | Renamed organizer Score to Run; room controls are directly accessible there; stage completion opens Results. Corrections, withdrawals and review are in Results. Private judge Score and all permission/history rules remain. |
+| 2026-10-09 | Data placement and result cleanup | Judge access moved to Run, recovery to Publish; combined collapsed amendment/withdrawal management; observation counts removed from main standings only. Publication prerequisites and owner-release status are explained, preserving approval gates. |
+| 2026-10-09 | Public-site design and automatic Finals | Separate photo-led public pages, latest winner cards, event-filtered leaderboards and unchanged immutable scorecards/revisions; approved advancement fills unopened Strictly/J&J finalist rosters using Setup counts. Actual J&J draw remains organizer-entered; frozen Finals and deferred replacement policy protected. Local tests only; no hosted site registration/deployment or real publication. |
+| 2026-10-09 | Finals roster clarity and named judge pages | Approved J&J people are visible immediately in Run; the actual draw remains organizer-entered via a shortcut to the selected Finals pairing setup. Readiness names the unpaired dancers instead of reporting an empty roster. Each judge link identifies its assigned judge in the page heading and tab title. Owner sample inspected without mutation; synthetic development/compiled controls verified. |
+| 2026-10-09 | Finalist count capacity and renewed review | Setup/review explain J&J count per role and eligible capacity; invalid counts disable approval and server errors name the actual count/limit. Server-owned advancementRevision scopes each saved count change to a fresh source, retaining earlier approvals/votes and allowing explicit renewed approval after returning to an earlier count. No sample-event mutation or migration. |
+| 2026-10-09 | Eligible-roster limits and actionable Run | Strictly maximum equals eligible couples; J&J maximum is the smaller eligible lead/follow count, excluding applied withdrawals. Input max and disabled Save prevent over-limit drafts; server independently rejects them without writes. Direct Fix finalist count/Review results/Set Finals pairings controls reveal the appropriate section. Review banner replaces stale dancing status, earlier selections are labeled pending renewed approval, and detail lists collapse by default. Owner saved count/draw untouched; synthetic development/compiled checks recorded in test report. |
+| 2026-10-09 | Actual Finals draw directly in Run | Approved J&J leads receive follow dropdowns below Start Finals, retaining saved pairs and disabling used follows. Save Finals pairings uses the existing organizer setup/CAS route. Drafts survive navigation, block premature start, and stale event edits require discard/review. Saved pairs collapse after completion and disappear on frozen stage start. Shared pure pair edits retain pair IDs, heat assignments, songs, current advancement and count; no actual draw is invented. |
+| 2026-10-09 | Results-website approval and usability | Complete-event review/send at the top of organizer Publish; separate `/admin` one-click event approval; durable atomic release sets and revisions; `/owner` compatibility redirect; plain-language/progressive-disclosure requirements in master/agent guidance. Local-only verification below. |
 | Later, separately authorized | Hosted preparation and public release | Real domain/provider/auth setup, hosted migrations, venue/physical-device/capacity checks, deployment and publication. No date, purchase or deployment commitment. |
 
 ## Product and workflow
@@ -65,29 +73,19 @@ The site should be usable by friends running community competitions and presenta
 
 ### Implemented local/demo surfaces
 
-| Step / internal view | Implemented behavior |
+| Surface | Current behavior |
 | --- | --- |
-| 01 Set up / `event` | Edit event name, venue, date; add Strictly or Jack & Jill competitions; edit competition details; add/remove judges and entries. Judges are shared across the event. |
-| 02 Score / `scoring` | Select active competition, mark each entry per judge, show progress, reset an entry or clear the ballot, review missing marks. Clicking a selected mark clears it. |
-| 03 Results / `results` | Show completed-entry standings and ties; export CSV; print; save a result revision after the entire ballot is complete. Ballot remains editable. |
-| 04 Publish / `data` | Import entrant/judge CSVs, download templates, download/restore JSON event backups, optionally send completed results to Google Sheets. |
+| Set up | One common editor; collapsed sections, event/judges, program, required panels, finalists/pairs, roster/heats and rotations. Inline CSV examples/imports; explicit Save persists drafts. Imports stay here; judge access/room controls live in Run and Data & recovery lives in Publish. |
+| Organizer Run | Start stage, next song/heat, lineup and conclude/open review, plus room/submission/coverage progress and collapsed private judge access (Copy/Open and link management). No judge mark entry, judge submission, panel votes or head approval actions. Concluding a stage opens Results. |
+| Results | Main standings show place, entrant and average; observation counts and explicit blanks remain in detailed scorecards. Organizer recording-error requests, competition/entrant withdrawals and exact approval/history are combined in one collapsed Amendments & withdrawals section. Head approvals/decisions remain on the private judge page. |
+| Publish | Collapsed Data & recovery (operational/v2 backups, restores, retained history and archive controls), plus exact public snapshot preview and organizer approval request. Disabled preparation explains missing stages/submissions/head approvals or changed finalists and offers navigation to the next step. One top action reviews all competitions, followed by Send results for approval above their final placements. Status explains website-admin approval, sending pending or Published. Detailed scorecards and prior versions are collapsed; the judging app has no admin credential or approval screen. No result export or Google publishing controls. |
+| Organizer home / legacy recovery | Browser remembers private D1 access separately from backups. Fresh visitor gets sample preparation; existing event reopens. Read-only v2 archive and wrapped/plain restore sit in Data & recovery. Restore opens a separate setup copy without importing legacy scores as stage marks. |
 
-Navigation is not a gated wizard. Users may move between views. The review dialog reports missing judges for each incomplete entry and links to Results when the ballot is complete.
-
-The default event is “Bluebonnet Country Dance Classic,” Fort Worth, with seeded judges, entrants, and some marks. This is application sample content, not evidence of a real event or current contestant list. No dedicated “start blank event” or “reset demo” action exists yet.
-
-### Changes with destructive effects
-
-- Clearing a ballot removes its current scores, after confirmation; saved revisions remain.
-- Removing an entry removes that entry and its current scores from the active competition.
-- Removing a judge removes their marks across competitions; existing revisions remain snapshots.
-- Importing entrants replaces the active roster and clears its scores. Importing judges replaces the event judge list and clears scores across competitions. Confirmation is requested when replacing existing records.
-- Restoring a backup replaces the local event after confirmation. It preserves this device's current publishing URL and separately stored key.
-- Adding a new judge can make previously complete ballots incomplete. Revisions remain unchanged.
+Preparation removal edits the current D1 event; the separately retained legacy archive, including earlier removed-competition history, is unchanged. Started event assignments stay frozen; use documented review requests rather than deleting score history. Restoring device data replaces that device event after confirmation. Shared restore creates a fresh preparation event with new links and inert imported history. Link codes remain separate from backups. There is no automatic migration of v2 scores into stage averages.
 
 ## Scoring contract
 
-Authoritative implementation: [lib/scoring.ts](lib/scoring.ts). Examples: [tests/scoring.test.ts](tests/scoring.test.ts).
+This section describes retained legacy v2 semantics, used for recovery/history rather than new organizer score entry. Authoritative implementation: [lib/scoring.ts](lib/scoring.ts). Examples: [tests/scoring.test.ts](tests/scoring.test.ts).
 
 | Mark | Numeric value | Counts as filled? |
 | --- | ---: | --- |
@@ -101,13 +99,13 @@ Scores are sums, not averages or ordinal judge rankings. An entry is eligible fo
 
 Sort completed entries by descending total. Totals differing by less than 0.0001 share place. Use competition ranking: totals 30, 30, 28 produce places 1, 1, 3. Entry ID orders rows with exactly equal totals for display; it must not award one tied entry a better place. Strictly has one Couples group. Jack & Jill has separate Leads and Follows groups (with a defensive Unassigneds group).
 
-Saving a revision requires the whole ballot to be complete. It appends an ID, ISO timestamp, sequential label, and calculated result rows. It does not lock marks, advance a round, or create an authenticated audit record. The current UI lists revision timestamps/counts; it does not provide full historical-row browsing. CSV/print use current results, including completed entries in a still-provisional ballot.
+Historically, saving a v2 revision required the whole ballot to be complete; the current interface only reads those retained revisions. It appends an ID, ISO timestamp, sequential label, and calculated result rows. It does not lock marks, advance a round, or create an authenticated audit record. The current UI lists revision timestamps/counts; it does not provide full historical-row browsing. CSV/print use current results, including completed entries in a still-provisional ballot.
 
 Legacy mode has no callbacks or automatic advancement. No skating/relative-placement algorithm, judge quotas or official sanctioning-body compliance is implemented. Confirm competition rules before changing the established mark values or ranking semantics.
 
 ## Data and persistence
 
-Authoritative types and seeded event: [lib/domain.ts](lib/domain.ts). Browser handlers: [app/page.tsx](app/page.tsx).
+Legacy types/history fixture: [lib/domain.ts](lib/domain.ts). Organizer home: [organizer-home.tsx](components/live/organizer-home.tsx); fictional stage preparation and fresh identity copies: [sample-setup.ts](lib/sample-setup.ts).
 
 | Object | Fields / ownership |
 | --- | --- |
@@ -120,9 +118,9 @@ Authoritative types and seeded event: [lib/domain.ts](lib/domain.ts). Browser ha
 | Result row | Entry ID/number, primary/secondary names, group, place, tied flag, total, complete flag |
 | Revision | ID, creation time, label, snapshot of result rows |
 
-The browser loads `country-dance-judging:v2` on startup, then debounces ordinary legacy edits by 250 ms. Explicit richer Save setup writes immediately before reporting completion. The publishing key uses a separate key, `country-dance-judging:publisher-key`. The URL is inside the stored event but is cleared in new backup exports. Both URL and key start empty for a fresh visitor. Storage is per browser profile and origin, not per signed-in user.
+The organizer home reads `country-dance-judging:v2` without rewriting it. Invalid legacy data stays untouched; when no saved D1 event exists it blocks automatic setup copying until recovery. Save setup edits the current D1 event with an explicit version guard and does not rewrite the legacy archive. Historical publisher URL/key fields are inert and no key control or outgoing publisher remains in the UI. New backups clear publisherUrl; the separate historical publisher-key is not exported. Storage is per browser profile and origin, not per signed-in user.
 
-In local/demo mode there is no server copy of the event. Other visitors get their own browser state. Opening a different browser/device or changing the site's hostname does not transfer legacy saved work. Legacy tabs have no coordinated merge/conflict handling. Keys in localStorage are accessible to someone using that browser; they are not encrypted by the app. Shared mode is a separate, deliberate workflow with server authority and scoped revisions; local v2 events are not automatically migrated.
+The main organizer workspace uses the same authoritative D1 engine as private event URLs. A new browser gets its own sample event and private organizer binding; an explicit organizer URL can reopen an existing event. `country-dance-judging:rehearsal` stores the current access/creation nonce; `country-dance-judging:organizer-history` stores earlier private event links, separately from backups. Legacy scores stay in their original origin-local archive; a setup-only copy does not migrate marks, revisions or approvals. Changing browser/device/hostname does not transfer those device records. Browser access keys are not encrypted; keep organizer URLs private.
 
 ### JSON backup contract
 
@@ -137,39 +135,25 @@ Current exports wrap the event as follows:
 }
 ```
 
-The example is a shape illustration, not an importable backup. Full ballots, event details, judges, competitions, and revisions are exported. The publishing key is separate and not exported. Restore accepts the wrapped format and older raw v2 state objects; it preserves this device's publisher URL/key. New fields must not accidentally introduce credentials into exports.
+The example is a shape illustration, not an importable backup. Full ballots, event details, judges, competitions, and revisions are exported. The publishing key is separate and not exported. Restore accepts the wrapped format and older raw v2 state objects; the inert historical publisher URL is excluded from new backups and no publisher key is exported. New fields must not accidentally introduce credentials into exports.
 
-`isAppState` only checks a few top-level properties and the presence of the active competition (or empty competitions with an empty active ID). It is not deep schema validation. Restore currently does not enforce `backupVersion`, inspect all nested fields, or cap file size. Do not describe it as fully validated input.
+`isAppState` only checks a few top-level properties and the presence of the active competition (or empty competitions with an empty active ID). It is not deep schema validation. Restore currently does not enforce `backupVersion`, inspect all nested fields, or deeply validate nested values. Device and shared restore now cap input at 1.5 MB. Do not describe it as fully validated input.
 
 ### CSV contract
 
-| Import | Canonical header |
-| --- | --- |
-| Strictly roster | `Number,Lead,Follow` |
-| Jack & Jill roster | `Number,Name,Role` |
-| Judges | `Name` (a one-column list without a header also works) |
-
-Header matching ignores case and punctuation and supports aliases in `importEntrants`. Jack & Jill roles are interpreted from initial `l`/`f`. Invalid entrant rows are skipped; duplicates are not consistently rejected during CSV import. Manual entry rejects duplicate numbers in the active competition. Parsing handles quoted commas, escaped quotes and embedded line breaks, trims fields, and skips empty rows.
-
-Results CSV columns: Event, Competition, Division, Round, Group, Place, Tie, Number, Primary, Secondary, Total Score. CSV serialization quotes delimiters but does not neutralize spreadsheet formulas. Only import data from known sources until stronger validation is implemented.
+Setup imports are confined to preparation and use inline examples rather than downloadable templates. Strictly: `Number,Lead,Follow`; J&J: `Number,Name,Role`; judges: `Name,ParticipantId`. Judge imports validate distinct participant identities and cannot replace a panel after a round starts. Validated imports change the editor draft only; Save setup is explicit. Roster imports use existing deep setup checks and respect frozen started rounds. The parser supports quoted commas, line breaks and escaped quotes. Result CSV/Excel/PDF/scorecard/history-download/print features are removed; JSON recovery remains separately labeled.
 
 ### Event-day usage
 
-Use one primary browser/device for the event. Back up before replacing rosters, after important rounds, and before switching devices. Restore the JSON file on a new device; sharing the website link alone does not share the event. Save CSV/print results for distribution. Existing loaded scoring operations are local, but first load/reload and publishing require connectivity; no service worker or guaranteed offline installation exists.
+Run deliberately created private organizer/judge routes, keep organizer and distribution links separately, and make operational JSON backups before recovery operations. Judge pending edits remain attached to their original song and retry online. A checked heat submission becomes immutable after named confirmation; every active entrant needs an observation from each assigned judge. Explicit No is coverage and zero; a blank is not observed. Publication service availability has no bearing on operational judging. First load/reload still requires the operational service; no guaranteed offline installation exists.
 
-## Optional Google Sheets connector
+## Inert Google compatibility source
 
-Files: [Do_Post.gs](google-apps-script/Do_Post.gs), [setup instructions](google-apps-script/README.md), and `publishResults` in the page.
+[Do_Post.gs](google-apps-script/Do_Post.gs) and its historical setup README remain as compatibility source/history only. No organizer/public route, key/URL editor, send control or result export invokes them. Editing this source does not deploy Apps Script. No Google request was made. New publication is the separately owner-controlled, local-only workflow described below; real external publishing requires separate authorization.
 
-Google is not part of normal startup or scoring. There is no contestant read/sync API. An organizer must set a URL and publishing key, complete the ballot, then explicitly send results. No endpoint, publishing key, or destination Sheet ID is bundled as an active default.
+## Usability contract
 
-The client POSTs form-encoded `results` (JSON array of arrays with a header row) and `publishingKey`. Rows contain event/competition/division/round, place/tie, bib, participant fields, total, and each judge's mark. Current URL validation requires HTTPS, hostname `script.google.com`, and a `/macros/s/` path prefix. The intended deployment suffix is `/exec`; the code does not enforce that suffix.
-
-The supplied script reads `SHEET_ID` and `PUBLISHING_KEY` from Script Properties, compares the key via SHA-256 digests, validates rectangular primitive-valued rows, and obtains a script lock. Limits are 5,000 rows, 50 columns and 2,000 characters per cell; there is no explicit total HTTP body limit before parsing. It appends a timestamped copy to **Published Results Archive**, then clears/writes **Published Private Results** as the latest snapshot. These are sequential writes, not a transaction. `doGet` is a basic service response. The response is JSON with `success` and either publication details or an error.
-
-**External status:** the template was committed, but installation, script properties, redeployment, authorization and browser-to-Google delivery were not verified. The owner's historical project contained `DoPost_old.gs`, `testDoPost.gs`, and `Do_Post.gs`. Ensure there is exactly one active global `doPost` when replacing it; a file named “old” is still executable Apps Script. The old handler had no key enforcement. A new key field in the frontend does not fix that deployed handler.
-
-Use a disposable spreadsheet for connector tests. Verify invalid keys make no writes, valid requests archive and update as expected, and browser responses are readable. Never publish test results into a live competition sheet without explicit intent. Do not put real publishing keys, access tokens, Sheet IDs tied to private operations, or raw contestant backups in this reference.
+The intended audience includes nontechnical organizers, dancers and judges who may not know the judging process. Every screen must make the next step, responsible person and outcome clear in ordinary language. Keep a single useful primary action near the top, with the information being approved immediately below it. State actionable blockers next to disabled controls and offer a shortcut to the relevant section. Show names/bibs, placements, required approvals and concise status; collapse full marks/calculations, technical metadata, history and uncommon maintenance. Group related corrections/withdrawals and event-wide publication tasks. Do not remove evidence, privacy or exact approval checks to simplify the display. Assess new features for control placement, understandable wording, keyboard access and narrow-screen fit. AGENTS.md makes this a standing implementation requirement; no external documentation upload is required or authorized by these local changes.
 
 ## Visual design
 
@@ -191,49 +175,29 @@ Social preview metadata is in `app/layout.tsx`. `/og` serves a JPEG encoded in `
 
 ## Architecture and file map
 
-```text
-Browser page / (React state)
-  ├─ domain.ts: types, defaults, shallow state check
-  ├─ scoring.ts: derived progress and rankings
-  ├─ csv.ts: parsing and serialization
-  ├─ localStorage: event and separate publisher key
-  ├─ file download/import: CSV and JSON
-  └─ explicit POST: organizer's optional Apps Script → Google Sheet
-
-Shared organizer /live/<private-code> and judge /judge/<stable-slug>/<private-code>
-  ├─ /api/live: server-enforced access, scoped saves and atomic lifecycle operations
-  ├─ D1: event setup/context, access records, frozen round generations, ballots,
-  │      immutable submissions, tie decisions, approvals and retry receipts
-  └─ browser pending-edit cache: temporary, author-scoped, never authoritative
-
-Sites worker: serves application, /og and the D1-backed /api/live route
-```
-
-| File | Responsibility |
+| Area | Source |
 | --- | --- |
-| `app/page.tsx` | All four views, state lifecycle, mutations, imports/exports, publishing |
-| `app/globals.css` | Design tokens, layouts, responsive and print rules |
-| `app/layout.tsx`, `app/og/route.ts` | HTML wrapper and social metadata/image response |
-| `lib/domain.ts`, `lib/scoring.ts`, `lib/csv.ts` | Data contracts, scoring rules, CSV helpers |
-| `tests/scoring.test.ts`, `tests/csv.test.ts` | Five scoring tests and two CSV tests |
-| `google-apps-script/` | Optional externally deployed publisher and setup notes |
-| `package.json`, `pnpm-lock.yaml` | Commands and pinned dependency resolution |
-| `vite.config.ts` | Vinext, Sites, Tailwind/PostCSS, Cloudflare integration |
-| `.openai/hosting.json` | Existing Sites project identity; logical D1 `DB`, unused R2 null; hosted resource not provisioned |
-| `components/live/`, `app/live/`, `app/judge/` | Shared four-view desk, blank creation, private phone ballots and head review |
-| `lib/live/types.ts`, `lib/live/validation.ts`, `lib/live/scoring.ts`, `lib/live/merge.ts` | Separate shared contracts, bounded setup validation, exact-input averages and monotonic client reads |
-| `lib/live/server.ts`, `app/api/live/route.ts`, `db/index.ts` | Access-checked prepared D1 operations; no runtime schema creation |
-| `db/schema.ts`, `drizzle/`, `scripts/migrate-local.mjs` | Versioned generated schema migrations and local-only migration ledger |
-| `tests/live-*.ts`, `tests/live-api.test.mts`, `playwright.config.ts` | Unit/legacy checks, actual HTTP/D1 rehearsal and isolated browser sessions |
+| Organizer home / legacy recovery | `app/page.tsx`, `components/live/organizer-home.tsx`, `lib/sample-setup.ts`, `lib/domain.ts`, `lib/demo-setup.ts`; main D1 desk, isolated fictional preparation and v2 retained without score conversion |
+| Organizer role gates / desks | `app/live/[code]/page.tsx`, `components/live/desk.tsx` (older block events), `stage-desk.tsx` (stage-v1), `finals-pairings.tsx` (approved actual-draw controls in Run) |
+| Common setup / judge access | `components/live/setup.tsx`, `setup-section.tsx`, `desk.tsx`, `stage-desk.tsx`; one ordered editor; organizer home no longer uses a separate preparation wrapper |
+| Judge/head page | `app/judge/[slug]/[code]/page.tsx`, `components/live/judge.tsx`, `stage-review.tsx`, `results.tsx`, `client.ts`, `lib/live/merge.ts` |
+| Server authority / scoring / eligibility | `lib/live/server.ts`, `types.ts`, `validation.ts`, `stage.ts`, `eligibility.ts`, `finalists.ts`; atomic prepared D1 batches, receipts, frozen rounds and immutable submissions |
+| Public snapshots / preview | `lib/live/publication.ts`, `components/live/publication.tsx`; allowlist and independent numeric validation |
+| Website admin / receiver-only source checks | `public-site/admin.ts` is served on the separate results origin; `app/owner/page.tsx` redirects old links there. `/api/publication-owner`, `/api/publication-source`, `lib/live/local-publisher.ts` retain server authority; server-only synthetic `.dev.vars` |
+| Separate local public site / dispatcher | `public-site/render.ts`, `public-site/styles.css`, `public-site/assets/`, `scripts/fake-publisher.mts`, `scripts/publication-outbox.mts`; separate origin/store, local static asset allowlist/CSP, durable retries, no automatic approvals |
+| Storage | `db/schema.ts`, append-only `drizzle/0004_late_epoch.sql` (snapshots/outbox), `0005_friendly_living_mummy.sql` (service state), prior migrations retained unchanged |
+| Publication readiness guidance | `lib/live/publication-readiness.ts`; client explanations of existing server prerequisites, with navigation to Setup/Run/Results; server remains authoritative |
+| Branding | `public/kickinit-community-logo.jpg`; original verified 150×150 profile image, small-display use only |
+| Tests | Existing legacy/stage suites plus `eligibility.test.ts`, `publication.test.ts`, `publication-api.test.mts`, `withdrawal-api.test.mts`, access/owner/withdrawal browser scenarios and the extended full stage mock |
 
-Inspected pins: React 19.2.6, Next 16.2.6, Vinext 1.0.0-beta.3, Vite 8.0.13, TypeScript 5.9.3, Tailwind 4.2.1. Check `package.json` when working on dependencies; these are a snapshot, not a recommendation to upgrade.
+The server supplies explicit role-scoped data; hidden navigation is not the permission boundary. A judge response omits organizer metadata/identity, participant identifiers in both setup and frozen panels, link distribution, publication state and other authors’ notes. Relevant request audit displays role labels; original identities remain in the operational immutable history. Owner credentials confer no operational organizer/head/judge powers. Anonymous public readers see released snapshots only.
 
 ## Development and release
 
 ### Repository and local working copies
 
 - Repository: [WesKof/CountryDanceJudgingSoftware](https://github.com/WesKof/CountryDanceJudgingSoftware), renamed by the owner on 2026-10-09.
-- Current app branch: [`codex/stage-heat-workflow`](https://github.com/WesKof/CountryDanceJudgingSoftware/tree/codex/stage-heat-workflow); checkpoint `d9ea167` and completed stage/setup batch `f589b7c` are pushed. Next-batch documents are specification only.
+- Current app branch: [`codex/stage-heat-workflow`](https://github.com/WesKof/CountryDanceJudgingSoftware/tree/codex/stage-heat-workflow); checkpoint `d9ea167` and completed stage/setup batch `f589b7c` are pushed. The owner-authorized next batch is locally implemented and remains uncommitted.
 - Local branch tracks `github/codex/stage-heat-workflow`. The prior local `main` tracked `github/codex/country-dance-judging-app`; GitHub historical `main` and `StrictlyMaster` are separate legacy branches.
 - Preferred development checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app` (uncompressed, separate app Git repository).
 - This task's workspace mirror: `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app`. Its parent Git repository is not the app repository. Check paths before commits or copies.
@@ -258,7 +222,7 @@ The package scripts invoke Vinext, not the standard Next CLI. Respect the lockfi
 
 The August release had seven scoring/CSV tests. Current shared work also has focused unit, actual local D1/API and browser suites. Lint, explicit typecheck and production build are required alongside them. Tests do not confirm physical-phone/venue behavior, hosted resources or real Apps Script delivery.
 
-For future changes: preserve scoring cases; add focused tests for new data-handling behavior; run lint/typecheck/build as appropriate for application changes. Test connector mutations against a disposable sheet. Documentation-only work needs factual/link/diff checks. Do not claim a successful TypeScript check based solely on a Vite build.
+For future changes: preserve scoring cases; add focused tests for new data-handling behavior; run lint/typecheck/build as appropriate for application changes. Test publication against the local synthetic receiver only. Documentation-only work needs factual/link/diff checks. Do not claim a successful TypeScript check based solely on a Vite build.
 
 ### Hosting and public sharing
 
@@ -274,22 +238,16 @@ GitHub and Sites source hosting are separate destinations. Pushing GitHub alone 
 
 ## Known limitations and proposed improvements
 
-The table below primarily describes retained local/demo limitations. Shared mode has deep setup validation, scoped saves and phone ballots, but still needs the external readiness checks listed in the shared implementation status. Suggested improvements are not additional authorization.
-
-| Area | Current gap / useful next action |
+| Area | Current limit |
 | --- | --- |
-| Backup integrity | Deep validation, schema migration, file limits, and malformed/round-trip tests are missing. Unknown properties accepted by shallow validation may survive restore/export. |
-| Save recovery | Invalid/failed stored-state loads may lead to starter data being saved over the old value; retain a recoverable copy before improving this flow. |
-| Sheets publishing | Template not verified live. Browser success currently accepts some non-JSON or empty successful responses; require explicit `success: true`. CORS/redirect behavior needs real testing. |
-| Spreadsheet data | CSV export and script cell normalization do not neutralize formula-leading strings. Add appropriate formula handling for the target consumer before claiming safe arbitrary imports. |
-| Connector durability | Archive/latest writes are not atomic; retries may append duplicates. Consider explicit publication IDs, idempotency and sheet capacity handling. |
-| Privacy | Local keys and event data remain accessible on shared devices. Backup files contain participant data. A public URL does not add shared storage or access roles. |
-| Offline operation | No service worker or verified offline reload. Align README/preview copy with this limit or implement/test offline support. |
-| Mobile/accessibility | Horizontal score scrolling, small scoring buttons, form width and dialog keyboard handling need focused usability checks. |
-| Imports | Duplicate bibs and invalid rows need clearer feedback; number/role validation differs between manual entry and CSV. |
-| Metadata | Host syntax is checked, but forwarded host is not pinned to a trusted deployment origin. Review before treating social URLs as trusted. |
-| Portfolio polish | Clear demo identity, a safe start-blank flow, and a concise project story/GitHub link would help visitors; these are not yet implemented. |
-
+| Legacy restore | v2 top-level validation remains shallow; unknown nested properties may survive. Input is capped and malformed startup data is preserved, but this is not complete schema validation. |
+| Recovery/privacy | Device data and explicit note-inclusive backups are accessible to file/device holders. Ordinary operational notes remain author-only. Backup inclusion has its existing warning and is separate from public disclosure. |
+| Offline operation | Online retry/pending cache works; no service worker, guaranteed offline first load/reload or measured extended venue outage. |
+| Hosted services | Owner controls/auth, provider/domain choices, hosted D1 quotas/migrations/capacity and real receiver provisioning are unperformed and unauthorized here. Local synthetic credentials are not a production authentication design. |
+| Publication | Local fake receiver/store only. Last synchronized time exposes delayed status propagation; public outage may delay Under review. No real release, real external publication or uptime promise. |
+| Post-Finals policy | Changed advancement/finalist membership blocks approval/publication; no invented substitute/replacement/redance/reinstatement policy. Legacy-only publication is deferred. |
+| Assets | Verified small profile emblem is suitable at its small display size; no high-resolution/vector source or large-print asset is claimed. Two original public community photos (640×449 and 640×480) are selected for modest web display; no high-resolution/print suitability or paid font license is claimed. |
+| Capacity/devices | Synthetic Edge contexts and local Worker/D1 checks do not establish physical-phone, venue-Wi-Fi, long-history or production load behavior. |
 
 ## Live judging implementation target
 
@@ -305,15 +263,15 @@ The table below primarily describes retained local/demo limitations. Shared mode
 
 **Scoring.** Values remain Yes=10, A1=4.5, A2=4.3, No=0. For each entrant, average each assigned judge’s recorded songs, then average those judge means equally. Blanks contribute no observation; they never become zero. Display each judge mean/observation count, per-song means/counts and every submitted mark/blank. Count heat acknowledgements separately from judges; preliminary equal-average ranks remain visibly equal after the separate advancement vote is decided. For example, judge means 10, 5 and 5 produce 20/3 even if observation counts are 1, 2 and 2. J&J prelims rank Leads and Follows independently with stable dancer identities across partner rotations. Finals score fixed pairs/couples together. Legacy v2 totals/completeness/ranks are unchanged.
 
-**Advancement votes.** The saved final round’s finalist count defines the cutoff (per role for J&J). A tie crossing that cutoff creates a separate panel vote. Every assigned judge, including the head, chooses exactly the remaining number of places from the tied group. All must vote; highest vote counts advance. A full-panel vote tie at the remaining boundary requires an explicit head decision; candidates above that vote boundary cannot be displaced. Votes and decisions are scoped to current source fingerprints and retained in history. Finalized own choices remain visible after reload. Numeric marks and averages never change for a tiebreak. The head approves the exact resulting advancement. Saved finalists must match that approved selection before Finals can start.
+**Advancement votes.** The saved final round’s finalist count, editable from either Prelims or Finals setup, defines the cutoff (per role for J&J). A tie crossing that cutoff creates a separate panel vote. Every assigned judge, including the head, chooses exactly the remaining number of places from the tied group. All must vote; highest vote counts advance. A full-panel vote tie at the remaining boundary requires an explicit head decision; candidates above that vote boundary cannot be displaced. Votes and decisions are scoped to current source fingerprints and retained in history. Finalized own choices remain visible after reload. Numeric marks and averages never change for a tiebreak. The head approves the exact resulting advancement. Head approval atomically persists that exact advancing selection into matching unopened Finals. Strictly copies the approved couples with their identities/bibs/names; J&J selects the approved leads and follows but requires the organizer to enter the actual random draw in Run or Finals setup. Existing eligible pairs and heat assignments are retained, new Strictly subjects enter the first heat, and songs/panel/heat identities remain unchanged. The stage UI shows a read-only advancing roster instead of selection checkboxes. For J&J, Run presents one approved lead/follow dropdown row per couple directly below Start Finals, with existing saved pairs prefilled and assigned follows disabled for other leads. Save Finals pairings persists the exact organizer-entered draw through the existing setup API/version guard while retaining Prelims approval. Both Setup and Run reuse setFinalsPair, preserving existing pair identities/bibs, other heat assignments and songs; new pairs enter the first heat. No pair is inferred. The selected-roster list stays collapsed. Pending draws open automatically, completed saved draws collapse but remain editable until the stage starts. Shared unsaved drafts survive organizer tab navigation and block starting a stage; concurrent event changes disable stale edits/Save and require discard/review. Started Finals hide this editor and retain server frozen-stage protection. The round count represents advancing people; a separate count reports completed pairs. Server opening readiness names unpaired dancers and directs the organizer to enter the actual draw; Run instead gives a short instruction to use the adjacent dropdowns and Save Finals pairings, replacing misleading Add entrants/empty-heat messages while the entire draw is pending. Existing heat/song checks and the requirement to pair every finalist remain enforced. No pair is invented, even when only one lead/follow advance. Count changes invalidate Prelims review; renewed approval refills unopened Finals. The J&J count is per role and therefore also the number of Finals couples: 1 selects one lead and one follow, not one total dancer. Setup and provisional review show eligible capacity and specific count/limit guidance; head approval is disabled when a required role/couple group cannot supply that many finalists. Server validation independently rejects invalid counts with the same explanation. Eligible capacity excludes applied withdrawals. The count input's maximum is the eligible couple total for Strictly or the smaller Lead/Follow total for J&J (within the existing 100-count schema bound). An over-limit typed draft cannot be saved; the server separately rejects over-limit stage setup without changing event version, advancement revision, scores, submissions or approvals. Empty/incomplete preparation rosters remain savable, but their count control is disabled until eligible groups exist; opening/head approval still requires a valid positive count. Existing saved invalid values are displayed for explicit correction rather than silently changed. Run prioritizes Fix finalist count while that is the blocker, then names the head approval required and offers Review prelims results. Shortcuts expand the matching Finals setup and scroll to Finalists & pairings. Once current approval exists, the inline actual-draw controls appear while the selected-dancer roster stays collapsed. Previously selected people/draws are labeled as previous pending renewed approval, not current approved advancement. Heat-submission and judge-coverage details also collapse by default; current waiting/submission actions stay visible. The post-stage banner describes review instead of stale song/lineup activity. J&J freeze errors distinguish the configured pair-count mismatch from wrong selected identities. No count is silently capped or changed. Each saved count change increments server-owned advancementRevision on the matching Finals setup and includes it in the Prelims source fingerprint. This revision stays stable through approval and ordinary setup saves, ignores client-supplied values, and distinguishes a later return to a previously approved count. Fresh explicit approval is then possible without uniqueness conflicts or overwriting earlier approvals/votes/snapshots. Existing events without this additive JSON field retain their current fingerprints until a count changes; no schema migration is needed. Older approved events with empty unopened Finals derive the exact approved roster for display and persist it on Save/opening; reads do not write. Started Finals are never replaced by this helper. Saved/frozen finalists must still match currently approved advancement before Finals start or approval/publication can proceed. Legacy block finalist selection remains manual.
 
 **Finals review.** Finals ties require an explicit head placement decision, ordered or explicitly shared; ordinary judges and organizer cannot decide or approve them. Head approval requires current source submissions, current round version, every required acknowledgement, resolved ties and current matching preliminary advancement. Provisional and approved results are labeled separately.
 
-**Genuine recording-error corrections.** The affected judge or organizer may request a change to an exact submitted heat version, with cells, recorded/intended marks and reason. A mistaken-bib transfer explicitly identifies both entries. Proposed changes cannot leave an entrant uncovered. Each revision creates a new request version and clears prior request approvals. Organizer and head must review/approve that same exact version from distinct participant identifiers/roles; either approval alone leaves marks intact. Applying both adds an immutable amended heat snapshot linked to the original. Original/corrected values, requester, reason, both approval timestamps and prior result/vote snapshots remain in history. Affected result/advancement/dependent final approval becomes stale and requires renewed review. This is not routine rejudging, filling an unobserved blank, or copying another judge.
+**Genuine recording-error corrections.** Only the organizer may request a change to an exact submitted heat version after discussion with the affected judge, with cells, recorded/intended marks and reason. A mistaken-bib transfer explicitly identifies both entries. Proposed changes cannot leave an entrant uncovered. Each revision creates a new request version and clears prior request approvals. Organizer and head must review/approve that same exact version from distinct participant identifiers/roles; either approval alone leaves marks intact. Applying both adds an immutable amended heat snapshot linked to the original. Original/corrected values, requester, reason, both approval timestamps and prior result/vote snapshots remain in history. Affected result/advancement/dependent final approval becomes stale and requires renewed review. This is not routine rejudging, filling an unobserved blank, or copying another judge.
 
 **Competition removal and withdrawal.** Preparation Remove competition asks for confirmation, removes both rounds and running-order references from the draft, and requires Save setup. Remove heat retains the roster, leaves its entrants unassigned for reassignment and protects the last heat. Empty programs remain editable. A started competition instead requires an organizer withdrawal request with reason and both organizer/head approvals. The active program/context is repaired, affected reviews are invalidated, and all judging records remain in database/backups. Withdrawing the active last division leaves the remaining stage able to conclude. Late writes to removed rounds are rejected.
 
-**Notes, transparency and exports.** Private notes remain author-only in ordinary API/read/review payloads. Stage cards expose finalized marks and explicit blanks to assigned judges and organizer, never another author’s notes. Standings CSV includes means/counts/status/source fingerprint; scorecards CSV includes every song slot and submission version; amendment history JSON discloses exact changes/approvals. Default shared backups omit access codes and notes, including withdrawn history. Explicit note inclusion warns that file holders can read them. Print uses the Results view. Optional Apps Script publishing remains an explicit organizer action using the existing 2D row contract and credentials excluded from backups. No actual Google request/publication was made during verification.
+**Notes, transparency and recovery.** Private notes stay author-only in ordinary API/read/review data. Finalized stage cards reveal marks, explicit blanks and counts to appropriate roles. Public snapshots exclude all notes, access/participant identities and internal reasons. No CSV/Excel/PDF/scorecard/result-print or Sheets publishing path remains. Default operational backups exclude credentials and notes; explicit note inclusion retains its existing warning. Recovery contains immutable requests, submissions and publication history as inert imported records.
 
 **Settled decisions.** Equal judge means; complete required heat submissions; full-panel exact-count votes; head deadlock/finals decisions; unique participant identifiers plus attestation; affected-judge/organizer correction requests; dual exact-version correction/withdrawal approval; author-only notes. No automatic deadlines, abstentions, copied scores or ordinary stage-end editing were introduced.
 
@@ -323,16 +281,17 @@ The table below primarily describes retained local/demo limitations. Shared mode
 
 | Area | Source / behavior |
 | --- | --- |
-| Local setup adapter | [lib/demo-setup.ts](lib/demo-setup.ts), [components/live/local-setup.tsx](components/live/local-setup.tsx): optional v2 setup extension, retained legacy scores/revisions, archived removed competitions, empty-program fallback and immediate explicit setup persistence. Retained legacy editor changes reconcile without duplicating rounds or losing rich setup. |
-| Shared stage desk | [components/live/stage-desk.tsx](components/live/stage-desk.tsx), reused [setup.tsx](components/live/setup.tsx): setup, links/revocation, stage readiness/running order, withdrawals, exports/backups/lifecycle. |
+| Organizer home / compatibility adapter | [organizer-home.tsx](components/live/organizer-home.tsx), [sample-setup.ts](lib/sample-setup.ts), [lib/demo-setup.ts](lib/demo-setup.ts): saved D1 access, fictional preparation, fresh identity graph, v2 setup-only copying and explicit legacy restore. Original v2 marks/revisions/removed history stay separate; the unused local-setup wrapper is removed. |
+| Shared stage desk | [components/live/stage-desk.tsx](components/live/stage-desk.tsx), reused [setup.tsx](components/live/setup.tsx): setup, links/revocation, stage readiness/running order, withdrawals, publication preparation and backups/lifecycle. |
 | Phone and review | [judge.tsx](components/live/judge.tsx), [stage-review.tsx](components/live/stage-review.tsx), [results.tsx](components/live/results.tsx): own visited songs, recovery/conflict comparison, acknowledgement/confirmation, read-only cards, votes and exact approvals. |
+| Automatic Finals | [finalists.ts](lib/live/finalists.ts): exact approved roster preparation; `server.ts` uses the existing atomic approval/version batch and freezes only exact approved membership; unit/API/browser tests verify counts, identity, pairs, persistence and protection. |
 | Pure stage rules | [lib/live/stage.ts](lib/live/stage.ts): heat coverage/snapshot/signature, latest immutable version, equal judge means and cutoff vote calculation. [validation.ts](lib/live/validation.ts): identities, stage setup and fixed finalist/pair validation. |
 | Server and persistence | [server.ts](lib/live/server.ts), [db/schema.ts](db/schema.ts), [drizzle/](drizzle/): server access checks, prepared statements, atomic D1 guards, request receipts, immutable heat submissions, votes and versioned review requests. Approval uniqueness includes source fingerprint to retain earlier approvals. |
 | Tests | [tests/stage-fixture.ts](tests/stage-fixture.ts), unit `stage.test.ts`/`demo-setup.test.ts`, local D1 `stage-api.test.mts`/`stage-edge-api.test.mts`, browser `stage-browser.spec.ts`/`local-browser.spec.ts`; earlier legacy suites remain. |
 
 New shared events default to `workflow: 'stage-v1'`. Existing shared events lacking that property retain the earlier full-song/block submission workflow, head-only ties and explicit single-role reopen/setup correction. Their [desk.tsx](components/live/desk.tsx) branch and tests remain. An opened event cannot switch workflow through setup. Earlier block tests are compatibility evidence, not evidence for stage rules.
 
-The demo still uses `country-dance-judging:v2`, AppState `version: 2`, legacy scoring and existing wrapped/plain JSON restore. `demoSetup` and `removedCompetitions` are optional additions, not score conversion. Removed local competitions retain their scores/revisions in JSON history; survivors retain marks and revisions. This does not turn the public demo into a shared competition or migrate existing data to D1.
+The original `country-dance-judging:v2` AppState remains an unchanged legacy archive on ordinary startup and stage setup saves. `demoSetup` and `removedCompetitions` remain compatible optional fields. Explicit wrapped/plain restore retains original legacy scores and creates a fresh D1 preparation copy with remapped internal IDs, never stage ballots or approvals. There is no sum-to-average conversion.
 
 Shared backup remains `country-dance-live-backup`, `backupVersion: 1`, with additive heat/vote/amendment history. Restore creates a separate preparation event with new IDs/links and inert imported history. Current snapshots/approval never import as active. Keep the organizer link separately; it is deliberately omitted. Archived links become read-only; permanent deletion remains confirmed and organizer-only.
 
@@ -374,7 +333,7 @@ D1 is recommended for active structured judging; object storage is an alternativ
 
 ### Starting state and scope
 
-The owner resumed implementation on 2026-10-08 and settled the rules above. Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; Documents is a mirror. Branch: `codex/stage-heat-workflow`, tracking `github/codex/stage-heat-workflow`. Earlier uncommitted work was committed and explicitly pushed as `d9ea167`; the completed stage/setup batch is documented in [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery). Fresh 2026-10-09 checks passed 17 unit, 17 local D1/API and all 8 browser scenarios plus lint, TypeScript and build. Next-batch work is specification only until the owner settles it. Inspect branch/status and compare affected files before any further sync. Never commit the parent Documents workspace as the app repository.
+The owner resumed implementation on 2026-10-08 and settled the rules above. Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; Documents is a mirror. Branch: `codex/stage-heat-workflow`, tracking `github/codex/stage-heat-workflow`. Earlier uncommitted work was committed and explicitly pushed as `d9ea167`; the completed stage/setup batch is documented in [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery). Fresh 2026-10-09 checks passed 17 unit, 17 local D1/API and all 8 browser scenarios plus lint, TypeScript and build. The owner approved local implementation of the next batch on 2026-10-09; its implemented contract is below. Inspect branch/status and compare affected files before any further sync. Never commit the parent Documents workspace as the app repository.
 
 No public deployment, hosted D1 provisioning/migration, service purchase or real results publication is authorized. Generated migrations are append-only. `pnpm db:local` applies local-only migrations through an ignored hash ledger after a build; it does not provision a database. Keep the local preview available and user data/open browser sessions intact.
 
@@ -391,13 +350,17 @@ No public deployment, hosted D1 provisioning/migration, service purchase or real
 
 ### Local/demo and shared setup parity
 
-Both surfaces reuse `SetupEditor` in the same section order: Event & judges, Program & stages, round selection, required judges, finalist/pair setup, roster/heat assignment and song/rotation setup. Equivalent names, choices, validation and preparation confirmation controls are used. Competition removal and heat removal are visible. Save setup persists through each mode’s storage path, cancellation leaves data intact and an empty program supports re-addition.
+Both surfaces reuse `SetupEditor` in the same section order: Event & judges, Program & stages, round selection, required judges, finalist/pair setup, roster/heat assignment and song/rotation setup. Equivalent names, choices, validation and preparation confirmation controls are used. Competition removal and heat removal are visible. Both current organizer entry points save through the same D1 version guards. Cancellation leaves data intact and an empty program supports re-addition. Legacy archives remain separately preserved.
 
-Local and shared pages use one canonical setup editor. The duplicate legacy overview and its editing controls are removed; this does not migrate or delete legacy scores. The editor retains the original competition cards, numbered bib badges, panel styling and head label beside the judge name. Event details, Judges, Program & stages, Round setup and Event-long private judge links are expandable native sections, collapsed on initial load/reload. Round setup contains separately collapsed Required judges, Finalists & pairings (Finals only), Roster & heat assignments and Heats, songs & partner rotations. Summaries show useful counts/context while collapsed, support mouse/touch/keyboard, and opening/collapsing does not save edits. Multiple sections may stay open. Selecting a competition card selects its prelims and opens Round setup; choosing another round retains the current expanded sections. Legacy Score/Results tabs, historical marks/revisions and v2 backups retain their single-ballot meaning through the same local adapter.
+Local and shared pages use one canonical setup editor. The duplicate legacy overview and its editing controls are removed; this does not migrate or delete legacy scores. The editor retains the original competition cards, numbered bib badges, panel styling and head label beside the judge name. Event details, Judges, Program & stages, Round setup and Event-long private judge links are expandable native sections, collapsed on initial load/reload. Round setup contains separately collapsed Required judges, Finalists & pairings (count available from either stage, actual draw in Finals), Roster & heat assignments and Heats, songs & partner rotations. Summaries show useful counts/context while collapsed, support mouse/touch/keyboard, and opening/collapsing does not save edits. Multiple sections may stay open. Selecting a competition card selects its prelims and opens Round setup; choosing another round retains the current expanded sections. Legacy marks/revisions and v2 backups retain their sum meaning in read-only recovery/history through the same local adapter; legacy Score entry and result export controls are removed.
 
-**Local rehearsal links (2026-10-08 follow-up).** Open organizer page, Open judge page and both Copy link buttons deliberately create a stage event from the saved setup on the current server. At localhost this uses local D1 and the exact same organizer/judge routes and stage engine used by shared events. The organizer can open, copy and distribute every judge link. The role used to score is determined by the judge link; an organizer credential still cannot score or vote. Links work before judging starts; readiness requirements still gate starting a stage.
+**Organizer home cleanup (2026-10-09).** The owner replaced the template-to-organizer hop with a working main-page desk. `/` reopens the existing origin-local event binding. With no saved event, it copies valid legacy preparation only, or creates a labeled fictional sample when there is no legacy data. Each private judge page uses the assigned judge name as its main heading and browser title, with event/role context below the name; loading/denied links reveal no assigned identity before authorization. Judge links are separate; the former organizer Score tab is now Run, holding only organizer room controls and progress. Copy organizer link uses `/?event=<private code>`; the role is checked before changing saved access. Existing `/live/<code>` URLs remain compatible with the same desk.
 
-The browser remembers the rehearsal organizer path and idempotent creation nonce in a separate origin-local storage key, excluded from v2 event backups. Retries after a lost creation response reuse the same event. Reload/reopening links retain the event, marks and role assignments. Once created, edit and run that rehearsal on its organizer page. Later edits to the retained local template do not overwrite an existing rehearsal or started assignments. Create another rehearsal explicitly confirms selecting a fresh copy; it preserves the earlier event and its link. Keep the earlier organizer link before switching. Ordinary local setup edits still create no server resources. Access controls wait for browser link storage to load; unavailable storage/API is reported. This is a local development rehearsal, not hosted deployment or an offline guarantee.
+The fictional sample has three distinct named judges (one head), a separate organizer, four Strictly couples, two J&J leads/two follows, one heat per competition, two named songs/rotations and Finals counts of two couples/one pair. It contains no ballots, scores, submissions, votes, head approvals or publication records. Head-approved advancement automatically fills unopened Finals; J&J still requires actual draw pairs. Its attestation is a synthetic example; actual people/separation must be verified for a real event.
+
+Other events holds fresh-sample/blank-event actions and saved event selection. Confirming a new event preserves earlier server data/private links and discards unsaved setup edits explicitly. Each copied preparation has fresh bounded internal IDs, retaining its references and participant identities, so D1 round records cannot collide with the source. Creation/setup response loss reuses the same nonce; successful prior setup is not overwritten during retry. Invalid storage/denied role is reported rather than replaced. These local results establish no hosted readiness or guaranteed offline reload.
+
+Setup follows one column: Event details → Judges (with nested Setup imports) → Program & stages → Round setup. Event-long private judge links are collapsed in Run; Data & recovery is collapsed in Publish. Run competition is the separate Run navigation section, shown directly with room controls; result correction/withdrawal/history controls live together in one collapsed Amendments & withdrawals section in Results. Sections remain collapsed by default, with the existing theme/numbered sidebar/cards/bibs. Copy/Open judge actions remain prominent inside Access; Revoke/Replace are nested under Manage link. Started-competition withdrawal is collapsed within Results; withdrawal controls appear after a stage starts and request history appears there; existing dual approval/privacy/history rules are unchanged.
 
 ### Mock competition and test acceptance
 
@@ -405,21 +368,213 @@ Use deterministic synthetic fixtures and independent expected outcomes. Never re
 
 The fixture includes 44 Strictly couples across Beginner/Intermediate and Advanced, three heats per Strictly division, 2–3 songs, both J&J individual-role divisions with rotations, three distinct judges including the head and a distinct organizer. Browser rehearsal uses a bounded 18-couple equivalent plus both J&J divisions in four isolated sessions at desktop and 360/390px. Equivalent local/shared setup has a retained v2 history fixture.
 
-Required sequence: setup/add/remove/cancel/save/reload; all prelim heats/song pages; an uncovered entrant and explicit No/blank observations; interrupted save plus online retry/reload/focus preservation; acknowledgement cancellation/reset/final submission; whole-stage read-only cards; genuine mistaken-bib correction with both roles; panel cutoff voting and exact approval; explicit matching finalists/J&J pairs; all finals heats/acknowledgements; finals review/results; CSV/cards/amendment/backup/print/restore; separate withdrawal and head deadlock/finals tie scenarios.
+Required sequence: setup/add/remove/cancel/save/reload; all prelim heats/song pages; an uncovered entrant and explicit No/blank observations; interrupted save plus online retry/reload/focus preservation; acknowledgement cancellation/reset/final submission; whole-stage read-only cards; genuine mistaken-bib correction with both roles; panel cutoff voting and exact approval; automatic matching approved finalists/actual J&J draw pairs; all finals heats/acknowledgements; finals review/results; exact public preview, independent organizer/owner approvals, released and revised public cards, and internal backup/restore; separate withdrawal and head deadlock/finals tie scenarios.
 
 Commands: `pnpm test`, `pnpm test:live`, `pnpm test:browser`, `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`. Browser match is `tests/**/*browser.spec.ts`; focused runs use `pnpm exec playwright test tests/local-browser.spec.ts tests/stage-browser.spec.ts` (passing filenames through the pnpm fallback script can insert `--` and run all matches). Synthetic outputs/local D1 files remain ignored. No extra tests of production or real services are implied.
 
 ### Required verification and completion evidence
 
-Report passed/failed/unperformed checks separately. Unit tests cover independent mean/counts/coverage/ranking and legacy invariants. Actual local D1/API tests cover role/identity access, notes, revisions, duplicate/stale requests, racing saves/submissions, vote quorum/deadlock, corrected approval invalidation, immutable history, finalist gates, withdrawal context, backups and revoked links. Browser tests verify the actual controls, confirmations, focus, acknowledgement/hiding, persistence and exports.
+Report passed/failed/unperformed checks separately. Unit tests cover independent mean/counts/coverage/ranking and legacy invariants. Actual local D1/API tests cover role/identity access, notes, revisions, duplicate/stale requests, racing saves/submissions, vote quorum/deadlock, corrected approval invalidation, immutable history, finalist gates, withdrawal context, backups and revoked links. Browser tests verify the actual controls, confirmations, focus, acknowledgement/hiding, persistence, absence of prohibited exports and internal recovery.
 
-Physical phones, real venue Wi-Fi, extended outage/offline reload, hosted quota/provisioning/migration/deployment, live Google delivery and post-announcement replacement-finalist/redance operations remain unperformed or undecided. A real event-day release needs those applicable checks and separate deployment authorization. Builds and local synthetic sessions cannot establish them.
+Physical phones, real venue Wi-Fi, extended outage/offline reload, hosted quota/provisioning/migration/deployment, real external publication and post-announcement replacement-finalist/redance operations remain unperformed or undecided. A real event-day release needs those applicable checks and separate deployment authorization. Builds and local synthetic sessions cannot establish them.
+
+## Access, withdrawals and owner publication — implemented locally
+
+The owner’s approved temporary specification is folded here. Its complete policy and isolated acceptance sequence remain below; actual verification belongs in LOCAL_TEST_REPORT.md. NEXT_BATCH_SPEC.md has been removed after folding, with history retained in Git.
+
+Local implementation uses server-only synthetic `.dev.vars`: LOCAL_PUBLICATION_ONLY=true, independent LOCAL_OWNER_KEY and LOCAL_RECEIVER_KEY, and a loopback LOCAL_PUBLISHER_URL. These keys are ignored, omitted from client bundles/backups/responses, and never seeded into a public page. The separate results origin serves `/admin`. Its local sign-in checks the existing independent LOCAL_OWNER_KEY against server authority, retains the credential only in an expiring server-memory session and issues an HttpOnly/SameSite=Strict opaque cookie. Same-origin POSTs and an exact CSRF token protect approval/service actions. Keys never appear in HTML, browser storage or public result storage. `/owner` redirects there for old links. Hosted website admin identity integration, provider/domain provisioning and production authentication remain deferred.
+
+Start the retained operational preview with `pnpm dev --hostname 127.0.0.1` (3000). Start `node --experimental-strip-types scripts/fake-publisher.mts` (3100), supplying LOCAL_RECEIVER_KEY via server environment; its ignored JSON store is separate from D1. Optional `scripts/publication-outbox.mts` uses LOCAL_OWNER_KEY and loopback LOCAL_OPERATIONAL_URL to retry durable approved deliveries/statuses every 2.5 seconds without creating approvals. Compiled Worker tests use 3001 with inspector 9230, receiver 3110 and a separate ignored D1/public store. Compiled settings belong in ignored `dist/server/.dev.vars`; point LOCAL_PUBLISHER_URL to 3110 and LOCAL_TEST_RECEIVER_STORE to the matching isolated receiver JSON path. No hosted service is contacted.
+
+Preparation pins source, schema/scoring, disclosure, competition/stage scope, revision/supersedes, timestamp, named judges, explicit mark/blank slots, means/counts, head decisions and current head approvals into an immutable fingerprint. Repeated preparation of unchanged content reuses the record. Role/version/source CAS guards protect organizer approval, owner release and acknowledgement. Publication enablement is guarded atomically; the receiver independently checks current authorized source, complete payload fingerprint, means/counts/ranks and exact ordered revision before atomic replacement. Retried delivery IDs return the same acknowledgement and never create another revision. Old released snapshots remain immutable.
+
+Applied changes invalidate pending releases or mark released sources Under review, queuing status independently of new-result release. A status arriving before its snapshot is retained. Dispatcher retries do not block ordinary judging; last-synchronized times expose delayed propagation. Suspension prevents new releases while permitting status notices; shutdown state does not archive the event. Physically stopping the local public process simulates unavailable hosting independently.
+
+Eligibility is an overlay over frozen originals. A preliminary withdrawal affects that dancer/couple and dependent finals identities; a final withdrawal affects the fixed final pair only, preserving prelim eligibility. Past partners and observations are immutable. Exact J&J plans contain eligible opposite-role partners once per song and cover remaining active dancers over reviewed undanced work; unscheduled/withdrawn entrants cannot receive new marks. Withdrawal changes clear active review acknowledgements and require every judge’s submission even with zero active entrants. Withdrawn public cards retain recorded marks, per-judge means/counts but no official average/place.
+
+The deferred post-Finals membership policy, legacy-only publication, reinstatement/substitutes, hosted authentication/provider/domain setup and real external release remain deliberately unimplemented.
+
+### Experience and access
+
+- Preserve the judging application's current visual template, general layout, theme, numbered sidebar, cards and bib badges. Set-Up sections and nested sections start collapsed; retain keyboard activation, explicit Save setup and draft preservation. Main navigation is **Set-Up → Run → Results → Publish**.
+- Only an organizer role accesses the organizer interface, including direct routes and API responses. A judge/head link opens one scoring page containing assigned work, own notes, heat acknowledgement and relevant review/voting/head duties. No organizer navigation or organizer payload is sent to judges. Do not rely on hiding buttons.
+- The organizer can open, copy, distribute, revoke and replace individual judge links. An organizer credential cannot enter scores, vote or act as head. Opening a judge link deliberately uses that judge's capability. Preserve the existing unique participant identifiers, separation attestation and distinct-role checks; link possession cannot prove a physical identity. Judges may look at the organizer screen during between-stage discussions.
+- Organizer navigation is **Set up → Run → Results → Publish**, per the owner's subsequent clarification. **Run** contains start-stage, next-song/heat, lineup and conclude/open-review controls plus room/submission/coverage progress. It contains no judge mark entry, judge submission, vote or head-approval actions. Completing the stage opens **Results**, which holds read-only submitted scorecards, organizer correction initiation, exact approvals/history and competition/entrant withdrawal review. Head scoring/approval remains on the private judge page. Imports remain in **Set up**; private judge links are in **Run** and operational/legacy recovery is in **Publish** beside publication. Organizer correction/withdrawal/history controls share one collapsed **Amendments & withdrawals** section. Main standings omit observation counts; detailed scorecards and coverage rules retain them.
+
+### Settled judging contracts retained
+
+Marks: Yes=10, A1=4.5, A2=4.3, No=0. Blank means no observation; a note is not coverage. Each assigned judge must observe each active entrant at least once across 2–3 songs in a heat. Every required judge independently acknowledges/submits; no timeout, guessed marks, copied scores or general coverage override. The only new exclusion is a specifically approved withdrawal, described below.
+
+Stages encompass every scheduled division/heat. At whole-stage conclusion, average each judge's recorded song marks first, then average those judge means equally. Expose observation counts and explicit blanks; never pool all observations into one weighted mean. J&J prelim roles rank separately; fixed finals pairs retain identity. Legacy v2 sums/completeness/shared-place ranks and backup version remain unchanged.
+
+Cutoff tie votes require the whole assigned panel including the head, each selecting exactly the remaining places. Highest vote counts advance; the head resolves a remaining vote-boundary deadlock. Head finals placement decisions do not alter numeric marks. Preserve exact source fingerprints, approval version checks, renewal after correction, and matching approved finalists before Finals.
+
+### Corrections and withdrawal
+
+#### Request initiation and approval
+
+Organizer initiates all new genuine recording-error corrections and withdrawal requests after discussing them with the affected judge. Judges no longer create/revise/cancel these requests from their page or API capability. Judges retain their own draft editing and author-only notes; the head retains necessary approval duties on the single judge page. Existing requests/history remain readable according to role and are not deleted because requester rules change.
+
+Each request states affected competition/entrant/heat/submission, recorded and intended values when applicable, reason and exact version. Require separate explicit organizer and head approvals of the same request. Initiating the request is not an implicit approval. Editing request content invalidates both approvals; stale approvals fail. Preserve original records, requester, reason, identities, timestamps and amendments. Notes are not editable by organizer/head on another judge's behalf. A correction cannot fabricate an observation or leave a non-withdrawn entrant uncovered.
+
+Applied changes invalidate affected results, votes, advancement and dependent finals approvals, plus pending publication approvals. Unchanged numeric scores must not be rewritten to resolve ties. Internal reasons and audit records are not automatically public commentary.
+
+#### Scope now explicitly confirmed
+
+| Action | Requirement and effect |
+| --- | --- |
+| Remove preparation competition/heat/roster entry | Existing preparation confirmation and explicit Save setup; separate from started withdrawal. Preserve history and frozen-work restrictions. |
+| Withdraw a started competition | Retain existing reason + exact organizer/head approval, history preservation, active-room repair and dependent approval invalidation. Organizer initiates. |
+| Withdraw a started contestant/couple | Implemented scope. Both roles approve the exact request before effect. Retain every recorded mark; label Withdrawn. Exclude the entry from current-stage placement/advancement and future work. Waive only that entry's remaining coverage. Every assigned judge still acknowledges/submits the heat. |
+| Strictly or fixed-pair Finals partner withdrawal | Withdraw the fixed scoring couple together; retain identities/marks. No automatic substitute. |
+| J&J prelim dancer withdrawal | Withdraw that dancer only. Retain observations already completed for everyone. Organizer proposes, and organizer/head approve, the exact revised plan for undanced pairings; block continuation if a remaining dancer lacks a valid pairing. No copied scores or automatic substitute. |
+| Publication suspension/removal, event archive/delete | Distinct lifecycle actions; never treat them as dancer withdrawal or silently delete judging records. Owner controls public hosting. Existing operational archive/recovery is preserved; destructive deletion is outside this new withdrawal feature. |
+
+Design withdrawal as a versioned change to eligibility, not deletion of an entrant or blanket ballot reopening. For an active heat, the reviewed submission version must include current eligibility: applying withdrawal invalidates a previously checked, unsubmitted acknowledgement. Already submitted ballots remain immutable; no new scores are invented. All still-required judges submit even if a heat has no active entrants left. Preserve the original roster/schedule in history and record effective stage/song boundaries. A pairing plan may change only undanced work; past partner identities cannot be rewritten. Pairing/coverage/withdrawal races must commit atomically or reject stale operations.
+
+No automatic reinstatement, replacement finalist, substitute dancer or redance is introduced. A post-Finals correction or withdrawal that makes approved finalist membership inconsistent must invalidate dependent approvals and block publication. The separate redance/replacement policy remains deferred; do not use publication to bypass the block.
+
+### Approved snapshots and public site
+
+#### Authority and publication sequence — confirmed
+
+The current organizer workflow publishes the complete event together: every configured competition must have all scheduled stages complete, current head-approved final results and valid upstream advancement. Review results to publish prepares every immutable competition snapshot in one guarded transaction; an unfinished competition prevents partial preparation. Send results for approval pins the exact latest snapshot ID/fingerprint for every competition in one guarded transaction. Missing, duplicate, foreign, stale or changed previews fail without partial approval. Existing per-competition protocol commands remain for compatibility/testing; the user-facing workflow has one complete-event action. Do not publish drafts or provisional calculations.
+
+The organizer reviews a faithful public preview and explicitly approves its exact version. **The authenticated results-website admin separately approves and publishes the whole event with one button above the results**, including every correction revision. In this local preview, Wesley retains that authority through the existing independent credential. Organizer approval submits a publication request; it never publishes by itself. No administrative credentials or publishing keys appear in organizer/judge pages, bundles, localStorage, URLs, backups or responses.
+
+The website admin sees pending events, a competition/version/status summary and final placements immediately below one Approve & publish results button. Prelims/judge scorecards, published history and website management controls are collapsed. The backend revalidates every current snapshot, organizer approval, complete event membership, event version and publication enablement before atomically queuing the changed records as one durable release set. The local receiver authenticates and validates every set member, then atomically persists every changed current pointer; a bad member exposes none of that set. Delivery retries reuse the same immutable payload and receipt. An unchanged already-published competition may join a corrected complete-event review without receiving a duplicate revision. A correction to any competition reviewed in an event request (including an unchanged already-published member) invalidates the undelivered set together so another member cannot be stranded in Sending pending. Public reads remain independent of operational drafts; website admin credentials never grant organizer/judge powers.
+
+Recommended immutable snapshot fields: snapshot/schema/scoring-rule versions; public event and competition IDs; event display metadata; scope; source fingerprint; applicable stages/rounds/heats/songs and stable entrant/pair IDs; names/bibs/roles; judge display names and head designation; recorded marks and blank slots; per-judge means and observation counts; overall means/counts; numeric tied ranks and separate advancement/head decisions; withdrawn status; exact head result approval reference; organizer snapshot approval; owner release record; revision, timestamps and supersedes pointer. Keep internal participant identifiers, access codes, private notes, raw internal reasons and unneeded audit details outside the allowlisted public payload.
+
+The public system renders this snapshot, not a live query of operational drafts. Derive publication data from authoritative server results and independently validate it; don't accept a client-supplied score table as truth. Pin approval to the entire snapshot, including displayed names, disclosure policy, eligibility and scoring version. Any material change requires a new snapshot and approvals.
+
+#### Public pages and explanations — confirmed
+
+| Page | Required content |
+| --- | --- |
+| Winners | Published final placements by event/competition/division; tied/shared places and Withdrawn accurately represented; revision status visible. Do not invent unique winners for shared places. |
+| Leaderboard | Published competitions with event/division/stage context, standings and applicable approval/revision status. Each contestant/couple name links to its scorecard. Show only released snapshots. |
+| Contestant/couple scorecard | Applicable prelim/final stages, heats/songs, stable person/pair context, every recorded mark and permitted blank, each named judge's mean/count and resulting overall mean/place. Follow individual J&J identity into the fixed final pair without relabeling earlier observations. |
+| Judge scorecards | Read-only detailed submitted marks organized by named judge, competition/stage/heat/song. Show head designation, counts, blanks and the calculation context. Reachable from contestant cards and judge names; never expose active draft forms or private notes. |
+
+**Judge names are public. Private notes are never public.** No new public comment/notes feature is in scope. Song/setup notes and internal correction/withdrawal reasons are excluded unless separately specified later. A sanitized revision explanation can say “Approved score correction” or “Approved withdrawal”; don't copy internal free text.
+
+Explain Yes/A1/A2/No values, blank versus zero, equal judge weighting and observation counts next to expandable scoring details. Example: judge means 10, 5, 5 with counts 1, 2, 2 produce 20/3, not a pooled observation average. Keep stored precision for ranking; rounding is display-only. Explain cutoff votes/head decisions separately from numeric marks. Legacy archival results must identify their actual legacy sum rule and must not be relabeled as stage averages. New publication of legacy-only events is deferred; preservation/recovery remains in scope.
+
+#### Revised results — confirmed
+
+After a dual-approved correction/withdrawal changes a published source, keep the prior released snapshot visible with **Under review** status. A pending unapproved request alone does not change official public results. Renew affected head results approval, create/review a new snapshot, obtain organizer approval and then owner approval/release. Never silently replace the values under an unchanged revision number.
+
+Show revision number, original publication time, latest revision time and an approved generic change summary on winners, leaderboard and detailed cards. A stable public URL resolves to the latest released revision; retained old revision views must be prominently marked Superseded and link to the current revision. Keep immutable prior snapshots internally regardless of public history presentation. Publish the new revision atomically so placements and scorecards cannot disagree; retries must not create duplicates. Reject stale approvals, changed source fingerprints, duplicate/out-of-order deliveries and cross-event references.
+
+Implemented local protocol: persist a durable publication request/status outbox in the operational service, deliver to the separate publisher with server-held credentials, validate the authorized source/version, then atomically switch its public current-revision pointer. This local implementation does not authorize provisioning a hosted service. Correction status updates are separate from publishing new score data; disabling future releases should still permit Under review status notices while the public service is reachable. An outage may delay propagation; show last synchronized/publication time and retry without blocking judging.
+
+#### No result exports; recovery remains
+
+Remove public and organizer-facing Excel, CSV, PDF, result/scorecard file downloads, result print buttons and direct Google Sheets publication controls. Do not leave alternate direct export routes available to those roles. Publication preparation uses an on-screen preview, not a downloadable scorecard. Existing Apps Script compatibility source may remain inert for history; its publishing key UI cannot remain exposed as a competing publication path.
+
+Preserve JSON operational backup/restore, v2 compatibility, audit retention and internal recovery. Keep recovery visibly distinct in a collapsed Set-Up Data & recovery section; it is not a result-export menu or a disguised scorecard download. Default backups exclude credentials and private notes; retain existing explicit note-inclusive recovery semantics and visibility warning, separate from ordinary author-only API/review access. Any future tightening of that privileged backup behavior needs an explicit decision rather than silent data loss.
+
+Visible public results can still be copied, printed through the browser or captured in screenshots. The no-export requirement removes product features; it cannot prevent copying of displayed information. Do not add anti-copy scripts or claim DRM.
+
+### Service ownership and continuity — confirmed
+
+The owner provides the service in exchange for free event entries. Owner retains hosting, domain, deployment, administration and publication control. Organizers operate competitions and approve public snapshots; judges score/perform their assigned review duties. Free-entry arrangements give no score, vote or head override. Owner publication approval chooses whether/when to release an approved snapshot, not permission to edit judging outcomes.
+
+The owner will maintain the operational judging tool. Organizers can continue conducting competitions when the publishing feature is discontinued. **No organizer self-hosting package, ownership transfer or support/handoff solution is promised or required.** Keep operational records and recovery capabilities; don't remove them to enforce publishing access.
+
+Separate three states:
+
+1. Publishing enabled: the website admin may approve complete event requests; every immutable competition snapshot retains its own revision and exact approval history.
+2. Future publication suspended: scoring/setup/review/corrections/advancement/finals/results/recovery continue. Existing published results remain read-only while public hosting is available. Explain suspension clearly; do not imply a queued request was released. Pending requests stay auditable and need current approvals if publication resumes.
+3. Public hosting shut down: 30 days' notice where practicable, no promise of indefinite public availability, operational event records/internal recovery retained. This does not shut down the operational judging app. Unexpected outages may prevent advance notice; no uptime guarantee was agreed.
+
+Recommended technical boundary: separate origins/deployment identities, public snapshot storage and operational D1; separate owner-only publisher administration; minimum-scope server credentials controlled by owner; no public/organizer access to control-plane secrets; public read endpoints cannot reach operational drafts/notes. Operational paths never synchronously depend on the publisher being online or licensed. Owner publisher permissions never substitute for event organizer/head permissions. Switching off publication must not revoke judging links or erase data.
+
+Suggested transparent event arrangement: “Event judging remains available through the maintained tool. Publication is an optional owner-operated service provided under our agreed event-entry arrangement. The organizer approves the exact results and the service owner approves each release. If future publication stops, competitions can still run; existing public results remain read-only while hosted. A public-site shutdown has 30 days' notice where practicable. Visible results may be copied or captured.” Exact event-entry quantity, event eligibility and support commitments can be agreed per event; no contract, automatic billing or purchase is created by this specification.
+
+### Branding direction
+
+Use the confirmed Interskate/Lewisville community, not the mistakenly supplied UK Facebook business. The owner confirms permission to reuse its branding/logo/photos. The research below records inspected sources, usable asset scope and a text-only public-site proposal. Preserve the judging app's appearance. Exact licensed asset files and final public color/type choices are implementation inputs, not approval to download arbitrary reposts or publish a website now.
+
+The separate public pages are redesigned locally on the approved snapshot feed, with original community photos, latest winner cards, event-filtered leaderboards, scorecards and revision notices. No new hosted GPT Site is registered or deployed. Keep scoring/notes/private links outside the public site. Existing permission to use original community assets is settled.
+
+2026-10-09 implementation: verified the correct Instagram profile in a separate local browser without signing in and obtained its original 150×150 boot/longhorn profile image via the browser asset bundle. Stored it as public/kickinit-community-logo.jpg; displayed at 100×100. No platform ring, third-party repost, photograph, video or paid font was selected. The separate local public pages use cream/brown/dark-red colors and system/Georgia fonts; these are design interpretations, not official brand tokens. The judging application retains its theme/layout.
+
+#### Verified sources
+
+- [Instagram — kickinitcountrydance](https://www.instagram.com/kickinitcountrydance/): inspected live in the browser without signing in. The profile identifies the Interskate dance community and welcomes different experience levels. Its black-and-white boot/longhorn emblem has horizontal stripes and curved lettering. Visible posts emphasize group photographs and social dancing. The colored profile ring belongs to Instagram's interface, not a verified brand palette.
+- [Facebook — Kickin' It Country Dance group](https://www.facebook.com/groups/984536000183510/): the owner supplied this corrected URL. Inspected live without joining or signing in. The public group identifies Lewisville, Texas. Its cover matches the emblem and uses dark wood, warm lights, cream display lettering, red accents and stars around Interskate information. These are observed cues, not a formal brand guide.
+
+Web text retrieval failed for Instagram and returned a blocked page for the group. The observations above come from visible browser pages after dismissing optional login prompts. No private/member-only content was accessed. The originally supplied `facebook.com/kickinitcountryclub/` represents a UK party business with different artwork; exclude it from this project.
+
+#### Asset permission
+
+The owner explicitly confirmed permission to use the intended community's branding/logo/photos on 2026-10-09. Do not reask that permission. Select original assets covered by it; social visibility alone does not make every repost a usable project asset.
+
+| Asset | Proposed use |
+| --- | --- |
+| Correct community boot/longhorn logo | Use the original source at a suitable display size; the implemented 150×150 profile asset is limited to small-screen display; preserve proportions. Do not substitute the UK business's logo. |
+| Authorized community/event photographs | Original public-grid assets from [group photo](https://www.instagram.com/kickinitcountrydance/p/DeRrE7RDO-n/) (640×449) and [friends photo](https://www.instagram.com/kickinitcountrydance/p/Dd_pnnJjJ5W/) (640×480), copied unchanged to `public-site/assets/community-night.jpg` / `community-friends.jpg` using browser pageAssets. Visible originals only, no login/bypass/private media. Credits link to the original posts; photos provide community context and are not assigned to fictional winners. |
+| Community cover graphic | Reference for visual direction. Avoid copying its venue prices/schedules into competition results. |
+| Third-party reposts, music, platform interface | Not selected. No copying of Instagram/Facebook interface or downloading videos/music. |
+| Fonts/textures | Inspect licenses when selecting exact assets. No paid asset purchase authorized; do not claim a typeface identified from a screenshot. |
+
+#### Implemented local public-site direction
+
+Use the black/cream emblem with paper cream, forest ink and restrained copper accents. These are a design interpretation, not official color values. Keep score tables on plain light surfaces with high-contrast dark text. Reserve texture and Western display lettering for the masthead and small headings; use a readable normal face for names, marks and explanations.
+
+Public navigation: Winners, Leaderboard, About scoring. This is separate from the judging application's unchanged Set-Up → Run → Results → Publish navigation.
+
+- Winners: photo-led community landing page, fictional-preview banner, latest eight released competition cards with top-three placements and visible revision/Under review status; All results opens the full event-filtered leaderboard. Equal placements receive equal treatment.
+- Leaderboard: event filter submitted through a native GET form, readable event/division/stage rows, clickable contestant names, Withdrawn/shared-place labels and published revision. Main columns are Place, Entrant and Average; observations remain in detailed scorecards. Maintain name/rank context on phones.
+- Contestant cards: bib/person/pair context, applicable stages and expandable heat/song details, named judge means/counts and explicit blanks. Blank reads Not observed; No remains zero.
+- Judge cards: named judge and head designation, stage/heat/song marks and counts, matching revision, no private notes.
+- About scoring/service: actual averaging/tiebreak explanations, publication/revision meaning, owner-operated service terms and acknowledgment that visible results can be copied, printed or captured. Link to the correct community pages.
+
+The owner approved implementation in this chat. Domain registration, hosted deployment and real publication remain separately unauthorized.
+
+### Acceptance criteria and required verification
+
+This is the owner-approved acceptance matrix. Current test evidence and any unperformed checks are in LOCAL_TEST_REPORT.md; earlier closeout checks are historical evidence only.
+
+| Area | Unit / local D1/API evidence | Actual browser / persistence / permissions evidence |
+| --- | --- | --- |
+| Organizer/judge access | Role/action matrix; no organizer data to judge/public; cross-event/token substitution, revocation, replay and stale versions denied; distinct identity rules preserved | Direct routes, reload/back navigation, copied/replaced links, separate contexts and phone widths; organizer link distribution works; judge sees one page, relevant head duties only |
+| Run / Results / setup | No organizer judge-score writes or legacy bypass; room controls in Run; review/withdrawal in Results; import freeze validation | Actual Run controls, no judge mark/submission/vote/head approval controls; automatic stage-completion transition to Results; imports in Set up; judge links in Run; recovery in Publish; combined collapsed Results management; simplified standings and visible publication blockers; collapsed setup and keyboard/Save/cancel/reload |
+| Submission/scoring | Independent expected means/counts, No/blanks, stage gates, legacy sums, exact acknowledgement version and racing save rejection | Review/check/confirm/cancel/edit-reset, pending retry, incomplete active coverage, all-judge gate, immutable submitted entries, full stage boundary |
+| Corrections | Organizer-only initiation/revision/cancel; dual exact-version approval, no implicit approval, prior requests retained, vote/finals invalidation | Judge has no request controls; head approves exact changes; stale browser cannot approve new version; note privacy in DOM/network and reload |
+| Entrant/couple withdrawal | Eligibility + pairing plan version guards; only approved withdrawn coverage waived; no record deletion; original submissions immutable; all-judge quorum retained; zero-active heat handled | Wrong-role request denied, cancel/revise/approve actual controls, J&J blocked invalid pairings, fixed-pair withdrawal, persisted Withdrawn labels, active acknowledgement reset, no auto replacement |
+| Automatic Finals | Independent top-X identity/order and eligible-pair/frozen-round checks; local API head-only approval, persistence/backups, count invalidation/refill and older empty-roster preparation | Actual Prelims count input/save, read-only automatic roster and Start Finals; full Strictly/J&J mock verifies resolved votes/actual draw before Finals |
+| Public snapshot | Allowlist rejects credentials/notes/internal IDs/reasons; source/scope/disclosure fingerprint; named judges; true blank/count/legacy semantics; only current approvals releasable | Organizer previews exact snapshot and approves; owner separately approves/releases to a local fake publisher; unnamed public context sees only released pages |
+| Revision delivery | Atomic current pointer, retry dedupe, stale/out-of-order/source-race rejection, durable outbox recovery; immutable prior revisions | Approved correction causes Under review on prior snapshot; independent renewed approvals; actual revised winners/name-link/scorecard navigation; reload shows one consistent revision |
+| Suspension/ownership | Publication-disabled paths cannot write releases; scoring has no publisher dependency; status-only invalidation retained; owner/event role separation | Kill fake publisher, finish scoring/results/corrections/recovery; suspend future publication, existing site remains read-only; no secrets in bundles/responses/storage/backups |
+| No exports / recovery | No public/organizer result download endpoints; preserve wrapped/plain v2 and shared inert-history restore | No CSV/Excel/PDF/scorecard/template-download/print-result controls; inline import examples; actual internal backup/restore works; visible copy/print limitation disclosed |
+| Branding and accessibility | Escape all public names/text; no stored markup injection or accidental private URL leakage | Public winners/leaderboard/cards at desktop and 360/390px; readable tables/headings/focus/contrast; correct community assets; judging template unchanged |
+
+Required commands retain `pnpm test`, `pnpm test:live`, `pnpm test:browser`, `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build` and whitespace checks. Use a separate local D1 store for compiled Worker tests; verify append-only migration/restart recovery there. Add a local publication receiver/read-site fixture with no real external send. Exercise actual buttons and independent expected outcomes, not only mocks of implementation functions. Do not reset the owner's open event, original localStorage or D1. Report all failures/unperformed checks; local success never proves physical venue or hosted operation.
+
+### Complete isolated mock competition acceptance sequence
+
+1. Create deterministic synthetic organizer, distinct head and two other judges plus separate owner admin and anonymous public sessions. Retain legacy v2 fixture/revision history separately. Use multiple Strictly divisions/heats, both J&J role divisions, rotations and fixed finals pairs; 2–3 songs per heat. Use independent numeric/vote expectations from the existing fixture.
+2. Through actual Set-Up controls import entrants/judges, edit/save/cancel/reload, remove/re-add preparation competition/heat, test empty program and collapsed sections. Open/copy/revoke/replace each link. Verify direct-route and API denial by role. Never navigate synthetic tests through owner browser state.
+3. Start prelims from Run; verify the organizer has room controls but no judge score-entry controls and no mid-stage official averages appear. Judge enters marks, No, blanks and own notes over all songs. Interrupt a save, recover online/reload, test conflicting cell version and acknowledgement reset. Leave an active entrant uncovered and prove submission/room advancement block.
+4. On a separate eligible entrant exercise organizer withdrawal draft, cancellation, edited request/stale approval and exact dual approval. Preserve observed marks, Withdrawn label and only its coverage exemption. Withdraw a Strictly couple and one J&J prelim dancer in separate cases. For the latter reject an invalid remaining pairing plan, approve an exact valid plan for undanced work, and verify prior observations are unchanged. All judges still acknowledge/submit, including the all-withdrawn-heat edge case.
+5. Every judge reviews bibs/marks, checks acknowledgement, cancels a confirmation once, edits to clear it and finally confirms the named heat. Block missing judges; complete all remaining heats/divisions. End the whole stage and check counts/blanks/equal means against independent expectations.
+6. Discuss a mistaken bib; organizer alone initiates correction. Reject direct judge request and organizer/head single approval, revise request, reject stale approval, apply dual-approved exact version. Original submission and private note isolation survive reload. Reapprove stage after invalidation.
+7. Exercise full-panel advancement cutoff votes and a head-only vote deadlock decision with exact remaining count; organizer/ordinary judge cannot perform head action. Advance exactly approved identities. In a separate case correct already-approved prelims and verify stale votes/finals readiness invalidate.
+8. Set fixed final pairs and run every final heat/song/acknowledgement. Resolve final placement ties through head controls without changing averages. Approve final results. Keep another competition unfinished and demonstrate the complete-event publication action stays blocked without preparing a partial set; finish and approve that competition before continuing.
+9. Organizer Publish preview includes applicable stages, named judge detail, counts/explicit blanks and sanitized revision context. Inspect all public payloads for private notes, participant IDs, codes and reasons. Organizer sends the exact complete-event preview using its single top action; anonymous/judge/organizer release attempts fail. The separate local results website admin uses one top Approve & publish results action for the whole event. Follow winners → leaderboard → contestant name → detailed judge/stage/heat/song cards, checking independent totals and persisted version.
+10. Make a genuine post-publication correction that retains finalist membership. Dual approval marks prior public revision Under review without replacing it. Renew head results approval, organizer snapshot approval, owner release; verify new numbered revision/times and Superseded previous version. Duplicate/out-of-order sends and stale owner approval fail safely. Also verify membership-changing post-Finals changes block publication pending the deferred policy.
+11. Simulate publication/network failure and restart outbox processing: no duplicate release or mixed revision. Disable future publication and finish another competition through correction/results/recovery. Prior public snapshots remain readable; status notices work when reachable. Simulate public-hosting shutdown without changing operational ability.
+12. Assert absence of all prohibited export routes/buttons and actual internal v2/shared restore compatibility, retained withdrawal/correction history and inert historical approvals. Reload all sessions, recheck permissions, compare untouched owner data and preserved visual layout. Keep synthetic artifacts ignored and record exact pass counts and limits.
+
 
 ## Maintenance and handoff
 
 Keep this document as the concise map of stable behavior. Update relevant sections with the code change, including the review date, affected contract, test evidence and external configuration status. Do not append raw logs, secrets, long transcripts, or every dependency to it. Update AGENTS.md only when working rules or navigation to this reference change.
 
-If a task is interrupted, add a short temporary handoff containing objective, actual checkout/branch, files changed, checks completed, and the next concrete step. Remove obsolete handoff notes after completion. Proposed work must stay separate from shipped behavior.
+Keep only AGENTS.md, PROJECT_SPEC.md and LOCAL_TEST_REPORT.md as working references. Record incomplete work/next steps in the test report rather than new handoff files. Proposed work must stay separate from locally verified behavior.
 
 A useful prompt for a later authorized implementation task:
 
@@ -447,3 +602,7 @@ A useful prompt for a later authorized implementation task:
 ### 2026-10-08 setup presentation follow-up
 
 The owner confirmed replacing the separate legacy overview with one readable setup interface in local/shared modes and prefers expandable sections collapsed by default. This is implemented in [components/live/setup.tsx](components/live/setup.tsx) and the common [setup-section.tsx](components/live/setup-section.tsx); local setup and both organizer desks reuse it. Detailed link and layout evidence is in LOCAL_TEST_REPORT.md. No new stage or scoring rule was introduced.
+
+2026-10-09 decision: the owner approved all of NEXT_BATCH_SPEC.md for local implementation, including complete mock, branding, organizer-only initiation, dual entrant/couple withdrawal and separate owner publication. No settled requirements were reopened. No deployment, provisioning, real release or purchase was authorized.
+
+Final 2026-10-09 verification: 22 unit, 25 development API, 25 final compiled Worker API and 11 distinct browser scenarios passed; focused final owner/access, publication, shutdown, restart, secret-scan and query/integrity checks are recorded in LOCAL_TEST_REPORT.md. Local batch is uncommitted; preview is retained.

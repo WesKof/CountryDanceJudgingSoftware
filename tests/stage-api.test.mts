@@ -63,7 +63,7 @@ test('local D1 stage rehearsal: 44 couples, rotations, heat snapshots, votes, am
       const current = await api<LiveView>(judge), b = current.ballots.find((b) => b.roundKey === r.key)!;
       await api(judge, { action: 'submit-heat', requestId: crypto.randomUUID(), roundKey: r.key, heatId: h.id, ballotVersion: b.version }, 400);
       await api(judge, { action: 'submit-heat', requestId: crypto.randomUUID(), roundKey: r.key, heatId: h.id, ballotVersion: b.version - 1, acknowledged: true }, 409);
-      const input = { action: 'submit-heat', requestId: crypto.randomUUID(), roundKey: r.key, heatId: h.id, ballotVersion: b.version, acknowledged: true };
+      const input = { action: 'submit-heat', requestId: crypto.randomUUID(), roundKey: r.key, heatId: h.id, ballotVersion: b.version, acknowledged: true, expectedVersion: current.version };
       const ack = await api(judge, input); assert.deepEqual(await api(judge, input), ack);
       assert.ok((await api<LiveView>(judge)).heatSubmissions!.find((s) => s.heatId === h.id)!.acknowledgedAt);
       await command(organizer, { action: 'next' }, 400);
@@ -86,10 +86,10 @@ test('local D1 stage rehearsal: 44 couples, rotations, heat snapshots, votes, am
     await command(organizer, { action: 'reopen', roundKey: r.key, reason: 'Forbidden single-role unlock' }, 400);
     const correction = { action: 'request-correction', roundKey: r.key, heatId: h.id, judgeId: setup.judges[0].id, submissionId: sub.id, reason: 'Wrong contestant: observed bib 101 Yes recorded on bib 102.', changes: [{ performanceId: h.songs[0].id, subjectId: h.subjectIds[1], after: '' }, { performanceId: h.songs[0].id, subjectId: h.subjectIds[0], after: 'Yes' }] };
     await command(tokens[1], correction, 403);
-    const requested = await command(judge, correction) as { reviewRequestId: string };
+    const requested = await command(organizer, correction) as { reviewRequestId: string };
     await command(organizer, { action: 'approve-request', reviewRequestId: requested.reviewRequestId, requestVersion: 1 });
     assert.equal((await api<LiveView>(organizer)).heatSubmissions!.find((s) => s.id === sub.id)!.version, 1);
-    await command(judge, { ...correction, reviewRequestId: requested.reviewRequestId, reason: correction.reason + ' Confirmed during review.' });
+    await command(organizer, { ...correction, reviewRequestId: requested.reviewRequestId, reason: correction.reason + ' Confirmed during review.' });
     await command(head, { action: 'approve-request', reviewRequestId: requested.reviewRequestId, requestVersion: 1 }, 409);
     const revised = (await api<LiveView>(organizer)).reviewRequests!.find((q) => q.id === requested.reviewRequestId)!;
     assert.equal(revised.version, 2); assert.equal(revised.approvals.length, 0);
@@ -162,7 +162,7 @@ test('local D1 stage rehearsal: 44 couples, rotations, heat snapshots, votes, am
     assert.ok(!JSON.stringify(backup).includes('PRIVATE_STAGE_NOTE')); assert.ok(!JSON.stringify(backup).includes(tokens[0]));
     const history = backup.history as { heatSubmissions: unknown[]; approvals: unknown[]; reviewRequests: ReviewRequest[] };
     assert.ok(history.heatSubmissions.length > 30); assert.ok(history.approvals.length >= 8); assert.ok(history.reviewRequests.some((q) => q.appliedAt));
-    assert.ok((await api<LiveView>(organizer)).rounds.every((r) => !r.standings!.approved));
+    assert.ok((await api<LiveView>(organizer)).rounds.every((r) => r.standings!.approved));
     const restored = await api<{ path: string }>('', { action: 'restore', backup, requestId: nonce() });
     const restoredView = await api<LiveView>(restored.path.split('/').at(-1)!); assert.equal(restoredView.rounds.length, 0); assert.ok(restoredView.restoredHistory);
     await command(organizer, { action: 'revoke-link', judgeId: setup.judges[0].id }); await api(judge, undefined, 403);

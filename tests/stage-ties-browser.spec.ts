@@ -28,7 +28,7 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
     await command(token, { action: 'vote', roundKey: current.key, roundVersion: current.version, fingerprint: current.standings!.fingerprint, tieKey: tie.key, selected: [ids[0], ids[i + 1]] });
   }
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } }), head = await context.newPage(); const errors: string[] = []; head.on('pageerror', (e) => errors.push(e.message));
-  await head.goto(base + v.judgeLinks![2].path); await head.locator('.rail-item').nth(1).click();
+  await head.goto(base + v.judgeLinks![2].path); await head.locator('.rail-item').nth(0).click();
   await expect(head.getByText('Full panel is tied. The head judge must resolve the remaining vote tie.', { exact: true })).toBeVisible();
   const recordedVote = head.getByRole('group', { name: 'Beginner / Intermediate · Couples advancement tie', exact: true });
   await expect(recordedVote.locator('input:checked')).toHaveCount(2);
@@ -45,7 +45,7 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
   v = await api<LiveView>(organizer); expect(new Set(v.rounds[0].standings!.advancingIds)).toEqual(new Set([ids[0], ids[3]])); expect(v.rounds[0].standings!.rows.every((s) => s.average === 10)).toBe(true);
   const next = structuredClone(v.setup), final = next.rounds.find((r) => r.kind === 'finals')!; final.finalistIds = v.rounds[0].standings!.advancingIds!; final.subjects = v.rounds[0].definition.subjects.filter((s) => final.finalistIds.includes(s.id)); final.heats[0].subjectIds = final.subjects.map((s) => s.id);
   await command(organizer, { action: 'setup', setup: next }); await command(organizer, { action: 'open-stage', kind: 'finals' }); v = await api<LiveView>(organizer); r = v.rounds.find((r) => r.definition.kind === 'finals')!; await heat(organizer, tokens, r, 'A1');
-  await head.reload(); await head.locator('.rail-item').nth(1).click(); await expect(editor).toBeVisible();
+  await head.reload(); await head.locator('.rail-item').nth(0).click(); await expect(editor).toBeVisible();
   await expect(head.getByRole('button', { name: 'Approve these exact submissions', exact: true })).toBeDisabled();
   await editor.locator('.shared-inline').filter({ hasText: '#104 ' }).getByRole('button', { name: 'Move up', exact: true }).click();
   await editor.getByLabel('Decision explanation (optional)', { exact: true }).fill('Synthetic finals placement resolution'); await click(head, editor.getByRole('button', { name: 'Save head judge decision', exact: true }), 'tie');

@@ -1,4 +1,4 @@
-import { expandSetup } from './setup-browser-helpers';
+import { expandSetup, openJudgeAccess, openRecovery } from './setup-browser-helpers';
 import { test, expect, type APIRequestContext, type Page, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { liveFixture } from './live-fixture';
@@ -37,11 +37,11 @@ async function finishBlock(request: APIRequestContext, organizer: string, tokens
 }
 async function submitAndApprove(pages: Page[], head: Page) {
   for (const page of pages) {
-    await page.locator('.rail-item').nth(1).click();
+    await page.locator('.rail-item').nth(0).click();
     const submit = page.getByRole('button', { name: 'Submit finalized scores for this block' });
     await expect(submit).toBeEnabled({ timeout: 15000 }); await clickCommand(page, submit); await expect(submit).toBeDisabled();
   }
-  await head.locator('.rail-item').nth(2).click();
+  await head.locator('.rail-item').nth(0).click();
   expect(await head.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await head.evaluate(() => innerWidth));
   const editors = head.locator('.tie-editor');
   for (let i = 0; i < await editors.count(); i++) {
@@ -64,9 +64,9 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
   const organizer = desk.url().split('/').at(-1)!;
   const blank = await api<LiveView>(request, organizer); expect(blank.setup.judges).toHaveLength(0); expect(blank.setup.rounds).toHaveLength(0);
   const setup = liveFixture(22); setup.name = 'Local browser rehearsal'; setup.judges.push({ id: crypto.randomUUID(), name: 'Rehearsal Judge Two' });
-  await command(request, organizer, { action: 'setup', setup }); await desk.reload(); await expect(desk.getByRole('heading', { name: 'Event-long private judge links' })).toBeVisible();
+  await command(request, organizer, { action: 'setup', setup }); await desk.reload(); await openJudgeAccess(desk);await expect(desk.getByRole('heading', { name: 'Event-long private judge links' })).toBeVisible();
   const ready = await api<LiveView>(request, organizer); const tokens = [ready.judgeLinks![0], ready.judgeLinks![2], ready.judgeLinks![1]].map((l) => l.path.split('/').at(-1)!);
-  await desk.locator('.rail-item').nth(1).click(); await clickCommand(desk, desk.getByRole('button', { name: 'Start prelims judging', exact: true }));
+  await desk.locator('.rail-item').nth(0).click(); await expandSetup(desk); await desk.getByRole('button',{name:'02 Run',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start prelims judging', exact: true }));
   await Promise.all([judge.goto(`${base}${ready.judgeLinks![0].path}`), second.goto(`${base}${ready.judgeLinks![2].path}`), head.goto(`${base}${ready.judgeLinks![1].path}`)]);
   const firstRow = judge.locator('.phone-row').first(); await expect(firstRow).toBeVisible();
   const geometry = await judge.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, rail: document.querySelector('.side-rail')!.getBoundingClientRect().width }));
@@ -118,8 +118,8 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
     else { finals.finalistIds = pre.subjects.map((s) => s.id); finals.subjects = [0, 1].map((i) => ({ id: crypto.randomUUID(), number: 401 + i, primary: pre.subjects[i].primary, secondary: pre.subjects[i + 2].primary, members: [pre.subjects[i].id, pre.subjects[i + 2].id] })); }
     finals.heats[0].subjectIds = finals.subjects.map((s) => s.id);
   }
-  await command(request, organizer, { action: 'setup', setup: finalsSetup }); await desk.reload(); await desk.locator('.rail-item').nth(1).click();
-  await clickCommand(desk, desk.getByRole('button', { name: 'Start finals judging', exact: true })); await finishBlock(request, organizer, tokens);
+  await command(request, organizer, { action: 'setup', setup: finalsSetup }); await desk.reload(); await desk.locator('.rail-item').nth(0).click(); await expandSetup(desk);
+  await desk.getByRole('button',{name:'02 Run',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start finals judging', exact: true })); await finishBlock(request, organizer, tokens);
   const finalView = await api<LiveView>(request, organizer); const finalSong = finalView.rounds.flatMap((r) => r.definition.heats.flatMap((h) => h.songs)).find((p) => p.id === finalView.context.performanceId)!;
   await expect(desk.getByRole('heading', { name: finalSong.title, exact: true }).first()).toBeVisible({ timeout: 10000 });
   await clickCommand(desk, desk.getByRole('button', { name: 'Start discussion after all songs' })); await submitAndApprove([judge, second, head], head);
@@ -129,20 +129,17 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
   await clickCommand(head, head.locator('.result-sheet').filter({ hasText: `${finalRound.definition.format} · ${finalRound.definition.division} · finals` }).getByRole('button', { name: 'Reopen for a correction' }));
   const reopened = (await api<LiveView>(request, organizer)).rounds.find((r) => r.id === finalRound.id)!;
   expect(reopened.generation).toBe(finalRound.generation + 1); expect(reopened.standings!.approved).toBe(false);
-  await desk.locator('.rail-item').nth(3).click();
-  const csvPromise = desk.waitForEvent('download'); await desk.getByRole('button', { name: 'Export averaged standings CSV' }).click();
-  const csvFile = await csvPromise; const csv = await readFile((await csvFile.path())!, 'utf8');
-  expect(csv).toContain('Average Score'); expect(csv).toContain('Approved Place'); expect(csv).not.toContain('Typing through the song change');
-  expect(csv).not.toContain(tokens[0]);
+  await desk.locator('.rail-item').nth(3).click(); await expect(desk.getByRole('button',{name:/Export|Print|Send/})).toHaveCount(0);
   await Promise.all([organizerContext.close(), judgeContext.close(), secondContext.close(), headContext.close()]);
   expect(pageErrors).toEqual([]);
 });
 
 test('legacy v2 local storage and wrapped backups still restore', async ({ page }) => {
   await page.goto(base); const legacy = createDefaultState(); legacy.event.name = 'Legacy v2 rehearsal';
-  await page.evaluate((state) => localStorage.setItem('country-dance-judging:v2', JSON.stringify(state)), legacy); await page.reload();
+  await page.evaluate((state) => { localStorage.setItem('country-dance-judging:v2', JSON.stringify(state)); localStorage.removeItem('country-dance-judging:rehearsal'); }, legacy); await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Legacy v2 rehearsal' })).toBeVisible();
-  await page.locator('.rail-item').nth(3).click();
+  await page.locator('.rail-item').nth(0).click(); await expandSetup(page);
+  await openRecovery(page);await page.getByText('Legacy device backup & history',{exact:true}).click();
   const backupButton = page.getByRole('button', { name: 'Download JSON' });
   const downloaded = page.waitForEvent('download'); await backupButton.click();
   const file = await downloaded; const backup = JSON.parse(await readFile((await file.path())!, 'utf8'));
@@ -162,8 +159,9 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   const created = await api<{ path: string }>(request, '', { action: 'create', requestId: crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', ''), name: 'Heat editing regression', venue: 'Local test', date: '' });
   const organizer = created.path.split('/').at(-1)!;
   await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`); await expandSetup(page);
-  await expect(page.getByRole('heading', { name: 'Event-long private judge links', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '02 Score', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
+  await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
+  await page.getByRole('button',{name:'02 Run',exact:true}).click();
   const start = page.getByRole('button', { name: 'Start prelims judging', exact: true });
   await expect(start).toBeDisabled();
   await expect(page.getByText('Strictly · Beginner / Intermediate · prelims: Heat 2 has no entrants. Assign contestants or remove this heat.', { exact: true })).toBeVisible();
@@ -192,18 +190,19 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   const ready = await api<LiveView>(request, organizer);
   ready.setup.rounds[6].subjects = advancedSubjects; ready.setup.rounds[6].heats = advancedHeats;
   await command(request, organizer, { action: 'setup', setup: ready.setup }); await page.reload();
-  await page.getByRole('button', { name: '02 Score', exact: true }).click();
-  await expect(start).toBeEnabled(); await clickCommand(page, start);
+  await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
+  await page.getByRole('button',{name:'02 Run',exact:true}).click();await expect(start).toBeEnabled(); await clickCommand(page, start);
   // SQL result order is not the running order; every status read must follow the configured block.
   await page.route('**/api/live', async (route) => {
     if (route.request().method() !== 'GET') { await route.continue(); return; }
     const response = await route.fetch(), body = await response.json();
     body.rounds.reverse(); await route.fulfill({ response, json: body });
   });
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Event-long private judge links', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '02 Score', exact: true }).click();
+  await page.reload(); await expect(page.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
+  await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
   saved = (await api<LiveView>(request, organizer)).rounds[0].definition;
   expect(saved.heats).toHaveLength(1); expect(saved.heats[0].name).toBe('Heat 2');
+  await page.getByRole('button',{name:'02 Run',exact:true}).click();
   const discussion = page.getByRole('button', { name: 'Start discussion after all songs', exact: true });
   await expect(discussion).toBeDisabled();
   const view = await api<LiveView>(request, organizer), count = view.rounds.flatMap((r) => r.definition.heats.flatMap((h) => h.songs)).length;
@@ -219,7 +218,7 @@ test('competition removal updates both blocks, persists, protects live work and 
   const created = await api<{ path: string }>(request, '', { action: 'create', requestId: crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', ''), name: 'Competition editing regression', venue: 'Local test', date: '' });
   const organizer = created.path.split('/').at(-1)!;
   await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`); await expandSetup(page);
-  await expect(page.getByRole('heading', { name: 'Event-long private judge links', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
   const removed = setup.competitions[0], removedRounds = setup.rounds.filter((r) => r.competitionId === removed.id);
   const originalLinks = (await api<LiveView>(request, organizer)).judgeLinks;
   await page.getByRole('combobox', { name: 'Select round to configure', exact: true }).selectOption(removedRounds[0].id);

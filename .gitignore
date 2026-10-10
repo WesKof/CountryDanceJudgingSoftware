@@ -40,3 +40,6 @@ next-env.d.ts
 
 /test-results/
 /playwright-report/
+
+# local-only synthetic owner / receiver credentials
+.dev.vars*

@@ -1,6 +1,9 @@
 import { cellKey, roundKey, type Cells, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
 import { deriveStandings, missingCells, requiredCells, LIVE_MARKS } from './scoring.ts';
-import { freezeRound, id, integer, LiveError, record, requireRule, text, validateSetup } from './validation.ts';
+import { finalistLimitIssues, finalistCountIssues, freezeRound, id, integer, LiveError, record, requireRule, text, validateSetup } from './validation.ts';
+import { populateFinalists } from './finalists.ts';
+import { applyEligibility, validatePairingPlan, withdrawalBoundary } from './eligibility.ts';
+import { buildPublicSnapshot, publicId, latestPublications, type PublicationRecord } from './publication.ts';
 import { advancement, deriveStageStandings, heatSnapshot, latestHeatSubmissions, missingHeatSubjects } from './stage.ts';
 
 type EventRow = { id: string; version: number; setup: string; context: string; status: 'active' | 'archived'; restored_history: string | null; link_id: string; role: 'organizer' | 'judge'; judge_id: string | null };
@@ -9,7 +12,7 @@ type BallotRow = { round_key: string; judge_id: string; version: number; cells: 
 type SubmissionRow = { id: string; round_key: string; judge_id: string; ballot_version: number; snapshot: string; created_at: string };
 type DecisionRow = { round_key: string; fingerprint: string; decision: string };
 type ApprovalRow = { round_key: string; fingerprint: string; created_at: string; snapshot: string };
-type Snapshot = { event: EventRow; setup: LiveSetup; context: LiveContext; rounds: RoundView[]; ballots: LiveBallot[]; submissions: LiveSubmission[]; decisions: DecisionRow[]; approvals: ApprovalRow[]; heatSubmissions: HeatSubmission[]; requests: ReviewRequest[]; votes: StageVote[] };
+type Snapshot = { event: EventRow; setup: LiveSetup; context: LiveContext; rounds: RoundView[]; ballots: LiveBallot[]; submissions: LiveSubmission[]; decisions: DecisionRow[]; approvals: ApprovalRow[]; heatSubmissions: HeatSubmission[]; requests: ReviewRequest[]; votes: StageVote[]; publications: PublicationRecord[] };
 
 const now = () => new Date().toISOString();
 const uid = () => crypto.randomUUID();
@@ -44,6 +47,7 @@ async function load(db: D1Database, codeHash: string): Promise<Snapshot> {
     stmt(db, 'SELECT * FROM live_heat_submissions WHERE event_id = ?', event.id),
     stmt(db, 'SELECT data FROM live_review_requests WHERE event_id = ?', event.id),
     stmt(db, 'SELECT round_key, fingerprint, tie_key, judge_id, selected, created_at FROM live_stage_votes WHERE event_id = ?', event.id),
+    stmt(db, 'SELECT data FROM live_publication_snapshots WHERE event_id = ?', event.id),
   ]);
   const current = result[0].results[0] as unknown as EventRow | undefined;
   if (!current) throw new LiveError(403, 'This private link is invalid or has been revoked.');
@@ -54,7 +58,8 @@ async function load(db: D1Database, codeHash: string): Promise<Snapshot> {
   const heatSubmissions = (result[6].results as unknown as (SubmissionRow & { heat_id: string; version: number; supersedes: string | null; acknowledged_at: string })[]).map((s) => ({ id: s.id, roundKey: s.round_key, heatId: s.heat_id, judgeId: s.judge_id, ballotVersion: s.ballot_version, version: s.version, cells: parse<Cells>(s.snapshot), createdAt: s.created_at, acknowledgedAt: s.acknowledged_at, ...(s.supersedes ? { supersedes: s.supersedes } : {}) }));
   const requests = (result[7].results as unknown as { data: string }[]).map((r) => parse<ReviewRequest>(r.data));
   const votes = (result[8].results as unknown as { round_key: string; fingerprint: string; tie_key: string; judge_id: string; selected: string; created_at: string }[]).map((v) => ({ roundKey: v.round_key, fingerprint: v.fingerprint, tieKey: v.tie_key, judgeId: v.judge_id, selected: parse<string[]>(v.selected), createdAt: v.created_at }));
-  return { event: current, setup, context: parse<LiveContext>(current.context), rounds, ballots, submissions, decisions: result[4].results as unknown as DecisionRow[], approvals: result[5].results as unknown as ApprovalRow[], heatSubmissions, requests, votes };
+  for (const r of rounds) r.definition = applyEligibility(r.definition, requests);
+  return { publications: (result[9].results as unknown as { data: string }[]).map((r) => parse<PublicationRecord>(r.data)), event: current, setup, context: parse<LiveContext>(current.context), rounds, ballots, submissions, decisions: result[4].results as unknown as DecisionRow[], approvals: result[5].results as unknown as ApprovalRow[], heatSubmissions, requests, votes };
 }
 function organizer(s: Snapshot) { if (s.event.role !== 'organizer') throw new LiveError(403, 'An organizer link is required.'); }
 function head(s: Snapshot) { if (s.event.role !== 'judge' || s.event.judge_id !== s.setup.headJudgeId) throw new LiveError(403, 'The event head judge must make this decision.'); }
@@ -67,9 +72,10 @@ function currentRound(s: Snapshot, key: unknown) {
 async function standings(s: Snapshot, r: RoundView) {
   if (s.setup.workflow === 'stage-v1') {
     const latest = latestHeatSubmissions(s.heatSubmissions).filter((sub) => sub.roundKey === r.key);
-    const finalistCount = s.setup.rounds.find((f) => f.prelimRoundId === r.id)?.finalistCount ?? 0;
+    const finals = s.setup.rounds.find((f) => f.prelimRoundId === r.id);
+    const finalistCount = finals?.finalistCount ?? 0;
     const prelimKey = s.rounds.find((pre) => pre.id === r.definition.prelimRoundId)?.key;
-    const fingerprint = await hash(json({ round: r.key, head: s.setup.headJudgeId, finalistCount, submissions: latest.map((sub) => [sub.heatId, sub.judgeId, sub.id, sub.version]).sort(), prelimSources: prelimKey ? latestHeatSubmissions(s.heatSubmissions).filter((sub) => sub.roundKey === prelimKey).map((sub) => [sub.id, sub.version]).sort() : [], withdrawals: s.requests.filter((q) => q.kind === 'withdrawal' && q.appliedAt).map((q) => q.id).sort() }));
+    const fingerprint = await hash(json({ round: r.key, head: s.setup.headJudgeId, finalistCount, ...(finals?.advancementRevision ? { advancementRevision: finals.advancementRevision } : {}), submissions: latest.map((sub) => [sub.heatId, sub.judgeId, sub.id, sub.version]).sort(), prelimSources: prelimKey ? latestHeatSubmissions(s.heatSubmissions).filter((sub) => sub.roundKey === prelimKey).map((sub) => [sub.id, sub.version]).sort() : [], withdrawals: s.requests.filter((q) => q.kind === 'withdrawal' && q.appliedAt && (!q.payload.competitionId || q.payload.competitionId === r.definition.competitionId) && (q.payload.sourceStage !== 'finals' || r.definition.kind === 'finals')).map((q) => q.id).sort() }));
     const decisions = s.decisions.filter((d) => d.round_key === r.key && d.fingerprint === fingerprint).map((d) => parse<TieDecision>(d.decision));
     const computed = deriveStageStandings(r.definition, r.key, latest, decisions);
     const votes = s.votes.filter((v) => v.roundKey === r.key && v.fingerprint === fingerprint);
@@ -84,18 +90,29 @@ async function standings(s: Snapshot, r: RoundView) {
   return { ...deriveStandings(r.definition, submissions, decisions), fingerprint, decisions, approved: r.phase === 'approved' && Boolean(approval), approvedAt: approval?.created_at };
 }
 function safeDefinition(s: Snapshot, round: FrozenRound): FrozenRound {
-  return { ...round, heats: round.heats.map((heat) => ({ ...heat, songs: heat.songs.filter((p) => s.context.visited.includes(p.id)).map((p) => ({ ...p, notes: '' })) })) };
+  return { ...round, judges:round.judges.map((j)=>({id:j.id,name:j.name})), heats: round.heats.map((heat) => ({ ...heat, songs: heat.songs.filter((p) => s.context.visited.includes(p.id)).map((p) => ({ ...p, notes: '' })) })) };
+}
+// Older approved events can expose an empty unopened Finals roster without a read-side write.
+async function preparedFinals(s: Snapshot) {
+  let setup = s.setup;
+  for (const r of s.rounds.filter((r) => r.definition.kind === 'prelims' && r.phase === 'approved')) {
+    const empty = setup.rounds.filter((f) => f.prelimRoundId === r.id && !f.finalistIds.length).map((f) => f.id);
+    if (!empty.length) continue;
+    const result = await standings(s, r);
+    if (result.approved && 'advancingIds' in result) setup = populateFinalists(setup, r.definition, result.advancingIds, setup.rounds.filter((f) => !empty.includes(f.id) || s.rounds.some((x) => x.id === f.id && x.phase !== 'setup')).map((f) => f.id));
+  }
+  return setup;
 }
 async function view(db: D1Database, s: Snapshot): Promise<LiveView> {
   const isOrganizer = s.event.role === 'organizer';
   const isHead = s.event.judge_id === s.setup.headJudgeId && s.event.role === 'judge';
-  const visible = isOrganizer || isHead ? s.rounds : s.rounds.filter((r) => r.phase !== 'setup' && r.definition.judgeIds.includes(s.event.judge_id!));
+  const visible = isOrganizer ? s.rounds : s.rounds.filter((r) => r.phase !== 'setup' && r.definition.judgeIds.includes(s.event.judge_id!));
   const rounds: RoundView[] = await Promise.all(visible.map(async (r) => {
     const base = { ...r, definition: isOrganizer ? r.definition : safeDefinition(s, r.definition) };
     if (s.setup.workflow === 'stage-v1') {
       const reviewed = ['discussion', 'approved'].includes(r.phase);
       const latest = latestHeatSubmissions(s.heatSubmissions).filter((sub) => sub.roundKey === r.key);
-      const draftProgress = isOrganizer || isHead ? r.definition.judgeIds.map((judgeId) => { const b = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === judgeId); return { judgeId, filled: r.definition.heats.reduce((n, h) => n + h.subjectIds.length - missingHeatSubjects(h, b?.cells ?? {}).length, 0), required: r.definition.subjects.length, ballotVersion: b?.version ?? 0, locked: r.definition.heats.every((h) => latest.some((sub) => sub.heatId === h.id && sub.judgeId === judgeId)) }; }) : undefined;
+      const draftProgress = isOrganizer || isHead ? r.definition.judgeIds.map((judgeId) => { const b = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === judgeId); return { judgeId, filled: r.definition.heats.reduce((n, h) => n + h.subjectIds.filter((id)=>!h.withdrawnIds?.includes(id)).length - missingHeatSubjects(h, b?.cells ?? {}).length, 0), required: r.definition.subjects.filter((s)=>!r.definition.withdrawnIds?.includes(s.id)).length, ballotVersion: b?.version ?? 0, locked: r.definition.heats.every((h) => latest.some((sub) => sub.heatId === h.id && sub.judgeId === judgeId)) }; }) : undefined;
       return { ...base, draftProgress, ...(reviewed ? { standings: await standings(s, r), submittedMarks: latest.flatMap((sub) => Object.entries(sub.cells).map(([key, cell]) => ({ judgeId: sub.judgeId, performanceId: key.split(':')[0], subjectId: key.split(':')[1], mark: cell.mark }))) } : {}) };
     }
     if (!isOrganizer && !isHead) return base;
@@ -104,15 +121,16 @@ async function view(db: D1Database, s: Snapshot): Promise<LiveView> {
     return { ...base, standings: await standings(s, r), draftProgress, submissions: submitted.map((sub) => ({ id: sub.id, roundKey: sub.roundKey, judgeId: sub.judgeId, ballotVersion: sub.ballotVersion, createdAt: sub.createdAt })),
       submittedMarks: submitted.flatMap((submission) => requiredCells(r.definition).map((c) => ({ judgeId: submission.judgeId, performanceId: c.performanceId, subjectId: c.subjectId, mark: submission.cells[c.key]?.mark ?? '' }))) };
   }));
-  const setup = isOrganizer ? s.setup : { ...s.setup, rounds: rounds.filter((r) => r.phase !== 'setup').map((r) => r.definition), blocks: s.setup.blocks.map((b) => ({ ...b, roundIds: b.roundIds.filter((id) => rounds.some((r) => r.id === id && r.phase !== 'setup')) })) };
+  const setup: LiveSetup = isOrganizer ? await preparedFinals(s) : { name: s.setup.name, venue: s.setup.venue, date: s.setup.date, workflow: s.setup.workflow, headJudgeId: s.setup.headJudgeId, judges: s.setup.judges.filter((j) => j.id === s.event.judge_id || rounds.some((r) => r.definition.judgeIds.includes(j.id))).map((j) => ({ id: j.id, name: j.name })), competitions: s.setup.competitions.filter((c) => rounds.some((r) => r.definition.competitionId === c.id)), rounds: rounds.filter((r) => r.phase !== 'setup').map((r) => r.definition), blocks: s.setup.blocks.map((b) => ({ ...b, roundIds: b.roundIds.filter((id) => rounds.some((r) => r.id === id && r.phase !== 'setup')) })).filter((b) => b.roundIds.length) };
   const ballots = s.ballots.filter((b) => !isOrganizer && b.judgeId === s.event.judge_id && rounds.some((r) => r.key === b.roundKey && r.phase !== 'setup')).map((b) => ({ ...b, cells: Object.fromEntries(Object.entries(b.cells).filter(([key]) => s.context.visited.includes(key.split(':')[0]))) }));
   const payload: LiveView = { eventId: s.event.id, version: s.event.version, status: s.event.status, setup, context: s.context,
     role: isOrganizer ? 'organizer' : isHead ? 'head' : 'judge', judgeId: s.event.judge_id, rounds, ballots };
   if (s.setup.workflow === 'stage-v1') {
     payload.heatSubmissions = latestHeatSubmissions(s.heatSubmissions).filter((sub) => isOrganizer || isHead || sub.judgeId === s.event.judge_id).map((sub) => ({ id: sub.id, roundKey: sub.roundKey, heatId: sub.heatId, judgeId: sub.judgeId, version: sub.version, ballotVersion: sub.ballotVersion, supersedes: sub.supersedes, createdAt: sub.createdAt, acknowledgedAt: sub.acknowledgedAt }));
-    payload.reviewRequests = s.requests.filter((q) => !s.requests.some((newer) => newer.id === q.id && newer.version > q.version));
+    payload.reviewRequests = s.requests.filter((q) => (isOrganizer || isHead || q.payload.judgeId === s.event.judge_id || q.kind === 'withdrawal' && rounds.some((r) => r.definition.competitionId === q.payload.competitionId)) && !s.requests.some((newer) => newer.id === q.id && newer.version > q.version)).map((q)=>isOrganizer ? q : {...q,requester:'Organizer',approvals:q.approvals.map((a)=>({...a,participantId:a.role==='organizer'?'Organizer':'Head judge'}))});
   }
   if (isOrganizer) {
+    payload.publications = s.publications;
     const links = await stmt(db, 'SELECT judge_id, code, slug, revoked FROM live_links WHERE event_id = ? AND role = ? ORDER BY rowid', s.event.id, 'judge').all<{ judge_id: string; code: string; slug: string; revoked: number }>();
     payload.judgeLinks = s.setup.judges.map((j) => { const l = links.results.filter((l) => l.judge_id === j.id).at(-1); return { id: j.id, name: j.name, path: l ? `/judge/${l.slug}/${l.code}` : '', revoked: !l || Boolean(l.revoked) }; });
     if (s.event.restored_history) payload.restoredHistory = parse(s.event.restored_history);
@@ -217,9 +235,11 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
     const block = s.setup.blocks.find((b) => b.kind === input.kind);
     requireRule(block?.roundIds.length, 'Add competitions and save the stage setup first.');
     requireRule(!s.rounds.some((r) => ['dancing', 'discussion'].includes(r.phase)), 'Finish review and approve the current stage first.');
+    const prepared = input.kind === 'finals' ? await preparedFinals(s) : s.setup;
+    if (prepared !== s.setup) statements.push(stmt(db, 'UPDATE live_events SET setup = ? WHERE id = ?', json(prepared), s.event.id));
     let first = '';
     for (const rid of block.roundIds) {
-      const definition = freezeRound(s.setup, s.setup.rounds.find((r) => r.id === rid)!);
+      const definition = applyEligibility(freezeRound(prepared, prepared.rounds.find((r) => r.id === rid)!),s.requests);
       const old = s.rounds.find((r) => r.id === rid);
       requireRule(!old || old.phase === 'setup', 'This stage has already started. Submitted scores remain immutable.');
       if (definition.kind === 'finals') {
@@ -264,13 +284,14 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
     const existing = latestHeatSubmissions(s.heatSubmissions).find((sub) => sub.roundKey === r.key && sub.heatId === heat.id && sub.judgeId === s.event.judge_id);
     if (existing) return { statements, response: { ok: true, submittedId: existing.id, acknowledged: true } };
     requireRule(input.acknowledged === true, 'Acknowledge that you checked this heat’s bibs and song marks before final submission.');
+    if (input.expectedVersion !== s.event.version) throw new LiveError(409, 'Eligibility or room context changed after review. Review and acknowledge this heat again.');
     requireRule(r.phase === 'dancing' && s.context.lineupHeatId === heat.id && heat.songs.every((p) => s.context.visited.includes(p.id)), 'Submit at this heat’s lineup check after all its songs.');
     const ballot = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === s.event.judge_id)!;
     if (input.ballotVersion !== ballot.version) throw new LiveError(409, 'Saved marks changed after review. Refresh and review this heat again.');
     const missing = missingHeatSubjects(heat, ballot.cells);
     requireRule(!missing.length, `Score each assigned entrant at least once across this heat. Uncovered bibs: ${missing.map((id) => r.definition.subjects.find((s) => s.id === id)!.number).join(', ')}.`);
     const sub: HeatSubmission = { id: uid(), roundKey: r.key, heatId: heat.id, judgeId: s.event.judge_id, ballotVersion: ballot.version, version: 1, cells: heatSnapshot(heat, ballot.cells), createdAt: now(), acknowledgedAt: now() };
-    statements.push(...guard(db, stmt(db, "UPDATE live_ballots SET version = version + 1 WHERE round_key = ? AND judge_id = ? AND version = ? AND locked = 0 AND NOT EXISTS (SELECT 1 FROM live_heat_submissions WHERE round_key = ? AND heat_id = ? AND judge_id = ?) AND EXISTS (SELECT 1 FROM live_rounds WHERE id = ? AND generation = ? AND phase = 'dancing') AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND revoked = 0) AND EXISTS (SELECT 1 FROM live_events WHERE id = ? AND status = 'active' AND json_extract(context, '$.lineupHeatId') = ?)", r.key, s.event.judge_id, ballot.version, r.key, heat.id, s.event.judge_id, r.id, r.generation, codeHash, s.event.id, heat.id)), heatInsert(db, s, sub));
+    statements.push(...guard(db, stmt(db, "UPDATE live_ballots SET version = version + 1 WHERE round_key = ? AND judge_id = ? AND version = ? AND locked = 0 AND NOT EXISTS (SELECT 1 FROM live_heat_submissions WHERE round_key = ? AND heat_id = ? AND judge_id = ?) AND EXISTS (SELECT 1 FROM live_rounds WHERE id = ? AND generation = ? AND phase = 'dancing') AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND revoked = 0) AND EXISTS (SELECT 1 FROM live_events WHERE id = ? AND status = 'active' AND json_extract(context, '$.lineupHeatId') = ? AND version = ?)", r.key, s.event.judge_id, ballot.version, r.key, heat.id, s.event.judge_id, r.id, r.generation, codeHash, s.event.id, heat.id, s.event.version)), heatInsert(db, s, sub));
     response = { ok: true, submittedId: sub.id, acknowledged: true };
   } else if (['vote', 'tie', 'approve'].includes(String(input.action))) {
     const r = currentRound(s, input.roundKey), result = await standings(s, r);
@@ -294,9 +315,10 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
       statements.push(stmt(db, 'INSERT INTO live_tie_decisions (id, event_id, round_key, fingerprint, tie_key, decision) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(round_key, fingerprint, tie_key) DO UPDATE SET decision = excluded.decision', uid(), s.event.id, r.key, result.fingerprint, tie.key, json(decision)));
     } else {
       head(s);
-      requireRule(!s.requests.some((q) => !q.appliedAt && q.kind === 'correction' && q.payload.roundKey === r.key && !s.requests.some((newer) => newer.id === q.id && newer.version > q.version)), 'Resolve pending correction requests before approval.');
+      requireRule(!s.requests.some((q) => !q.appliedAt && !q.cancelledAt && q.kind === 'correction' && q.payload.roundKey === r.key && !s.requests.some((newer) => newer.id === q.id && newer.version > q.version)), 'Resolve pending correction requests before approval.');
       if (r.definition.kind === 'prelims') {
-        requireRule('finalistCount' in result && result.finalistCount > 0 && r.definition.subjects.every((subject) => result.rows.filter((row) => row.group === (subject.role ? `${subject.role}s` : 'Couples')).length >= result.finalistCount), 'Configure a valid finalist count for each role/couple group before approval.');
+        const countIssues = finalistCountIssues(r.definition.format, 'finalistCount' in result ? result.finalistCount : 0, r.definition.subjects.filter((subject) => !r.definition.withdrawnIds?.includes(subject.id)));
+        requireRule(!countIssues.length, countIssues[0]);
         requireRule('advancementTies' in result && result.advancementTies.every((t) => t.complete), 'Every required judge must vote and advancement deadlocks need a head decision.');
       } else {
         const prelim = s.rounds.find((p) => p.id === r.definition.prelimRoundId);
@@ -304,19 +326,23 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
         requireRule(pre?.approved && 'advancingIds' in pre && r.definition.finalistIds.length === pre.advancingIds.length && r.definition.finalistIds.every((id) => pre.advancingIds.includes(id)), 'Dependent advancement changed. Review the prelims and finalist identities before finals approval.');
         requireRule(result.rows.every((row) => row.decided), 'Decide all finals placement ties explicitly.');
       }
+      if (r.definition.kind === 'prelims' && 'advancingIds' in result) {
+        const prepared = populateFinalists(s.setup, r.definition, result.advancingIds, s.rounds.filter((x) => x.phase !== 'setup').map((x) => x.id));
+        statements.push(stmt(db, 'UPDATE live_events SET setup = ? WHERE id = ?', json(prepared), s.event.id));
+      }
       statements.push(stmt(db, 'INSERT INTO live_approvals (id, event_id, round_key, fingerprint, snapshot, created_at, judge_id) VALUES (?, ?, ?, ?, ?, ?, ?)', uid(), s.event.id, r.key, result.fingerprint, json({ rows: result.rows, decisions: result.decisions, ...('advancingIds' in result ? { advancingIds: result.advancingIds, votes: result.advancementTies } : {}), role: 'head' }), now(), s.event.judge_id!));
     }
     statements.push(...guard(db, stmt(db, 'UPDATE live_rounds SET phase = ?, version = version + 1 WHERE id = ? AND generation = ? AND version = ? AND phase = ?', input.action === 'approve' ? 'approved' : 'discussion', r.id, r.generation, r.version, 'discussion')));
   } else if (input.action === 'request-correction' || input.action === 'request-withdrawal') {
+    organizer(s);
     const reason = text(input.reason, 'genuine-error / withdrawal reason', 500, true);
     const prior = input.reviewRequestId ? s.requests.filter((q) => q.id === input.reviewRequestId).sort((a, b) => b.version - a.version)[0] : undefined;
-    if (input.reviewRequestId) requireRule(prior && !prior.appliedAt && prior.requester === participant(s), 'Only the original requester can revise a pending request.');
+    if (input.reviewRequestId) requireRule(prior && !prior.appliedAt && !prior.cancelledAt && prior.requester === participant(s), 'Only the original requester can revise a pending request.');
     const q: ReviewRequest = { id: prior?.id ?? uid(), kind: input.action === 'request-correction' ? 'correction' : 'withdrawal', version: (prior?.version ?? 0) + 1, payload: {}, reason, requester: participant(s), createdAt: now(), approvals: [] };
     requireRule(!prior || prior.kind === q.kind, 'A request revision must retain its request type.');
     if (q.kind === 'correction') {
       const r = currentRound(s, input.roundKey), heat = r.definition.heats.find((h) => h.id === input.heatId);
       requireRule(heat && ['discussion', 'approved'].includes(r.phase), 'Request genuine recording errors during stage review.');
-      if (s.event.role !== 'organizer' && s.event.judge_id !== input.judgeId) throw new LiveError(403, 'A judge may request corrections only to their own observations.');
       const sub = latestHeatSubmissions(s.heatSubmissions).find((sub) => sub.roundKey === r.key && sub.heatId === heat.id && sub.judgeId === input.judgeId);
       requireRule(sub && sub.id === input.submissionId, 'Use the exact current submitted heat version.');
       requireRule(Array.isArray(input.changes) && input.changes.length > 0 && input.changes.length <= 10, 'Identify the exact recording-error cells.');
@@ -326,17 +352,30 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
         return { performanceId: String(c.performanceId), subjectId: String(c.subjectId), before: sub.cells[key].mark, after: c.after as typeof sub.cells[string]['mark'] };
       });
       requireRule(new Set(changes.map((c) => cellKey(c.performanceId, c.subjectId))).size === changes.length, 'Do not repeat a correction cell.');
+      requireRule(changes.every((c) => c.before !== '' || c.after === '' || changes.some((other) => other.performanceId === c.performanceId && other.subjectId !== c.subjectId && other.before === c.after && other.after !== other.before)), 'A blank cannot become an invented observation; identify the recorded source of a mistaken-bib transfer.');
       const corrected = structuredClone(sub.cells); for (const c of changes) corrected[cellKey(c.performanceId, c.subjectId)].mark = c.after;
       requireRule(!missingHeatSubjects(heat, corrected).length, 'An amendment cannot leave an entrant uncovered or guess a missing observation.');
       q.payload = { roundKey: r.key, heatId: heat.id, judgeId: sub.judgeId, submissionId: sub.id, changes };
     } else {
       organizer(s); requireRule(s.setup.competitions.some((c) => c.id === input.competitionId) && s.rounds.some((r) => r.definition.competitionId === input.competitionId), 'Use preparation removal for an unstarted competition.');
       q.payload = { competitionId: String(input.competitionId) };
+      if (input.subjectId) {
+        const r = currentRound(s, input.roundKey), subjectId = id(input.subjectId);
+        requireRule(r.definition.competitionId === input.competitionId && r.definition.subjects.some((subject) => subject.id === subjectId) && !r.definition.withdrawnIds?.includes(subjectId), 'Choose a current eligible entrant/couple in this competition.');
+        q.payload = { competitionId: r.definition.competitionId, roundKey: r.key, subjectId, sourceStage:r.definition.kind, sourceBoundary: withdrawalBoundary(r.definition, s.context), pairingPlan: validatePairingPlan(r.definition, subjectId, s.context, input.pairingPlan) };
+      }
     }
     statements.push(requestInsert(db, s, q)); response = { ok: true, reviewRequestId: q.id, requestVersion: q.version };
+  } else if (input.action === 'cancel-request') {
+    organizer(s);
+    const q = s.requests.filter((q) => q.id === input.reviewRequestId).sort((a,b) => b.version-a.version)[0];
+    requireRule(q && !q.appliedAt && !q.cancelledAt, 'Choose a pending request.');
+    if (input.requestVersion !== q.version) throw new LiveError(409, 'The request changed. Review its current version.');
+    const next = { ...q, version: q.version + 1, approvals: [], cancelledAt: now() };
+    statements.push(requestInsert(db,s,next));
   } else if (input.action === 'approve-request') {
     const q = s.requests.filter((q) => q.id === input.reviewRequestId).sort((a, b) => b.version - a.version)[0];
-    requireRule(q && !q.appliedAt, 'Choose a pending review request.');
+    requireRule(q && !q.appliedAt && !q.cancelledAt, 'Choose a pending review request.');
     if (q.version !== input.requestVersion) throw new LiveError(409, 'The request changed. Both roles must review and approve its current exact version.');
     if (s.event.role !== 'organizer') head(s);
     const role = s.event.role === 'organizer' ? 'organizer' as const : 'head' as const;
@@ -350,12 +389,20 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
         const cells = structuredClone(sub.cells); for (const c of q.payload.changes!) cells[cellKey(c.performanceId, c.subjectId)] = { ...cells[cellKey(c.performanceId, c.subjectId)], mark: c.after };
         statements.push(heatInsert(db, s, { ...sub, id: uid(), version: sub.version + 1, supersedes: sub.id, cells, createdAt: now() }));
         statements.push(...invalidateReview(db, s, s.rounds.filter((round) => round.id === r.id || round.definition.prelimRoundId === r.id)));
+      } else if (q.payload.subjectId) {
+        const r = currentRound(s, q.payload.roundKey);
+        if (withdrawalBoundary(r.definition, s.context) !== q.payload.sourceBoundary) throw new LiveError(409, 'Eligibility or danced pairings changed. Revise the exact withdrawal plan and renew both approvals.');
+        validatePairingPlan(r.definition, q.payload.subjectId, s.context, q.payload.pairingPlan);
+        const affected = s.rounds.filter((round) => round.definition.competitionId === r.definition.competitionId && (r.definition.kind !== 'finals' || round.definition.kind === 'finals'));
+        // Preserve every original mark/submission. A version bump invalidates unsubmitted acknowledgements.
+        for (const ballot of s.ballots.filter((b) => affected.some((r) => r.key === b.roundKey))) statements.push(...guard(db,stmt(db, 'UPDATE live_ballots SET version = version + 1 WHERE round_key = ? AND judge_id = ? AND version = ?', ballot.roundKey, ballot.judgeId, ballot.version)));
+        statements.push(...invalidateReview(db,s,affected));
       } else {
         const competitionId = q.payload.competitionId, removed = new Set(s.setup.rounds.filter((r) => r.competitionId === competitionId).map((r) => r.id));
         requireRule(removed.size, 'This competition is already withdrawn.');
         const setup = { ...s.setup, competitions: s.setup.competitions.filter((c) => c.id !== competitionId), rounds: s.setup.rounds.filter((r) => !removed.has(r.id)), blocks: s.setup.blocks.map((b) => ({ ...b, roundIds: b.roundIds.filter((id) => !removed.has(id)) })) };
         statements.push(stmt(db, 'UPDATE live_events SET setup = ? WHERE id = ?', json(setup), s.event.id));
-        statements.push(...invalidateReview(db, s, s.rounds));
+        statements.push(...invalidateReview(db, s, s.rounds.filter((r)=>r.definition.competitionId===competitionId)));
         const removedCurrent = s.rounds.some((r) => removed.has(r.id) && r.definition.heats.some((h) => h.songs.some((p) => p.id === s.context.performanceId)));
         if (removedCurrent) {
           const remaining = s.setup.blocks.find((b) => b.id === s.context.blockId)?.roundIds.filter((rid) => !removed.has(rid)).flatMap((rid) => {
@@ -367,6 +414,7 @@ async function stageMutation(db: D1Database, s: Snapshot, codeHash: string, inpu
           statements.push(stmt(db, 'UPDATE live_events SET context = ? WHERE id = ?', json({ ...s.context, blockId: p ? s.context.blockId : null, performanceId: p?.id ?? null, lineupHeatId: next?.h.songs.every((p) => s.context.visited.includes(p.id)) ? next.h.id : null, visited: [...new Set([...s.context.visited, ...(p ? [p.id] : [])])] }), s.event.id));
         }
       }
+      statements.push(...await invalidatePublication(db, s, q.payload.competitionId ?? s.rounds.find((r) => r.key === q.payload.roundKey)?.definition.competitionId));
     }
     statements.push(...guard(db, stmt(db, 'UPDATE live_review_requests SET data = ? WHERE request_id = ? AND version = ? AND data = ? AND NOT EXISTS (SELECT 1 FROM live_review_requests WHERE request_id = ? AND version > ?)', json(next), q.id, q.version, json(q), q.id, q.version)));
   } else throw new LiveError(400, 'Use the stage/heat controls. Legacy block submission and single-role reopening do not apply to this event.');
@@ -390,7 +438,7 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
     const results = await Promise.all(s.rounds.map(async (r) => ({ round: r.definition, generation: r.generation, phase: r.phase, standings: await standings(s, r) })));
     const result: Record<string, unknown> = { format: 'country-dance-live-backup', backupVersion: 1, exportedAt: now(), setup: s.setup, context: s.context, status: s.event.status, results,
       history: { roundVersions: (await stmt(db, 'SELECT round_id, generation, definition, reason, created_at FROM live_round_versions WHERE event_id = ?', s.event.id).all()).results,
-        submissions: s.submissions.map((sub) => ({ ...sub, cells: Object.fromEntries(Object.entries(sub.cells).map(([key, c]) => [key, { mark: c.mark }])) })), heatSubmissions: s.heatSubmissions.map((sub) => ({ ...sub, cells: Object.fromEntries(Object.entries(sub.cells).map(([key, c]) => [key, { mark: c.mark }])) })), reviewRequests: s.requests, votes: s.votes, decisions: s.decisions, approvals: s.approvals },
+        submissions: s.submissions.map((sub) => ({ ...sub, cells: Object.fromEntries(Object.entries(sub.cells).map(([key, c]) => [key, { mark: c.mark }])) })), heatSubmissions: s.heatSubmissions.map((sub) => ({ ...sub, cells: Object.fromEntries(Object.entries(sub.cells).map(([key, c]) => [key, { mark: c.mark }])) })), reviewRequests: s.requests, publications: s.publications, votes: s.votes, decisions: s.decisions, approvals: s.approvals },
       ballots: s.ballots.map((b) => ({ ...b, cells: Object.fromEntries(Object.entries(b.cells).map(([key, c]) => [key, { mark: c.mark, revision: c.revision }])) })),
       includesPrivateNotes: input.includeNotes === true };
     if (s.event.restored_history) result.restoredHistory = archiveData(parse(s.event.restored_history), input.includeNotes === true);
@@ -413,6 +461,8 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
     requireRule(r.definition.judgeIds.includes(s.event.judge_id) && requiredCells(r.definition).some((c) => c.key === key) && s.context.visited.includes(performanceId), 'This song/entrant is outside your assignment.');
     if (!['dancing', ...(s.setup.workflow === 'stage-v1' ? [] : ['discussion'])].includes(r.phase)) throw new LiveError(423, 'This ballot is locked. Ask for an explicit correction.');
     const heat = r.definition.heats.find((h) => h.songs.some((p) => p.id === performanceId))!;
+    if(s.requests.some((q)=>q.appliedAt && q.payload.pairingPlan?.some((p)=>p.performanceId===performanceId))) requireRule(heat.songs.find((p)=>p.id===performanceId)?.partners.some((pair)=>pair.includes(subjectId)), 'This dancer is not scheduled in the approved pairing plan for this song.');
+    requireRule(!r.definition.withdrawnIds?.includes(subjectId), 'This entrant/couple is withdrawn; retained marks are read only.');
     if (s.setup.workflow === 'stage-v1' && s.heatSubmissions.some((sub) => sub.roundKey === r.key && sub.heatId === heat.id && sub.judgeId === s.event.judge_id)) throw new LiveError(423, 'This submitted heat is locked. Request a genuine-error amendment.');
     requireRule(input.mark === '' || LIVE_MARKS.includes(input.mark as typeof LIVE_MARKS[number]), 'Invalid mark.');
     const ballot = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === s.event.judge_id)!;
@@ -420,19 +470,33 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
     if (ballot.locked) throw new LiveError(423, 'Finalized ballot is locked. Your pending edit is preserved.');
     if ((ballot.cells[key]?.revision ?? 0) !== input.baseRevision) throw new LiveError(409, 'Another device saved this entry. Compare your edit with the saved version.', { cell: ballot.cells[key] ?? { mark: '', note: '', revision: 0, mutationId: '' } });
     const path = `$."${key}"`;
-    statements = guard(db, stmt(db, `UPDATE live_ballots SET cells = json_set(cells, ?, json(?)), version = version + 1 WHERE round_key = ? AND judge_id = ? AND locked = 0 AND COALESCE(json_extract(cells, ?), 0) = ? AND EXISTS (SELECT 1 FROM live_rounds WHERE id = ? AND generation = ? AND phase IN (${s.setup.workflow === 'stage-v1' ? "'dancing'" : "'dancing','discussion'"})) AND NOT EXISTS (SELECT 1 FROM live_heat_submissions WHERE round_key = ? AND heat_id = ? AND judge_id = ?) AND EXISTS (SELECT 1 FROM live_events WHERE id = ? AND status = 'active') AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND revoked = 0)`, path, json(cell), r.key, s.event.judge_id, `${path}.revision`, Number(input.baseRevision), r.id, r.generation, r.key, heat.id, s.event.judge_id, s.event.id, codeHash));
+    statements = guard(db, stmt(db, `UPDATE live_ballots SET cells = json_set(cells, ?, json(?)), version = version + 1 WHERE round_key = ? AND judge_id = ? AND locked = 0 AND COALESCE(json_extract(cells, ?), 0) = ? AND EXISTS (SELECT 1 FROM live_rounds WHERE id = ? AND generation = ? AND phase IN (${s.setup.workflow === 'stage-v1' ? "'dancing'" : "'dancing','discussion'"})) AND NOT EXISTS (SELECT 1 FROM live_heat_submissions WHERE round_key = ? AND heat_id = ? AND judge_id = ?) AND EXISTS (SELECT 1 FROM live_events WHERE id = ? AND status = 'active' AND version = ?) AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND revoked = 0)`, path, json(cell), r.key, s.event.judge_id, `${path}.revision`, Number(input.baseRevision), r.id, r.generation, r.key, heat.id, s.event.judge_id, s.event.id, s.event.version, codeHash));
     response = { cell, roundKey: r.key, performanceId, subjectId };
   } else {
     statements = input.action === 'submit-heat' ? [] : eventGuard(db, s, codeHash, input.expectedVersion);
-    if (s.setup.workflow === 'stage-v1' && input.action !== 'setup' && !['backup', 'replace-link', 'revoke-link', 'archive'].includes(String(input.action))) {
+    if (['prepare-publication','approve-publication','prepare-event-publication','approve-event-publication'].includes(String(input.action))) {
+      const change = await publicationMutation(db, s, input); statements.push(...change.statements); response = change.response;
+    } else if (s.setup.workflow === 'stage-v1' && input.action !== 'setup' && !['backup', 'replace-link', 'revoke-link', 'archive'].includes(String(input.action))) {
       const change = await stageMutation(db, s, codeHash, input);
       statements.push(...change.statements); response = change.response;
     } else if (input.action === 'setup') {
       organizer(s);
       const setup = validateSetup(input.setup);
+      // Server-owned revision distinguishes renewed review even when a count returns to an earlier value.
+      // Incoming revision fields are ignored by validateSetup; existing immutable approvals remain intact.
+      if (setup.workflow === 'stage-v1') for (const finals of setup.rounds.filter((r) => r.kind === 'finals')) {
+        const prior = s.setup.rounds.find((r) => r.id === finals.id);
+        if (prior) {
+          const revision = (prior.advancementRevision ?? 0) + Number(finals.finalistCount !== prior.finalistCount);
+          if (revision) finals.advancementRevision = revision;
+        }
+      }
+
       const frozenChanged = s.rounds.some((r) => r.phase !== 'setup' && (json(s.setup.rounds.find((x) => x.id === r.id)) !== json(setup.rounds.find((x) => x.id === r.id)) || json(s.setup.blocks.find((b) => b.id === r.definition.blockId)) !== json(setup.blocks.find((b) => b.id === r.definition.blockId)) || json(s.setup.judges) !== json(setup.judges) || s.setup.headJudgeId !== setup.headJudgeId || s.setup.organizerParticipantId !== setup.organizerParticipantId || s.setup.separationAttested !== setup.separationAttested || json(s.setup.competitions.find((c) => c.id === r.definition.competitionId)) !== json(setup.competitions.find((c) => c.id === r.definition.competitionId))));
       if (frozenChanged && (s.setup.workflow === 'stage-v1' || input.correction !== true)) throw new LiveError(423, s.setup.workflow === 'stage-v1' ? 'Started stage assignments are frozen. Use a dual-approved amendment or withdrawal; setup cannot reopen submitted scores.' : 'Opened assignments are frozen. Use the explicit setup correction action.');
       if (s.rounds.length && s.setup.workflow !== setup.workflow) throw new LiveError(423, 'An existing event retains its original scoring workflow. Create a new event for the stage workflow.');
+      const limitIssues = finalistLimitIssues(setup, Object.fromEntries(s.rounds.map((r) => [r.id, r.definition.withdrawnIds ?? []])));
+      requireRule(!limitIssues.length, limitIssues[0]);
       const removedRounds = s.rounds.filter((r) => !setup.rounds.some((item) => item.id === r.id));
       if (frozenChanged || removedRounds.length) {
         const reason = frozenChanged ? text(input.reason, 'correction reason', 500, true) : 'Removed competition from preparation; judging history retained';
@@ -444,6 +508,7 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
         if (frozenChanged) statements.push(stmt(db, 'UPDATE live_events SET context = ? WHERE id = ?', json({ blockId: null, performanceId: null, visited: [] }), s.event.id));
       }
       statements.push(stmt(db, 'UPDATE live_events SET setup = ? WHERE id = ?', json(setup), s.event.id));
+      statements.push(...await invalidatePublication(db, s));
       if (setup.workflow === 'stage-v1') for (const oldFinals of s.setup.rounds.filter((r) => r.kind === 'finals')) {
         const nextFinals = setup.rounds.find((r) => r.id === oldFinals.id);
         const pre = s.rounds.find((r) => r.id === oldFinals.prelimRoundId);
@@ -458,7 +523,7 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
       requireRule(!s.rounds.some((r) => r.phase === 'dancing' || r.phase === 'discussion'), 'Finish and approve the current block before opening another.');
       let firstPerformance: string | undefined;
       for (const rid of block.roundIds) {
-        const definition = freezeRound(s.setup, s.setup.rounds.find((r) => r.id === rid)!);
+        const definition = applyEligibility(freezeRound(s.setup, s.setup.rounds.find((r) => r.id === rid)!),s.requests);
         const old = s.rounds.find((r) => r.id === rid);
         requireRule(!old || old.phase === 'setup', 'This block is already open or approved. Use Reopen for a correction.');
         if (definition.kind === 'finals') {
@@ -551,4 +616,184 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
     throw error;
   }
   return response;
+}
+
+
+function publicationWrite(db: D1Database, s: Snapshot, record: PublicationRecord) {
+  return stmt(db,'INSERT INTO live_publication_snapshots (id,event_id,competition_id,data) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET data = excluded.data',record.id,s.event.id,record.competitionId,json(record));
+}
+function outboxWrite(db: D1Database, s: Snapshot, kind: string, payload: unknown) {
+  return stmt(db,'INSERT INTO live_publication_outbox (id,event_id,kind,payload,created_at) VALUES (?,?,?,?,?)',uid(),s.event.id,kind,json(payload),now());
+}
+async function invalidatePublication(db: D1Database, s: Snapshot, competitionId?: string) {
+  const statements: D1PreparedStatement[] = [];
+  const bundled=(await stmt(db,"SELECT id,payload FROM live_publication_outbox WHERE event_id = ? AND kind = 'release-set' AND status = 'pending'",s.event.id).all<{id:string;payload:string}>()).results;
+  const ids=new Set(s.publications.filter((p)=>!competitionId||p.competitionId===competitionId).map((p)=>p.id));
+  for(const item of bundled){const members=parse<PublicationRecord[]>(item.payload);for(const member of members)ids.add(member.id);statements.push(stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id));}
+  for (const record of s.publications.filter((p) => ids.has(p.id))) {
+    statements.push(publicationWrite(db,s,{ ...record, status: record.status === 'released' ? 'released' : 'stale', underReview: record.status === 'released' ? true : record.underReview }));
+    statements.push(stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE event_id = ? AND kind = 'release' AND json_extract(payload,'$.id') = ? AND status = 'pending'",s.event.id,record.id));
+    if (record.status === 'released' || record.status === 'queued') statements.push(outboxWrite(db,s,'status',{ id: record.id, eventId: await publicId(s.event.id,s.event.id), competitionId: await publicId(s.event.id,record.competitionId), revision: record.revision, status: 'Under review' }));
+  }
+  return statements;
+}
+async function publicationMutation(db: D1Database, s: Snapshot, input: Record<string,unknown>) {
+  organizer(s);
+  const statements: D1PreparedStatement[] = [];
+  if (input.action === 'prepare-event-publication') {
+    requireRule(s.setup.competitions.length, 'Add a competition first.');
+    for (const competition of s.setup.competitions) {
+      const change = await publicationMutation(db, s, {action:'prepare-publication', competitionId:competition.id});
+      statements.push(...change.statements);
+    }
+    return {statements, response:{ok:true}};
+  }
+  if (input.action === 'approve-event-publication') {
+    const records = exactPublicationSet(s, input.publications);
+    const currentView = await view(db,s);
+    requireRule(records.some((p)=>p.status==='prepared'), 'These results have already been sent.');
+    for (const item of records) {
+      requireRule(['prepared','requested','released'].includes(item.status) && !item.underReview, 'Review the latest results for every competition before sending.');
+      await currentPublication(currentView,item);
+      if(item.status==='prepared') statements.push(publicationWrite(db,s,{...item,status:'requested',organizerApprovedAt:now()}));
+    }
+    return {statements,response:{ok:true}};
+  }
+  if (input.action === 'prepare-publication') {
+    const competitionId = id(input.competitionId), released = s.publications.filter((p) => p.competitionId === competitionId && p.status === 'released').sort((a,b)=>b.revision-a.revision)[0];
+    const snapshot = await buildPublicSnapshot(await view(db,s),competitionId,(released?.revision ?? 0)+1,released?.id ?? null,now(),uid());
+    for(const existing of s.publications.filter((p)=>p.competitionId===competitionId && p.status!=='stale')) { const check=await buildPublicSnapshot(await view(db,s),competitionId,existing.revision,existing.snapshot.supersedes,existing.snapshot.preparedAt,existing.id); if(check.sourceFingerprint===existing.sourceFingerprint) return {statements,response:{publicationId:existing.id}}; }
+    const record: PublicationRecord = { id: snapshot.id, competitionId, revision: snapshot.revision, sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'prepared' };
+    statements.push(publicationWrite(db,s,record)); return { statements,response: { publicationId: record.id } };
+  }
+  const record = s.publications.find((p)=>p.id===input.publicationId);
+  requireRule(record && record.status === 'prepared' && input.sourceFingerprint === record.sourceFingerprint, 'Review an exact prepared snapshot before organizer approval.');
+  const current = await buildPublicSnapshot(await view(db,s),record.competitionId,record.revision,record.snapshot.supersedes,record.snapshot.preparedAt,record.id);
+  if (current.sourceFingerprint !== record.sourceFingerprint) throw new LiveError(409,'Displayed data or head-approved source changed. Prepare and review a new snapshot.');
+  statements.push(publicationWrite(db,s,{ ...record,status:'requested',organizerApprovedAt:now() }));
+  return { statements,response:{ ok:true } };
+}
+function exactPublicationSet(s:Snapshot, value:unknown) {
+  requireRule(Array.isArray(value) && value.length===s.setup.competitions.length && value.length>0, 'Include the latest results for every competition in this event.');
+  const latest=latestPublications(s.publications);
+  const records=value.map((entry)=>{
+    const item=record(entry), current=latest.find((p)=>p.id===item.publicationId);
+    requireRule(current && current.sourceFingerprint===item.sourceFingerprint && s.setup.competitions.some((c)=>c.id===current.competitionId),'Results changed. Refresh and review the complete event.');
+    return current;
+  });
+  requireRule(new Set(records.map((p)=>p.competitionId)).size===s.setup.competitions.length,'Include each competition exactly once.');
+  return records;
+}
+async function currentPublication(currentView:LiveView, item:PublicationRecord) {
+  const current=await buildPublicSnapshot(currentView,item.competitionId,item.revision,item.snapshot.supersedes,item.snapshot.preparedAt,item.id);
+  if(current.sourceFingerprint!==item.sourceFingerprint) throw new LiveError(409,'Results changed. Renew the required approvals and review the new results.');
+}
+export type LocalPublisherConfig = { enabled: boolean; receiverUrl: string; receiverKey: string };
+export async function ownerPublication(db: D1Database, input: Record<string,unknown>, config: LocalPublisherConfig) {
+  requireRule(config.receiverUrl.startsWith('http://127.0.0.1:') || config.receiverUrl.startsWith('http://localhost:'), 'The local fake publisher requires a loopback URL.');
+  await stmt(db,"INSERT OR IGNORE INTO live_publication_service (id,state,updated_at) VALUES ('owner','enabled',?)",now()).run();
+  const service = await stmt(db,"SELECT state FROM live_publication_service WHERE id = 'owner'").first<{state:string}>();
+  config = {...config,enabled:config.enabled && service?.state!=='suspended' && service?.state!=='shutdown'};
+  if (input.action === 'service') {
+    requireRule(['enabled','suspended','shutdown'].includes(String(input.state)), 'Choose a service state.');
+    await stmt(db,"INSERT INTO live_publication_service (id,state,updated_at) VALUES ('owner',?,?) ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",String(input.state),now()).run();
+    return {ok:true,state:input.state};
+  }
+  if (input.action === 'list') {
+    const publications=(await stmt(db,'SELECT data FROM live_publication_snapshots').all<{data:string}>()).results.map((r)=>parse<PublicationRecord>(r.data));
+    const rows=(await stmt(db,'SELECT id,setup,status FROM live_events WHERE id IN (SELECT event_id FROM live_publication_snapshots)').all<{id:string;setup:string;status:string}>()).results;
+    const events:Record<string,{competitionIds:string[];active:boolean}>={};
+    for(const row of rows)events[await publicId(row.id,row.id)]={competitionIds:parse<LiveSetup>(row.setup).competitions.map((c)=>c.id),active:row.status==='active'};
+    return {publications,events,enabled:config.enabled,serviceState:service?.state??'enabled'};
+  }
+  if (input.action === 'release-event') {
+    requireRule(config.enabled, 'Publication is paused. Judging remains available.');
+    requireRule(Array.isArray(input.publications) && input.publications.length>0 && input.publications.length<=8,'Review a complete event first.');
+    const first=record(input.publications[0]);
+    const row=await stmt(db,'SELECT event_id FROM live_publication_snapshots WHERE id = ?',id(first.publicationId)).first<{event_id:string}>();
+    requireRule(row,'This publication request is unavailable.');
+    const link=await stmt(db,"SELECT code_hash FROM live_links WHERE event_id = ? AND role = 'organizer' AND revoked = 0",row.event_id).first<{code_hash:string}>();
+    requireRule(link,'Organizer access unavailable.');
+    const s=await load(db,link.code_hash);active(s);
+    const records=exactPublicationSet(s,input.publications), currentView=await view(db,s);
+    requireRule(records.every((p)=>['requested','released'].includes(p.status) && p.organizerApprovedAt && !p.underReview),'The organizer must send the current results for every competition first.');
+    const queued:PublicationRecord[]=[];
+    const statements=[...guard(db,stmt(db,"UPDATE live_publication_service SET updated_at = updated_at WHERE id = 'owner' AND state = 'enabled'")),...eventGuard(db,s,link.code_hash,s.event.version)];
+    for(const item of records){
+      await currentPublication(currentView,item);
+      if(item.status==='requested'){
+        const next={...item,status:'queued' as const,ownerApprovedAt:now()};queued.push(next);
+        statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(next),item.id,json(item))));
+      }
+    }
+    requireRule(queued.length,'These results have already been published.');
+    statements.push(outboxWrite(db,s,'release-set',queued));
+    await batch(db,statements);
+  } else if (input.action === 'release') {
+    requireRule(config.enabled, 'Future publication is suspended. Judging remains available.');
+    const row = await stmt(db,'SELECT * FROM live_publication_snapshots WHERE id = ?',id(input.publicationId)).first<{event_id:string; data:string}>();
+    requireRule(row,'Unknown publication request.'); const record = parse<PublicationRecord>(row.data);
+    requireRule(record.status==='requested' && record.organizerApprovedAt && record.sourceFingerprint===input.sourceFingerprint,'Owner release needs the exact current organizer-approved snapshot.');
+    const link=await stmt(db,"SELECT code_hash FROM live_links WHERE event_id = ? AND role = 'organizer' AND revoked = 0",row.event_id).first<{code_hash:string}>(); requireRule(link,'Organizer access unavailable.');
+    const s = await load(db,link.code_hash); active(s);
+    const current=await buildPublicSnapshot(await view(db,s),record.competitionId,record.revision,record.snapshot.supersedes,record.snapshot.preparedAt,record.id);
+    if(current.sourceFingerprint!==record.sourceFingerprint) throw new LiveError(409,'Source changed; renew head, organizer and owner review.');
+    const next={...record,status:'queued' as const,ownerApprovedAt:now()};
+    await batch(db,[...guard(db,stmt(db,"UPDATE live_publication_service SET updated_at = updated_at WHERE id = 'owner' AND state = 'enabled'")),...eventGuard(db,s,link.code_hash,s.event.version),...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(next),record.id,row.data)),outboxWrite(db,s,'release',next)]);
+  } else requireRule(input.action === 'retry','Unknown owner publication action.');
+  const pending=(await stmt(db,"SELECT * FROM live_publication_outbox WHERE status = 'pending' ORDER BY rowid").all<{id:string;event_id:string;kind:string;payload:string}>()).results;
+  let delivered=0;
+  for(const item of pending) {
+    if(['release','release-set'].includes(item.kind) && !config.enabled) continue;
+    const payload=parse<PublicationRecord>(item.payload);
+    if(item.kind==='release-set') {
+      const members=parse<PublicationRecord[]>(item.payload);
+      let valid=members.length>0;
+      for(const member of members){const current=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',member.id).first<{data:string}>();if(!current || parse<PublicationRecord>(current.data).status!=='queued')valid=false;}
+      if(!valid){await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id).run();continue;}
+      try{
+        const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json({deliveryId:item.id,kind:item.kind,payload:members}),signal:AbortSignal.timeout(15000)});
+        if(!response.ok)continue;
+        const synchronizedAt=now(),statements=[stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ?",item.id)];
+        for(const member of members){
+          const fresh=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',member.id).first<{data:string}>();
+          if(!fresh)continue;
+          const record=parse<PublicationRecord>(fresh.data),released={...record,status:'released' as const,releasedAt:record.releasedAt??synchronizedAt,underReview:record.status==='stale',lastSynchronizedAt:synchronizedAt};
+          statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(released),record.id,fresh.data)));
+          if(record.status==='stale')statements.push(stmt(db,'INSERT INTO live_publication_outbox (id,event_id,kind,payload,created_at) VALUES (?,?,?,?,?)',uid(),item.event_id,'status',json({id:record.id,eventId:record.snapshot.eventId,competitionId:record.snapshot.competitionId,revision:record.revision,status:'Under review'}),synchronizedAt));
+        }
+        await batch(db,statements);delivered++;
+      }catch{/* Keep the complete event delivery pending for retry. */}
+      continue;
+    }
+    if(item.kind==='release') {
+      const current=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',payload.id).first<{data:string}>();
+      if(!current || parse<PublicationRecord>(current.data).status!=='queued') { await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id).run(); continue; }
+    }
+    try {
+      const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json({deliveryId:item.id,kind:item.kind,payload}),signal:AbortSignal.timeout(5000)});
+      if(!response.ok) continue;
+      // The receiver may succeed just before a source correction. Preserve its release and queue Under review.
+      const fresh=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',payload.id).first<{data:string}>();
+      const statements=[stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ?",item.id)];
+      if(fresh) {
+        const record=parse<PublicationRecord>(fresh.data), synchronizedAt=now();
+        const released=item.kind==='release' ? {...record,status:'released' as const,releasedAt:record.releasedAt ?? synchronizedAt,underReview:record.status==='stale',lastSynchronizedAt:synchronizedAt} : {...record,lastSynchronizedAt:synchronizedAt};
+        statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(released),record.id,fresh.data)));
+        if(item.kind==='release' && record.status==='stale') statements.push(stmt(db,'INSERT INTO live_publication_outbox (id,event_id,kind,payload,created_at) VALUES (?,?,?,?,?)',uid(),item.event_id,'status',json({id:record.id,eventId:record.snapshot.eventId,competitionId:record.snapshot.competitionId,revision:record.revision,status:'Under review'}),synchronizedAt));
+      }
+      await batch(db,statements); delivered++;
+    } catch { /* Durable pending outbox; judging does not depend on receiver availability. */ }
+  }
+  return {ok:true,delivered,pending:(await stmt(db,"SELECT COUNT(*) AS count FROM live_publication_outbox WHERE status = 'pending'").first<{count:number}>())?.count ?? 0};
+}
+
+// Receiver-only current-source attestation discloses no drafts, notes or operational credentials.
+export async function attestPublication(db:D1Database,input:Record<string,unknown>) {
+  const service=await stmt(db,"SELECT state FROM live_publication_service WHERE id='owner'").first<{state:string}>();if(service?.state!=='enabled')return {valid:false};
+  const row=await stmt(db,'SELECT data,event_id FROM live_publication_snapshots WHERE id = ?',id(input.publicationId)).first<{data:string;event_id:string}>();
+  if(!row)return {valid:false};const record=parse<PublicationRecord>(row.data);
+  if(record.status!=='queued'||record.sourceFingerprint!==input.sourceFingerprint||record.revision!==input.revision||record.snapshot.eventId!==input.eventId||record.snapshot.competitionId!==input.competitionId)return {valid:false};
+  const link=await stmt(db,"SELECT code_hash FROM live_links WHERE event_id = ? AND role = 'organizer' AND revoked = 0",row.event_id).first<{code_hash:string}>();if(!link)return {valid:false};
+  try{const s=await load(db,link.code_hash);const current=await buildPublicSnapshot(await view(db,s),record.competitionId,record.revision,record.snapshot.supersedes,record.snapshot.preparedAt,record.id);return {valid:s.event.status==='active'&&current.sourceFingerprint===record.sourceFingerprint};}catch{return {valid:false};}
 }

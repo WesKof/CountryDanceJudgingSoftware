@@ -2,7 +2,7 @@ import { cellKey, type Cells, type FrozenRound, type HeatSubmission, type LiveHe
 
 const TENTHS = { Yes: 100, A1: 45, A2: 43, No: 0 };
 export function missingHeatSubjects(heat: LiveHeat, cells: Cells): string[] {
-  return heat.subjectIds.filter((id) => !heat.songs.some((p) => Object.hasOwn(TENTHS, cells[cellKey(p.id, id)]?.mark ?? '')));
+  return heat.subjectIds.filter((id) => !heat.withdrawnIds?.includes(id) && !heat.songs.some((p) => Object.hasOwn(TENTHS, cells[cellKey(p.id, id)]?.mark ?? '')));
 }
 export function latestHeatSubmissions(submissions: HeatSubmission[]): HeatSubmission[] {
   const latest = new Map<string, HeatSubmission>();
@@ -19,7 +19,7 @@ export function heatSnapshot(heat: LiveHeat, cells: Cells): Cells {
   })));
 }
 export function heatReviewSignature(heat: LiveHeat, cells: Cells): string {
-  return JSON.stringify([heat.id, ...heat.songs.flatMap((p) => heat.subjectIds.map((id) => {
+  return JSON.stringify([heat.id, heat.eligibilityVersion ?? '', ...heat.songs.flatMap((p) => heat.subjectIds.map((id) => {
     const c = cells[cellKey(p.id, id)]; return [p.id, id, c?.mark ?? '', c?.note ?? '', c?.revision ?? 0];
   }))]);
 }
@@ -32,7 +32,7 @@ export function deriveStageStandings(round: FrozenRound, key: string, submission
   }));
   if (!complete) return { rows: [] as LiveResult[], ties: [], complete: false, submitted: latest.length, required };
   const combined: LiveSubmission[] = round.judgeIds.map((judgeId) => ({ id: judgeId, roundKey: key, judgeId, ballotVersion: 0, createdAt: '', cells: Object.assign({}, ...latest.filter((s) => s.judgeId === judgeId).map((s) => s.cells)) }));
-  const rows: LiveResult[] = round.subjects.map((subject) => {
+  const rows: LiveResult[] = round.subjects.filter((subject) => !round.withdrawnIds?.includes(subject.id)).map((subject) => {
     const heat = round.heats.find((h) => h.subjectIds.includes(subject.id))!;
     const judgeMeans = combined.map((s) => {
       const marks = heat.songs.map((p) => s.cells[cellKey(p.id, subject.id)]?.mark).filter((m): m is keyof typeof TENTHS => Boolean(m));

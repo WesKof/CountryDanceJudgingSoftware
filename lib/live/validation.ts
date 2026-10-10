@@ -91,6 +91,35 @@ export function validateSetup(value: unknown): LiveSetup {
   }
   return setup;
 }
+export function finalistCapacity(format: 'Strictly' | 'Jack & Jill', subjects: LiveSubject[]) {
+  return format === 'Jack & Jill'
+    ? [{ label: 'leads', available: subjects.filter((s) => s.role === 'Lead').length }, { label: 'follows', available: subjects.filter((s) => s.role === 'Follow').length }]
+    : [{ label: 'couples', available: subjects.length }];
+}
+export function finalistCountIssues(format: 'Strictly' | 'Jack & Jill', count: number, subjects: LiveSubject[]): string[] {
+  if (!Number.isSafeInteger(count) || count < 1) return ['Set a positive whole-number finalist count in the matching Finals round in Set up → Finalists & pairings, then Save setup before head approval.'];
+  const capacity = finalistCapacity(format, subjects), maximum = Math.min(...capacity.map((g) => g.available));
+  if (count <= maximum) return [];
+  const configured = format === 'Jack & Jill' ? `J&J finalist count is ${count} per role (${count} couples / ${count * 2} dancers)` : `Finalist count is ${count} couples`;
+  return [`${configured}, but only ${capacity.map((g) => `${g.available} eligible ${g.label}`).join(' and ')} are available. ${maximum ? `Choose 1–${maximum}${format === 'Jack & Jill' ? ' per role' : ' couples'} in Set up → Finalists & pairings, then Save setup and renew head approval.` : 'No valid finalist count is available for this roster; resolve the eligible roster before approval.'}`];
+}
+export function finalistLimitIssues(setup: LiveSetup, withdrawnIdsByRound: Record<string, string[]> = {}): string[] {
+  if (setup.workflow !== 'stage-v1') return [];
+  return setup.rounds.filter((f) => f.kind === 'finals').flatMap((f) => {
+    const pre = setup.rounds.find((r) => r.id === f.prelimRoundId);
+    const competition = setup.competitions.find((c) => c.id === f.competitionId);
+    if (!pre || !competition) return [];
+    const eligible = pre.subjects.filter((s) => !withdrawnIdsByRound[pre.id]?.includes(s.id));
+    const maximum = Math.min(...finalistCapacity(competition.format, eligible).map((g) => g.available));
+    // Empty/in-progress preparation rosters remain editable; opening/approval still requires valid groups.
+    return maximum > 0 && f.finalistCount > maximum ? finalistCountIssues(competition.format, f.finalistCount, eligible).map((issue) => `${competition.format} · ${competition.division}: ${issue}`) : [];
+  });
+}
+export function unpairedFinalists(setup: LiveSetup, round: LiveRound): LiveSubject[] {
+  if (setup.workflow !== 'stage-v1' || round.kind !== 'finals' || setup.competitions.find((c) => c.id === round.competitionId)?.format !== 'Jack & Jill') return [];
+  const members = new Set(round.subjects.flatMap((s) => s.members ?? []));
+  return setup.rounds.find((r) => r.id === round.prelimRoundId)?.subjects.filter((s) => round.finalistIds.includes(s.id) && !members.has(s.id)) ?? [];
+}
 export function roundOpeningIssues(setup: LiveSetup, round: LiveRound): string[] {
   const competition = setup.competitions.find((c) => c.id === round.competitionId)!;
   const prefix = `${competition.format} · ${competition.division} · ${round.kind}: `;
@@ -98,10 +127,12 @@ export function roundOpeningIssues(setup: LiveSetup, round: LiveRound): string[]
   if (!setup.judges.length || !setup.headJudgeId) issues.push('Add judges and designate the event head judge.');
   if (setup.workflow === 'stage-v1' && (!setup.organizerName?.trim() || !setup.organizerParticipantId || !setup.separationAttested || setup.judges.some((j) => !j.participantId))) issues.push('Enter distinct organizer/panel participant identifiers and confirm separation of duties.');
   if (setup.workflow === 'stage-v1' && round.judgeIds.length && !round.judgeIds.includes(setup.headJudgeId)) issues.push('Include the event head judge among this stage’s required judges.');
-  if (!round.subjects.length) issues.push('Add entrants to this round.');
+  const unpaired = unpairedFinalists(setup, round);
+  if (unpaired.length) issues.push(`Finalists are already selected. Enter their actual Finals draw in Set up → Finalists & pairings, then Save setup. Unpaired: ${unpaired.map((s) => `#${s.number} ${s.primary}`).join(', ')}.`);
+  if (!round.subjects.length && !unpaired.length) issues.push('Add entrants to this round.');
   if (!round.heats.length) issues.push('Add a heat and its songs.');
   for (const heat of round.heats) {
-    if (!heat.subjectIds.length) issues.push(`${heat.name} has no entrants. Assign contestants or remove this heat.`);
+    if (!heat.subjectIds.length && !(unpaired.length && !round.subjects.length)) issues.push(`${heat.name} has no entrants. Assign contestants or remove this heat.`);
     if (!heat.songs.length) issues.push(`${heat.name} has no songs. Add the songs this group will dance to.`);
   }
   const unassigned = round.subjects.filter((s) => !round.heats.some((h) => h.subjectIds.includes(s.id)));
@@ -123,7 +154,8 @@ export function freezeRound(setup: LiveSetup, round: LiveRound): FrozenRound {
     if (competition.format === 'Jack & Jill') {
       const members = round.subjects.flatMap((s) => s.members ?? []); unique(members, 'finalist pair member');
       requireRule(members.length === round.finalistIds.length && members.every((id) => round.finalistIds.includes(id)), 'Each selected finalist must appear once in a finals pair.');
-      requireRule(round.subjects.length === round.finalistCount && round.subjects.every((s) => s.members && prelim.subjects.some((p) => p.id === s.members![0] && p.role === 'Lead' && p.primary === s.primary) && prelim.subjects.some((p) => p.id === s.members![1] && p.role === 'Follow' && p.primary === s.secondary)), 'Finals pairs must contain the selected lead and follow identities.');
+      requireRule(round.subjects.length === round.finalistCount, `${competition.format} · ${competition.division} · finals: Configured ${round.finalistCount} Finals couples, but ${round.subjects.length} actual pairs are saved. Complete current Prelims approval, then enter the actual draw for every Finals couple and Save setup.`);
+      requireRule(round.subjects.every((s) => s.members && prelim.subjects.some((p) => p.id === s.members![0] && p.role === 'Lead' && p.primary === s.primary) && prelim.subjects.some((p) => p.id === s.members![1] && p.role === 'Follow' && p.primary === s.secondary)), 'Finals pairs must contain the selected lead and follow identities.');
     } else requireRule(round.subjects.length === round.finalistCount && round.subjects.length === round.finalistIds.length && round.subjects.every((s) => round.finalistIds.includes(s.id) && prelim.subjects.some((p) => p.id === s.id && p.primary === s.primary && p.secondary === s.secondary)), 'Strictly finals retain the selected couples.');
   }
   return { ...round, ...competition, id: round.id, judgeIds, judges: setup.judges.filter((j) => judgeIds.includes(j.id)) };

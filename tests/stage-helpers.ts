@@ -5,7 +5,7 @@ export const base = process.env.LIVE_TEST_URL ?? 'http://127.0.0.1:3000';
 export const nonce = () => crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
 export async function api<T = Record<string, unknown>>(token: string, input?: Record<string, unknown>, expected = 200): Promise<T> {
   const response = await fetch(`${base}/api/live`, { method: input ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(input ? { 'Content-Type': 'application/json' } : {}) }, body: input ? JSON.stringify(input) : undefined });
-  const data = await response.json() as Record<string, unknown>;
+  const raw=await response.text();let data:Record<string,unknown>;try{data=JSON.parse(raw);}catch{assert.fail(`Non-JSON local API response (${response.status}): ${raw.slice(0,160).replace(/[a-f0-9]{64}/g,'[private identifier]')}`);}
   assert.equal(response.status, expected, `${input?.action ?? 'read'}: ${data.error ?? response.status}`);
   assert.equal(response.headers.get('cache-control'), 'no-store, private');
   return data as T;

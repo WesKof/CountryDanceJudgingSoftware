@@ -1,8 +1,8 @@
 export type LiveMark = '' | 'Yes' | 'A1' | 'A2' | 'No';
 export type LiveSubject = { id: string; number: number; primary: string; secondary: string; role?: 'Lead' | 'Follow'; members?: [string, string] };
-export type Performance = { id: string; title: string; artist: string; tempo: string; notes: string; partners: [string, string][] };
-export type LiveHeat = { id: string; name: string; subjectIds: string[]; songs: Performance[] };
-export type LiveRound = { id: string; competitionId: string; kind: 'prelims' | 'finals'; blockId: string; subjects: LiveSubject[]; heats: LiveHeat[]; judgeIds: string[]; prelimRoundId?: string; finalistIds: string[]; finalistCount: number };
+export type Performance = { id: string; title: string; artist: string; tempo: string; notes: string; pairingRevised?: boolean; partners: [string, string][] };
+export type LiveHeat = { withdrawnIds?: string[]; eligibilityVersion?: string; id: string; name: string; subjectIds: string[]; songs: Performance[] };
+export type LiveRound = { id: string; competitionId: string; kind: 'prelims' | 'finals'; blockId: string; subjects: LiveSubject[]; heats: LiveHeat[]; judgeIds: string[]; prelimRoundId?: string; finalistIds: string[]; finalistCount: number; advancementRevision?: number };
 export type LiveSetup = {
   name: string; venue: string; date: string; headJudgeId: string;
   workflow?: 'stage-v1'; organizerName?: string; organizerParticipantId?: string; separationAttested?: boolean;
@@ -11,7 +11,7 @@ export type LiveSetup = {
   rounds: LiveRound[];
   blocks: { id: string; label: string; kind: 'prelims' | 'finals'; roundIds: string[] }[];
 };
-export type FrozenRound = LiveRound & { format: 'Strictly' | 'Jack & Jill'; division: string; judges: { id: string; name: string }[] };
+export type FrozenRound = LiveRound & { withdrawnIds?: string[]; format: 'Strictly' | 'Jack & Jill'; division: string; judges: { id: string; name: string }[] };
 export type LiveContext = { blockId: string | null; performanceId: string | null; visited: string[]; lineupHeatId?: string | null };
 export type Cell = { mark: LiveMark; note: string; revision: number; mutationId: string; savedAt?: string };
 export type Cells = Record<string, Cell>;
@@ -20,7 +20,7 @@ export type LiveSubmission = { id: string; roundKey: string; judgeId: string; ba
 export type HeatSubmission = LiveSubmission & { heatId: string; version: number; supersedes?: string; acknowledgedAt?: string };
 export type StageVote = { roundKey: string; fingerprint: string; tieKey: string; judgeId: string; selected: string[]; createdAt: string };
 export type AmendmentChange = { performanceId: string; subjectId: string; before: LiveMark; after: LiveMark };
-export type ReviewRequest = { id: string; kind: 'correction' | 'withdrawal'; version: number; payload: { roundKey?: string; heatId?: string; judgeId?: string; submissionId?: string; competitionId?: string; changes?: AmendmentChange[] }; reason: string; requester: string; createdAt: string; approvals: { role: 'organizer' | 'head'; participantId: string; version: number; at: string }[]; appliedAt?: string };
+export type ReviewRequest = { id: string; kind: 'correction' | 'withdrawal'; version: number; payload: { roundKey?: string; heatId?: string; judgeId?: string; submissionId?: string; competitionId?: string; subjectId?: string; sourceBoundary?: string; sourceStage?: 'prelims' | 'finals'; pairingPlan?: { performanceId: string; partners: [string, string][] }[]; changes?: AmendmentChange[] }; reason: string; requester: string; createdAt: string; approvals: { role: 'organizer' | 'head'; participantId: string; version: number; at: string }[]; appliedAt?: string; cancelledAt?: string };
 export type AdvancementTie = { key: string; group: string; subjectIds: string[]; slots: number; votes: StageVote[]; selected: string[]; deadlocked: boolean; complete: boolean };
 export type TieDecision = { key: string; order: string[]; shared: boolean; explanation: string; decidedAt: string; judgeId: string; role: 'head'; fingerprint: string };
 export type LiveResult = { subjectId: string; number: number; primary: string; secondary: string; group: string; average: number; sumTenths: number; denominator: number; place: number; tied: boolean; decided: boolean; judgeMeans?: { judgeId: string; average: number; observations: number }[]; songs: { id: string; title: string; sumTenths: number; denominator: number; average: number }[] };
@@ -31,7 +31,7 @@ export type LiveView = {
   role: 'organizer' | 'judge' | 'head'; judgeId: string | null; rounds: RoundView[]; ballots: LiveBallot[];
   judgeLinks?: { id: string; name: string; path: string; revoked: boolean }[];
   restoredHistory?: unknown;
-  heatSubmissions?: Omit<HeatSubmission, 'cells'>[]; reviewRequests?: ReviewRequest[];
+  heatSubmissions?: Omit<HeatSubmission, 'cells'>[]; reviewRequests?: ReviewRequest[]; publications?: import('./publication.ts').PublicationRecord[];
 };
 export const cellKey = (performanceId: string, subjectId: string) => `${performanceId}:${subjectId}`;
 export const roundKey = (id: string, generation: number) => `${id}:${generation}`;

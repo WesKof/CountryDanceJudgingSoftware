@@ -533,3 +533,19 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .setup-section > summary { flex-wrap: nowrap; }
 .shared-shell .setup-section > summary > div { min-width: 0; }
 @media (max-width: 600px) { .shared-shell .setup-section > summary h2 { font-size: 21px; } }
+
+/* Hidden file inputs must not inherit the full-width shared form field geometry. */
+.shared-shell .file-button input[type='file'] { width: 1px; height: 1px; min-height: 1px; padding: 0; border: 0; }
+
+/* Organizer preparation follows one reading order, with secondary controls nested. */
+.setup-editor-grid { grid-template-columns: minmax(0, 1fr); }
+.organizer-home-intro { margin-top: 24px; gap: 14px; }
+.sample-guide { padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 16px; background: var(--paper); }
+.sample-guide h2 { margin: 0 0 10px; }
+.sample-guide p:last-child { margin-bottom: 0; }
+.judge-link-maintenance { margin-left: auto; }
+.judge-link-maintenance > summary, .legacy-recovery > summary { cursor: pointer; }
+.judge-link-maintenance .shared-inline { margin-top: 10px; }
+.legacy-recovery { padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+
+.shared-shell .workspace > details.setup-section { margin-top: 20px; }

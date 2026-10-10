@@ -56,7 +56,7 @@ test('stage CAS race, panel deadlock, amended approved advancement and explicit 
   v = await api<LiveView>(head); r = v.rounds[0]; assert.deepEqual(new Set(r.standings!.advancingIds), new Set([all[0], all[3]]));
   await exact(head, r.id, 'approve');
   const priorFingerprint = r.standings!.fingerprint, source = v.heatSubmissions!.find((s) => s.judgeId === setup.judges[0].id)!;
-  const q = await command(tokens[0], { action: 'request-correction', roundKey: r.key, heatId: h.id, judgeId: setup.judges[0].id, submissionId: source.id, reason: 'Synthetic recorded Yes should be A1', changes: [{ performanceId: h.songs[0].id, subjectId: all[0], after: 'A1' }] }) as { reviewRequestId: string };
+  const q = await command(organizer, { action: 'request-correction', roundKey: r.key, heatId: h.id, judgeId: setup.judges[0].id, submissionId: source.id, reason: 'Synthetic recorded Yes should be A1', changes: [{ performanceId: h.songs[0].id, subjectId: all[0], after: 'A1' }] }) as { reviewRequestId: string };
   await command(head, { action: 'approve-request', reviewRequestId: q.reviewRequestId, requestVersion: 1 }); await command(organizer, { action: 'approve-request', reviewRequestId: q.reviewRequestId, requestVersion: 1 });
   v = await api<LiveView>(head); r = v.rounds[0];
   assert.equal(r.phase, 'discussion'); assert.equal(r.standings!.approved, false); assert.notEqual(r.standings!.fingerprint, priorFingerprint);

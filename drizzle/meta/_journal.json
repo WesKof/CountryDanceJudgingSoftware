@@ -29,6 +29,20 @@
       "when": 1791495942244,
       "tag": "0003_perfect_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791570259429,
+      "tag": "0004_late_epoch",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791570565500,
+      "tag": "0005_friendly_living_mummy",
+      "breakpoints": true
     }
   ]
 }

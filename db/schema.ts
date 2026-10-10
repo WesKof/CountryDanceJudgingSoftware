@@ -69,3 +69,16 @@ export const reviewRequests = sqliteTable('live_review_requests', {
   id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   requestId: text('request_id').notNull(), version: integer('version').notNull(), data: text('data').notNull(),
 }, (t) => [uniqueIndex('idx_live_request_version').on(t.requestId, t.version), index('idx_live_review_requests_event').on(t.eventId)]);
+
+export const publicationSnapshots = sqliteTable('live_publication_snapshots', {
+  id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  competitionId: text('competition_id').notNull(), data: text('data').notNull(),
+}, (t) => [index('idx_live_publication_event').on(t.eventId)]);
+export const publicationOutbox = sqliteTable('live_publication_outbox', {
+  id: text('id').primaryKey(), eventId: text('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), payload: text('payload').notNull(), status: text('status').notNull().default('pending'), createdAt: text('created_at').notNull(),
+}, (t) => [index('idx_live_outbox_event').on(t.eventId)]);
+
+export const publicationService = sqliteTable('live_publication_service', {
+  id: text('id').primaryKey(), state: text('state').notNull(), updatedAt: text('updated_at').notNull(),
+});

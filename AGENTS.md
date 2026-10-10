@@ -4,29 +4,38 @@
 
 - [PROJECT_SPEC.md](PROJECT_SPEC.md): authoritative current behavior, settled contracts, source routing and project timeline. Start with Quick context; shared judging also needs Stage workflow revision and Implementation handoff.
 - [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md): dated verification, batch delivery and unperformed checks. Local success is not evidence of hosted readiness.
-- [NEXT_BATCH_SPEC.md](NEXT_BATCH_SPEC.md): temporary future requirements, answered policy questions, branding, acceptance criteria and next-chat prompt. It is not implemented. Do not start implementation or a fresh chat until the owner finishes spec review and authorizes it. Do not reask settled questions.
 
-Keep these four working documents. After implementation, merge the temporary spec into the master reference/test report and remove it; Git preserves history. Do not create separate timeline, closeout, branding or handoff files. Update each fact in its canonical home and link to it elsewhere.
+Keep these three working documents. The completed approved temporary specification is folded into the master reference/test report; Git preserves its history. Do not create separate timeline, closeout, branding or handoff files. Update each fact in its canonical home and link to it elsewhere.
 
 ## Checkout and preservation
 
 Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app` is the mirror. Inspect branch/status and compare affected files before edits/sync. Preserve unrelated/uncommitted work, event/browser state, legacy scoring/revisions and v2 backups. Never commit the parent workspace. Preferred-checkout writes may need filesystem approval.
 
-Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`; branch `codex/stage-heat-workflow`. Verify current state before Git writes. Completed stage/setup code is `f589b7c`; subsequent planning is documentation only. Git push authorization does not authorize deployment, hosted provisioning, real publication or purchases.
+Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`; branch `codex/stage-heat-workflow`. Verify current state before Git writes. Completed stage/setup code is `f589b7c`; the October 9 approved access/publication batch is locally implemented and uncommitted. Git push authorization does not authorize deployment, hosted provisioning, real publication or purchases.
 
 ## Implementation boundaries
 
-Preserve the visual template/layout/theme, numbered sidebar, cards/bibs and collapsed expandable setup sections. Local/shared setup and deliberately created local D1 rehearsals reuse shared components/routes; retain legacy v2 meaning rather than converting totals into stage averages. Organizer access to individual judge links for distribution/testing is authorized.
+Preserve the original theme, numbered sidebar, cards/bibs and collapsed setup sections. Reuse shared components/routes for local and shared preparation; preserve legacy v2 meaning.
 
-Use PROJECT_SPEC.md for implemented scoring, submission, role, note privacy, approval/history and restore contracts. NEXT_BATCH_SPEC.md explicitly describes future requester/withdrawal/publication changes; do not apply them merely because they are documented. Post-Finals changed-membership replacement/redance remains undefined: invalidate/block rather than invent a policy. Resolve only material unsettled decisions that block the active task.
+- `/` is the organizer desk. New visitors get a fictional ready sample; saved event access stays intact. Navigation is Set up / Run / Results / Publish. Judge access and room controls belong in Run; corrections/withdrawals/history share a collapsed Results section; recovery belongs in Publish. Imports stay in Set up. Main standings hide observation counts, which remain in scorecards.
+- Judges have one private Score page, with their assigned name as the heading and browser title. Organizer distribution/testing of judge links is intentional. Existing `/live/<code>` entry points remain compatible.
+- Finalist count is limited by the eligible roster (J&J per role/couple). Exact head-approved advancement fills unopened Finals automatically; the organizer enters the actual J&J draw through Run dropdowns or Setup. Reuse setFinalsPair to preserve pair identities, heat assignments and songs. Unsaved shared drafts block Start, survive navigation and require discard after a concurrent change. Keep started Finals frozen. Server-owned advancementRevision makes every saved count change a fresh approval source, including returning to an earlier value; ignore client revisions and preserve history.
+- Publish reviews and sends all competitions in the event together. The separate results website’s `/admin` has one top Approve & publish results action for the exact event set. `/owner` is only a compatibility redirect. Preserve independent head judge, organizer and website-admin approval, permission and history gates. Public sources/assets remain in public-site/, served by the separate local fake receiver. Credit original community photos and label synthetic results. No hosted site is registered.
+- Prioritize the next required count, pairing or review action in Run. Shortcuts reveal the matching setup section; roster, submission and coverage details collapse. See the master spec for count-cycle, pairing, privacy and exact-review behavior.
+
+Use PROJECT_SPEC.md for implemented scoring, submission, role, note privacy, approval/history and restore contracts. The locally implemented access, organizer-only requester, entrant/couple withdrawal and owner-publication contracts are in PROJECT_SPEC.md. Post-Finals changed-membership replacement/redance remains undefined: invalidate/block rather than invent a policy. Resolve only material unsettled decisions that block the active task.
 
 Read task-relevant source only; avoid dependency/build output/lockfiles and the base64 social image by default. Keep credentials/private links out of source, logs and backups. No accounts, new framework/provider/realtime service or real Google sends without applicable task authorization.
 
 Use existing Sites-managed D1 logical `DB` and project identity; R2 is unused. Read installed Sites persistence/SQLite guidance before schema/query work. Use prepared statements, server permissions and atomic version guards. Keep migrations append-only. `scripts/migrate-local.mjs` applies local migrations after build using ignored ledger hashes; it does not provision hosted D1.
 
+## Usability and plain language
+
+Design for organizers and judges with no technical background or judging experience. Put the next useful action near the top of its section, explain what it does and what happens next, and use short familiar labels. Explain a disabled action beside it with a direct route to fix the blocker. Keep essential names, bibs, placements and approval status visible; place technical identifiers, calculations, full audit history and uncommon management controls in labeled, collapsed details. Group related tasks instead of repeating controls for every record. Do not expose implementation terms such as fingerprints, outbox, CAS or source attestation in everyday instructions. Preserve the detailed records and exact approval/permission checks underneath the simpler interface. Verify the actual control order, status wording, keyboard use and phone layout. Use these instructions for every later feature; PROJECT_SPEC.md records the product contract and LOCAL_TEST_REPORT.md records evidence. Keep this guidance versioned with the app rather than uploading private project records to an unspecified service.
+
 ## Verification and reporting
 
-Use synthetic fixtures and isolated role/browser/API sessions. Never reset or submit the owner's event. Verify independent numeric expectations, actual controls, persistence, permissions and races. Required workflow coverage and the next full mock are in the master and next-batch specs; preserve legacy regressions.
+Use synthetic fixtures and isolated role/browser/API sessions. Never reset or submit the owner's event. Verify independent numeric expectations, actual controls, persistence, permissions and races. Required workflow coverage and the next full mock are in the master spec; preserve legacy regressions.
 
 Run `pnpm test`, `pnpm test:live`, `pnpm test:browser`, `pnpm lint`, `pnpm exec tsc --noEmit` and `pnpm build` as applicable. Focus browser files with `pnpm exec playwright test ...`. Keep synthetic artifacts/D1 stores ignored; compiled Worker tests use a separate store. Keep the preview available and use only local migration commands.
 
