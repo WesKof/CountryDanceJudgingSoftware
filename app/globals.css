@@ -549,3 +549,32 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .legacy-recovery { padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
 
 .shared-shell .workspace > details.setup-section { margin-top: 20px; }
+
+/* Keep decisions beside their competition; use the existing paper/forest palette. */
+.review-next-step { display: grid; justify-items: start; gap: 10px; margin: 20px 0; padding: 18px; border: 1px solid #c6d6c9; border-left: 4px solid var(--forest); border-radius: 12px; background: #edf2e9; }
+.review-next-step p { margin: 0; }
+.shared-shell .review-step-label { margin: 0; color: var(--forest); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.review-request-list { gap: 18px; }
+.review-request { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); scroll-margin: 24px; overflow-wrap: anywhere; }
+.review-request.is-pending { border-left: 4px solid var(--copper); background: var(--panel); }
+.review-request:focus { outline: 3px solid var(--gold); outline-offset: 3px; }
+.review-request h3 { margin: 8px 0; }
+.review-request > p { margin: 10px 0; }
+.review-request-status { color: var(--forest); font-weight: 600; }
+.review-request > details { margin-top: 12px; }
+.review-change { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
+.shared-shell .result-sheet > details { margin-top: 14px; }
+.judge-review-intro { margin: 18px 0 0; color: var(--muted); }
+@media (max-width: 720px) {
+  .review-next-step, .review-request { padding: 12px; }
+  .shared-shell .result-letterhead h2 { font-size: 24px; }
+  .review-next-step > p:not(.review-step-label) { font-size: 14px; }
+  .review-next-step > button { max-width: 100%; white-space: normal; }
+  .shared-shell .result-group table { min-width: 0; table-layout: fixed; }
+  .shared-shell .result-group th:first-child { width: 18%; }
+  .shared-shell .result-group th:last-child { width: 30%; }
+  .shared-shell .result-group th, .shared-shell .result-group td { padding: 10px 5px; overflow-wrap: anywhere; }
+  .shared-shell .result-group th { font-size: 10px; letter-spacing: .03em; }
+  .shared-shell .result-group td, .shared-shell .result-group td small { font-size: 14px; }
+  .shared-shell .result-group td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
