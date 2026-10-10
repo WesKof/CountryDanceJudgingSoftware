@@ -11,7 +11,7 @@ Keep these three working documents. The completed approved temporary specificati
 
 Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app` is the mirror. Inspect branch/status and compare affected files before edits/sync. Preserve unrelated/uncommitted work, event/browser state, legacy scoring/revisions and v2 backups. Never commit the parent workspace. Preferred-checkout writes may need filesystem approval.
 
-Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`; branch `codex/stage-heat-workflow`. Verify current state before Git writes. Completed stage/setup code is `f589b7c`; the October 9 approved access/publication batch is locally implemented and uncommitted. Git push authorization does not authorize deployment, hosted provisioning, real publication or purchases.
+Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`; branch `codex/stage-heat-workflow`. Verify current state before Git writes. Completed stage/setup code is `f589b7c`; the October 9 approved access/publication batch and follow-up workflow/site-admin cleanup are committed and pushed as `b0b3368`. The owner has authorized a separate cleanup/refactoring/UI-polish task, including reproducible bug fixes, for up to three hours. Preserve intended functionality; do not add features or remove supported behavior. Keep that work on a separate `codex/` cleanup branch for review and easy reversal. Git push authorization does not authorize deployment, hosted provisioning, real publication or purchases.
 
 ## Implementation boundaries
 

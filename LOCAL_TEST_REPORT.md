@@ -2,6 +2,13 @@
 
 Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`, branch `codex/stage-heat-workflow`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) for the earlier stage/setup batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
 
+## Git closeout and cleanup handoff — 2026-10-09
+
+The owner authorized this chat to wrap up and push, then automatically start a separate cleanup chat with up to three hours available. The follow-up explicitly includes reproducible bug fixes, optimization, refactoring, removal of verified unused code and UI organization for nontechnical people. Preserve all intended functionality, approvals, permissions, history, data and the visual template; add no new features. Keep cleanup separate and easy to review or revert.
+
+The completed 73-path application batch was committed as `b0b3368` and pushed to `github/codex/stage-heat-workflow`; the remote branch hash was independently verified. The index was empty beforehand, every changed/new/deleted path matched the mirror, and the final whitespace check passed. Credentials, event/browser state, local D1/fake-publication stores, generated artifacts and parent-workspace files were excluded. Existing test evidence below remains the verification for the implementation; documentation-only closeout does not repeat the full suites. Previews remain available at 3000 and 3100. Earlier statements that work was uncommitted or the owner sample was awaiting approval describe those earlier inspections; the agent has not reset or approved the owner event during closeout. No deployment, hosted provisioning, real publication or purchase occurred.
+
+
 ## Results website admin approval and usability — 2026-10-09
 
 This supersedes earlier `/owner` controls and per-competition publication UI. Organizer Publish now provides one top Review results to publish, then Send results for approval for every competition in the selected event. Final places are immediately below; Prelims, judge marks, calculations and old versions are collapsed. The separate local results website serves `/admin`, with one top Approve & publish results per pending event. `/owner` redirects there. Approval remains independent of event roles; no hosted admin integration was added. AGENTS.md and the master usability contract now require plain language, clear next steps, actionable blockers and hidden detail for nontechnical people. The master introduction is condensed; earlier decisions remain in its timeline and task sections. No MD files were uploaded externally.
