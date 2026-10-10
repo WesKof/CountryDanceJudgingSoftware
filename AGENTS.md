@@ -13,6 +13,8 @@ Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; `C:\U
 
 Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.git`; branch `codex/stage-heat-workflow`. Verify current state before Git writes. Completed stage/setup code is `f589b7c`; the October 9 approved access/publication batch and follow-up workflow/site-admin cleanup are committed and pushed as `b0b3368`. The owner has authorized a separate cleanup/refactoring/UI-polish task, including reproducible bug fixes, for up to three hours. Preserve intended functionality; do not add features or remove supported behavior. Keep that work on a separate `codex/` cleanup branch for review and easy reversal. Git push authorization does not authorize deployment, hosted provisioning, real publication or purchases.
 
+Current local cleanup branch: `codex/cleanup-workflow-polish`, based on pushed documentation checkpoint `5732336`. Keep it local for review. It aligns review controls with existing correction/archive rules, consolidates review rendering and polishes phone/public tables; the master reference and test report contain current evidence. The original `codex/stage-heat-workflow` checkpoint remains available. Compare affected files again before later edits or returning the mirror to a different branch.
+
 ## Implementation boundaries
 
 Preserve the original theme, numbered sidebar, cards/bibs and collapsed setup sections. Reuse shared components/routes for local and shared preparation; preserve legacy v2 meaning.
