@@ -23,10 +23,30 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
   await command(organizer, { action: 'setup', setup }); let v = await api<LiveView>(organizer); const tokens = v.judgeLinks!.map((l) => l.path.split('/').at(-1)!);
   await command(organizer, { action: 'open-stage', kind: 'prelims' }); v = await api<LiveView>(organizer); let r = v.rounds[0]; await heat(organizer, tokens, r, 'Yes');
   v = await api<LiveView>(organizer); r = v.rounds[0]; const ids = r.definition.subjects.map((s) => s.id), tie = r.standings!.advancementTies![0];
+  const organizerContext = await browser.newContext(), desk = await organizerContext.newPage();
+  await desk.goto(base + created.path); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
+  await expect(desk.locator('.context-status')).toContainText('Panel votes needed');
   for (const [i, token] of tokens.entries()) {
     const current = (await api<LiveView>(token)).rounds[0];
     await command(token, { action: 'vote', roundKey: current.key, roundVersion: current.version, fingerprint: current.standings!.fingerprint, tieKey: tie.key, selected: [ids[0], ids[i + 1]] });
   }
+  const deadlocked = await api<LiveView>(organizer);
+  expect(deadlocked.rounds[0].standings!.advancementTies![0].votes).toHaveLength(3);
+  expect(deadlocked.rounds[0].standings!.advancementTies![0].deadlocked).toBe(true);
+  await desk.reload(); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
+  await expect(desk.locator('.context-status')).toContainText('Head decision needed');
+  await desk.getByText('All competitions & pending work', { exact: true }).click();
+  await expect(desk.locator('.round-overview-list').getByRole('button').first()).toContainText('Head decision needed');
+  await desk.getByText('All competitions & pending work', { exact: true }).click();
+  for (const width of [360, 390, 1440]) {
+    await desk.setViewportSize({ width, height: 900 });
+    expect(await desk.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await desk.screenshot({ path: `test-results/usability-review-deadlock-${width}.png`, fullPage: false });
+  }
+  await desk.getByRole('button', { name: 'Open head judge access', exact: true }).click();
+  await expect(desk.locator('#run-judge-access')).toHaveAttribute('open');
+  await expect(desk.locator('#run-judge-access > summary')).toBeFocused();
+  expect((await api<LiveView>(organizer)).version).toBe(deadlocked.version);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } }), head = await context.newPage(); const errors: string[] = []; head.on('pageerror', (e) => errors.push(e.message));
   await head.goto(base + v.judgeLinks![2].path); await head.locator('.rail-item').nth(0).click();
   await expect(head.getByText('Full panel is tied. The head judge must resolve the remaining vote tie.', { exact: true })).toBeVisible();
@@ -39,6 +59,8 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
   for (let i = 0; i < 3; i++) await editor.locator('.shared-inline').filter({ hasText: '#104 ' }).getByRole('button', { name: 'Move up', exact: true }).click();
   await editor.getByLabel('Decision explanation (optional)', { exact: true }).fill('Synthetic panel deadlock resolution');
   await click(head, editor.getByRole('button', { name: 'Save head judge decision', exact: true }), 'tie');
+  await desk.reload(); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
+  await expect(desk.locator('.context-status')).toContainText('Head review needed');
   await expect(head.getByRole('button', { name: 'Approve these exact submissions', exact: true })).toBeEnabled();
   await click(head, head.getByRole('button', { name: 'Approve these exact submissions', exact: true }), 'approve');
   await expect(head.getByText(/tie pending/)).toHaveCount(0);
@@ -52,5 +74,5 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
   await expect(head.getByRole('button', { name: 'Approve these exact submissions', exact: true })).toBeEnabled(); await click(head, head.getByRole('button', { name: 'Approve these exact submissions', exact: true }), 'approve');
   v = await api<LiveView>(organizer); r = v.rounds.find((r) => r.definition.kind === 'finals')!;
   expect(r.standings!.rows.map((s) => [s.number, s.place, s.average])).toEqual([[104, 1, 4.5], [101, 2, 4.5]]);
-  await head.screenshot({ path: 'test-results/stage-head-ties-390.png', fullPage: false }); await context.close(); expect(errors).toEqual([]);
+  await head.screenshot({ path: 'test-results/stage-head-ties-390.png', fullPage: false }); await Promise.all([context.close(), organizerContext.close()]); expect(errors).toEqual([]);
 });

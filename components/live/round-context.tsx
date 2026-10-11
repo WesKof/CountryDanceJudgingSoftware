@@ -8,7 +8,8 @@ export function roundStatus(data: LiveView, roundId: string) {
   if (data.reviewRequests?.some((q) => (q.payload.roundKey === round.key || !q.payload.roundKey && q.payload.competitionId === round.definition.competitionId) && !q.appliedAt && !q.cancelledAt)) return 'Pending request';
   if (round.standings?.approved) return 'Head approved';
   if (round.phase === 'dancing') return 'Judging in progress';
-  if (round.standings?.advancementTies?.some((t) => !t.complete)) return 'Panel votes needed';
+  if (round.standings?.advancementTies?.some((t) => !t.complete && !t.deadlocked)) return 'Panel votes needed';
+  if (round.standings?.advancementTies?.some((t) => !t.complete && t.deadlocked)) return 'Head decision needed';
   if (round.definition.kind === 'finals' && round.standings?.rows.some((r) => !r.decided)) return 'Head decision needed';
   return 'Head review needed';
 }
