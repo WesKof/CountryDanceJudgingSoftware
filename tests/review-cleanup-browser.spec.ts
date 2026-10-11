@@ -116,7 +116,7 @@ test('a pending Finals correction blocks head approval until both exact approval
   await page.screenshot({ path: 'test-results/cleanup-head-blocked-390.png', fullPage: false });
   await results.getByRole('button', { name: 'Review pending corrections', exact: true }).click();
   await expect(page.locator(`#review-request-${created.reviewRequestId}`)).toBeFocused();
-  await expect(page.getByText(/Synthetic Finals recording error/)).toBeVisible();
+  await expect(page.locator(`#review-request-${created.reviewRequestId}`).getByText('Synthetic Finals recording error', { exact: true })).toBeVisible();
   page.once('dialog', (d) => void d.accept());
   await click(page, page.getByRole('button', { name: 'Approve request as head', exact: true }), 'approve-request');
   await expect(approve).toBeDisabled();

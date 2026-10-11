@@ -564,6 +564,48 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .review-request > details { margin-top: 12px; }
 .review-change { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
 .shared-shell .result-sheet > details { margin-top: 14px; }
+
+/* Organizer flow: context first, one current task, quieter retained detail. */
+.shared-shell .rail-copy small { font-size: 11px; line-height: 1.4; color: rgba(255,255,255,.65); }
+.shared-shell .round-context { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; margin: 24px 0; padding: 20px 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: 0 8px 28px rgba(48,42,32,.04); }
+.shared-shell .round-context > label > span, .shared-shell .context-status .kicker { color: var(--copper); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.shared-shell .context-status { display: grid; align-content: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.shared-shell .context-status p { margin: 0; }
+.shared-shell .context-status strong { color: var(--forest); }
+.shared-shell .context-status > span { font-size: 13px; }
+.shared-shell .round-overview { grid-column: 1 / -1; }
+.shared-shell .round-overview-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.shared-shell .round-overview-list button { display: grid; gap: 5px; text-align: left; white-space: normal; }
+.shared-shell .round-overview-list button[aria-pressed='true'] { border-color: var(--forest); background: #edf2eb; }
+.shared-shell .section-summary { margin: 7px 0 0; color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+.shared-shell .stage-status-list { display: grid; gap: 14px; }
+.shared-shell .stage-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 14px 0; border-top: 1px solid var(--line); }
+.shared-shell .stage-status h3, .shared-shell .stage-status p { margin: 0; }
+.shared-shell .stage-status p { flex: 1 1 220px; color: var(--muted); font-size: 14px; }
+.shared-shell .stage-preparation { padding: 20px; border: 1px solid var(--line); border-radius: 12px; }
+.shared-shell .stage-preparation > h3 { margin-top: 0; }
+.shared-shell .run-next-action, .shared-shell .review-context-status, .shared-shell .review-attention { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.shared-shell .review-attention { border-left: 4px solid var(--copper); }
+.shared-shell .review-attention h2 { margin-top: 0; font-family: Georgia, serif; font-weight: 500; }
+.shared-shell .review-attention > div { padding: 8px 0; }
+.shared-shell .setup-save-feedback { color: var(--muted); font-size: 13px; }
+.shared-shell a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.shared-shell .sample-guide { padding: 18px 22px; }
+.shared-shell .sample-guide h2 { margin-bottom: 12px; }
+.shared-shell .hero-panel button { margin-top: 16px; }
+
+@media (max-width: 720px) {
+  .shared-shell .rail-copy { display: block; }
+  .shared-shell .rail-copy strong { font-size: 10px; line-height: 1.2; }
+  .shared-shell .rail-copy small { display: none; }
+  .shared-shell .round-context { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px; margin: 18px 0; }
+  .shared-shell .round-overview-list { grid-template-columns: minmax(0, 1fr); }
+  .shared-shell .stage-preparation, .shared-shell .run-next-action, .shared-shell .review-context-status, .shared-shell .review-attention { padding: 14px; }
+  .shared-shell .stage-status { align-items: flex-start; }
+  .shared-shell .stage-status p { flex-basis: 100%; }
+  .shared-shell .section-summary { font-size: 12px; }
+  .shared-shell .round-context select { font-size: 14px; }
+}
 .judge-review-intro { margin: 18px 0 0; color: var(--muted); }
 @media (max-width: 720px) {
   .review-next-step, .review-request { padding: 12px; }
@@ -578,3 +620,5 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .shared-shell .result-group td, .shared-shell .result-group td small { font-size: 14px; }
   .shared-shell .result-group td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
 }
+
+.shared-shell .round-overview > summary small { display: block; margin-top: 6px; color: var(--copper); font-size: 13px; }
