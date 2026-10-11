@@ -15,6 +15,12 @@ Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.gi
 
 Current local cleanup branch: `codex/cleanup-workflow-polish`, based on pushed documentation checkpoint `5732336`. Keep it local for review. It aligns review controls with existing correction/archive rules, consolidates review rendering and polishes phone/public tables; the master reference and test report contain current evidence. The original `codex/stage-heat-workflow` checkpoint remains available. Compare affected files again before later edits or returning the mirror to a different branch.
 
+## Next chat: local organizer usability redesign
+
+The October 11 checkpoint preserves the complete current **local** implementation (application baseline `122cd23` plus the documentation checkpoint), on `codex/cleanup-workflow-polish`. The local annotated tag `checkpoint/local-before-usability-redesign-2026-10-11` identifies the handoff commit. The remote Sites version 3 / `4416e2f` is a separate, older design reference; preserve that deployed site exactly. Do not reset local code to the remote implementation.
+
+The owner requested the next implementation chat using `gpt-6.1-sol` with `high` reasoning. Read [the next-batch specification](PROJECT_SPEC.md#next-batch-local-organizer-usability-redesign) before implementing. Start a separate `codex/organizer-usability-redesign` branch from the local checkpoint after verifying status/parity; preserve the checkpoint branch/tag. This is a local presentation/workflow simplification of existing capabilities: descriptive navigation, consistent competition/round context, useful collapsed setup summaries, state-specific Run actions, focused Results, and publication-first layout. Preserve all scoring, role, approval, privacy, storage/history and frozen-Finals contracts. No new product features, dependency/schema changes, push, hosted source synchronization, deployment, provisioning or real publication are included. Keep this specification marked proposed until implemented and verified. The earlier three-hour cleanup allowance described above belongs to the completed October 9 task, not a new runtime limit.
+
 ## Implementation boundaries
 
 Preserve the original theme, numbered sidebar, cards/bibs and collapsed setup sections. Reuse shared components/routes for local and shared preparation; preserve legacy v2 meaning.

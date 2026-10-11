@@ -1,6 +1,18 @@
-# Local implementation verification — 2026-10-09
+# Local implementation verification and handoff — 2026-10-11
 
 Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`. Completed functionality remains pushed on `codex/stage-heat-workflow`; the current cleanup is local on `codex/cleanup-workflow-polish`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) for the earlier stage/setup batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
+
+## Local checkpoint and usability handoff — 2026-10-11
+
+This is a **documentation-only checkpoint of the existing local implementation**, not a new application release. The preferred repository was clean on `codex/cleanup-workflow-polish` at `122cd23` before editing; all three canonical Markdown files matched the Documents mirror byte for byte. Application commits `5fa4960`, `d31faff` and `122cd23` remain the local baseline. The handoff commit is identified by the local annotated tag `checkpoint/local-before-usability-redesign-2026-10-11`; the next chat should branch forward from it, preserving this branch/tag.
+
+Read-only inspection on October 11 verified successful HTTP responses for organizer `http://127.0.0.1:3000/`, public results `http://127.0.0.1:3100/` and admin `http://127.0.0.1:3100/admin`. Browser inspection confirmed the local organizer's Set up / Run / Results / Publish flow, fictional results site and admin sign-in. The local completed sample exposed presentation issues: Run still emphasizes disabled completed-stage start controls, Results stacks multiple rounds/competitions, setup summaries are sparse and recovery precedes the Publish task. These are redesign observations, not new scoring/API test results. Navigation was read-only; no owner event was reset, scored, submitted, approved or published.
+
+Sites metadata independently confirmed the separate internet site is active/public with latest saved version 3 and source `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`; its hosting record is dated August 21. The live browser page showed the older combined Score workflow and descriptive navigation subtitles. The web retrieval tool could not access it; the actual browser successfully loaded it. The owner explicitly requires preserving this remote site as is. It is an older design reference, while the checkpoint requested here is the complete current **local** work. No hosting/access/source/deployment change occurred.
+
+PROJECT_SPEC.md revision 1.29 now defines the next local usability batch, state/navigation acceptance matrix, file routing, preservation boundaries, verification and execution prompt. AGENTS.md routes the next chat to it. The new design is specified, not implemented. This checkpoint changes only the three canonical Markdown files; whitespace, diff scope, mirror parity and Git checkpoint identity are the applicable checks. The October 9 application test results below remain the implementation evidence; application suites are not rerun for this documentation-only commit. Credentials, private links, browser state, D1/receiver stores, generated files and parent-workspace Git metadata are excluded.
+
+The owner requested a new implementation chat using `gpt-6.1-sol`, reasoning `high`, in the existing Country Dance Judging App project. That chat is to create a separate redesign branch from this checkpoint, complete the specified local work and verification, then record local commits. No push, hosted source synchronization, deployment, provisioning, real results publication or purchase is authorized.
 
 ## Local cleanup, review controls and phone polish — 2026-10-09
 

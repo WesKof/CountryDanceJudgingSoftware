@@ -1,8 +1,16 @@
 # Country Dance Judging — master design, specification, and operating reference
 
-Document version: 1.28. Current local implementation: organizer Set up → Run → Results → Publish, private judge pages, automatic approved-Prelims finalists and inline actual J&J Finals draw. Publish sends the complete event for approval; the separate results website’s admin approves and publishes all its competition results with one top action. Review decisions and actionable blockers sit above each competition’s places; calculations, technical records and history remain collapsed. Completed functionality is pushed as `b0b3368`, with documentation checkpoint `5732336` on `codex/stage-heat-workflow`. The separate local `codex/cleanup-workflow-polish` branch preserves that functionality while improving review controls, organization and phone/public presentation. No deployment, hosted provisioning, real publication or purchase occurred. See [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) for verification and the timeline below for earlier changes.
+Document version: 1.29. Current local implementation: organizer Set up → Run → Results → Publish, private judge pages, automatic approved-Prelims finalists and inline actual J&J Finals draw. Publish sends the complete event for approval; the separate results website’s admin approves and publishes all its competition results with one top action. Review decisions and actionable blockers sit above each competition’s places; calculations, technical records and history remain collapsed. Completed functionality is pushed as `b0b3368`, with documentation checkpoint `5732336` on `codex/stage-heat-workflow`. The separate local `codex/cleanup-workflow-polish` branch preserves that functionality while improving review controls, organization and phone/public presentation. No deployment, hosted provisioning, real publication or purchase occurred. See [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) for verification and the timeline below for earlier changes.
 
 This describes the inspected implementation and the owner's decisions. It is intended for people and coding assistants. Source links are relative to the application repository. External hosting and Google configuration are dated observations, not live guarantees. If code and this document disagree, investigate and update the document; do not silently change behavior to fit stale prose.
+
+## October 11 local checkpoint and next handoff
+
+Specification revision **1.29** adds the next-batch plan below; current application behavior remains the 1.28 implementation described above. The owner explicitly requested a checkpoint of everything completed **locally**, followed by a new implementation chat. The local checkpoint is the documentation commit tagged `checkpoint/local-before-usability-redesign-2026-10-11` on `codex/cleanup-workflow-polish`; its application baseline is `122cd23`, including cleanup commits `5fa4960` and `d31faff`. It is local and unpushed. Preserve it and branch forward for the redesign.
+
+The internet site at `https://country-dance-judging.wes6969.chatgpt.site/` is a **separate older checkpoint and design reference**, not the base for the next implementation. October 11 Sites inspection confirmed public/active hosting, latest saved version 3, source `4416e2fe92c0a1db9820bb6f2b68bd1acb2533b6`, and August 21 hosting update; the live page still shows the older combined scoring workflow. The owner explicitly requires leaving the remote site as is for now. No deploy, hosted source sync, access change, hosted migration, provisioning or real publication is authorized. Local Git commits do not update the internet site.
+
+Read [Next batch: local organizer usability redesign](#next-batch-local-organizer-usability-redesign) for the approved work direction, scope, acceptance criteria and new-chat prompt. This batch is **specified, not implemented** at this checkpoint. October 11 evidence is recorded in LOCAL_TEST_REPORT.md; the prior implementation suites remain dated October 9.
 
 ## Quick context
 
@@ -22,6 +30,8 @@ This describes the inspected implementation and the owner's decisions. It is int
 
 ## Reference index
 
+- [Next batch: local organizer usability redesign](#next-batch-local-organizer-usability-redesign)
+
 - [Project timeline](#project-timeline)
 
 - [Product and workflow](#product-and-workflow)
@@ -39,10 +49,11 @@ This describes the inspected implementation and the owner's decisions. It is int
 
 ## Project timeline
 
-Updated 2026-10-09. Status distinguishes code verification, Git delivery and public deployment.
+Updated 2026-10-11. Status distinguishes code verification, Git delivery and public deployment.
 
 | Date | Milestone | Evidence / status |
 | --- | --- | --- |
+| 2026-10-11 | Local checkpoint and next usability batch | Preserve the complete local implementation at `122cd23` plus this documentation handoff under `checkpoint/local-before-usability-redesign-2026-10-11`. Next implementation uses a separate local branch and the detailed specification below. The older remote version 3 is a read-only design reference and must remain as is. No application change, push or deployment in this checkpoint. |
 | 2026-10-09 | Local cleanup and review polish | Separate local `codex/cleanup-workflow-polish` from `5732336`: cancelled/pending correction approval controls aligned with the server; archived votes and request/withdrawal controls read only; head decisions and panel votes grouped with their competition; named request cards and collapsed approval records; responsive judging/public/admin tables and indexed scorecard lookups. No scoring, permission, storage or publication policy changes. Evidence is in the cleanup section of LOCAL_TEST_REPORT.md. |
 | 2026-08-21 | Public competition release | Git `4416e2f`; recorded Sites version 3. Hosted availability was not reverified during closeout. |
 | 2026-10-07 | Master specification and agent routing | Git `e70bc46`; PROJECT_SPEC.md and AGENTS.md became the durable project references. |
@@ -66,6 +77,78 @@ Updated 2026-10-09. Status distinguishes code verification, Git delivery and pub
 | 2026-10-09 | Results-website approval and usability | Complete-event review/send at the top of organizer Publish; separate `/admin` one-click event approval; durable atomic release sets and revisions; `/owner` compatibility redirect; plain-language/progressive-disclosure requirements in master/agent guidance. Local-only verification below. |
 | 2026-10-09 | Git closeout and cleanup handoff | Completed implementation pushed as `b0b3368` to `github/codex/stage-heat-workflow`; 73 changed/new/deleted app paths matched the mirror before committing. Canonical documentation accompanies the checkpoint. Owner authorizes a separate task for up to three hours of optimization, refactoring, verified unused-code removal, UI polish and reproducible bug fixes, preserving intended functionality. Use a separate cleanup branch; no new features, deployment, provisioning, real publication or purchases. |
 | Later, separately authorized | Hosted preparation and public release | Real domain/provider/auth setup, hosted migrations, venue/physical-device/capacity checks, deployment and publication. No date, purchase or deployment commitment. |
+
+## Next batch: local organizer usability redesign
+
+Status: **proposed implementation, authorized for the next local chat on October 11**. The owner finds the preserved remote version more intuitive and easier to navigate, and wants the local app's expanded capabilities made easier to use. This is a focused redesign of existing presentation and task flow. All current features and correctness rules remain supported. Use the remote site's visual hierarchy, descriptive navigation and clear working context as references; do not copy its older scoring model or restore obsolete controls.
+
+### Checkpoint, working copies and delivery
+
+1. Read AGENTS.md, this section, relevant implemented contracts, and the latest LOCAL_TEST_REPORT.md. Inspect Git status and confirm the local checkpoint tag resolves before branching. Preferred repository: `C:\Users\Iam\Projects\Country Dance Judging App\app`; Documents is a source mirror inside a different parent repository. Compare affected files before every sync. Do not commit the parent workspace.
+2. Start `codex/organizer-usability-redesign` from `checkpoint/local-before-usability-redesign-2026-10-11`. If a branch with that name already exists, inspect it before reuse; never reset unrelated work. Preserve the checkpoint tag/branch. The previous application-only baseline is `122cd23`; the new tag also includes this handoff documentation.
+3. Make reviewable local commits for the coherent redesign and its meaningful regression coverage, followed by updated canonical documentation. Do not push, merge the checkpoint branch, deploy, synchronize hosted source, register a site, provision storage, purchase anything or publish real results. The remote site must remain exactly as is.
+4. Use the running previews where available: organizer `http://127.0.0.1:3000/`, separate results `http://127.0.0.1:3100/`, website admin `http://127.0.0.1:3100/admin`. These are local services; separate public/admin hosting does not exist. Avoid restarting the receiver unnecessarily because its admin sessions are held in memory. Isolate all fixtures from the owner's browser and local stores.
+
+### Observed friction to address
+
+- Remote navigation explains each step with subtitles; local navigation has only Set up / Run / Results / Publish. Run gives little indication of its purpose.
+- Local setup is compact but its collapsed sections require opening to assess readiness. Preserve collapsed defaults while adding useful, truthful summaries.
+- In the inspected completed sample, Run shows Finals review alongside disabled Start prelims stage / Start finals stage controls and approved labels. Earlier completed actions distract from current work, and the review message needs a direct route to the relevant results.
+- Results stacks Prelims and Finals for every competition into one long page. The currently relevant competition/round and outstanding tasks are difficult to locate.
+- Publish places Data & recovery above the publication task. Maintenance and historical detail should follow the current task.
+- Extra approval steps reflect real role boundaries. Explain the responsible person and next action in plain language rather than implying the organizer can complete another role's decision.
+
+### Experience and layout requirements
+
+| Surface | Required next-batch behavior | Preserved constraints |
+| --- | --- | --- |
+| Shared organizer shell | Retain the numbered forest sidebar/phone rail, cream cards and bib treatment. Restore concise subtitles: Set up — Event & entries; Run — Judges & rounds; Results — Review & advance; Publish — Send approved results. Maintain an unmistakable active tab and comfortable spacing. Use one consistent event/competition/round/status header where relevant. | No second navigation system, basic/advanced mode, new dashboard or duplicate workflow. Keep text usable at phone widths; accessible names remain descriptive even when subtitles are visually reduced. |
+| Competition and round context | Make the selected competition and round visible in Run/Results; provide a compact selector or overview using existing program data. Preserve deliberate selection between tabs where meaningful. Pending work elsewhere remains visible through named status/actions. | Display selection must never change the actual running heat/stage, eligibility, saved setup or approval scope. If the active stage is event-wide, clearly distinguish its scope from the selected competition view. Whole-event Publish always covers the entire event. Do not silently jump while someone reviews or edits. |
+| Set up | Keep sections initially collapsed. Show concise summaries drawn from actual setup, such as assigned judge count, entrant count and finalist count. Separate configured counts from validated readiness. A blocker shortcut opens/focuses the relevant section. Keep explicit Save and clear saved/unsaved feedback. Move lengthy sample instructions into short contextual help. | Preserve common local/shared editor, imports, keyboard access, drafts across navigation, cancel/discard behavior and server version guards. Initial organizer entry remains Set up; no forced wizard. Do not auto-save, create events or change counts/pairings as a side effect of navigation. |
+| Run | Lead with the current stage/heat, truthful submission progress and one primary actionable next step. Completed stages become compact statuses with a review link instead of prominent disabled start buttons. Judge access is easy to reach below the main action. Show Finals draw controls when needed, keeping the existing Save pairings flow. | Progress denominators must come from the relevant assigned judges/heat/stage, not an assumed panel of three. Distinguish submitted, acknowledged, missing coverage and disconnected/unknown states. Keep required detail reachable. Never enable Start when drafts, count, pairing or approval rules block it. |
+| Results | Default to the relevant competition/round, with a compact overview that makes other competitions and pending duties discoverable. Lead with placement table and review status/actions; keep the exact subject of any approval immediately visible. Provide a direct route back to the next round or Publish when eligible. | Retain all results, both J&J roles, ties, withdrawn/archived labels, submitted marks, scorecards, requests and history. Organizer sees status/routes; only authorized judges/head see their existing vote/decision/approval controls. No cross-competition stale-selection approvals. |
+| Publish | Put readiness and the exact complete-event preview before Data & recovery. Use the existing review/send flow with a clear Send results for approval action and explanation of website-admin approval. After confirmed release, make View published results prominent when an existing validated results URL is available. Keep maintenance and publication history below the main task. | Preserve explicit exact-version review, all-competition scope, independent website-admin release and failure/retry semantics. Do not infer Published from delivery alone, invent a public URL, add an organizer admin credential screen or bypass re-review after source changes. |
+| Private judge/head pages | Keep assigned name, current ballot and existing Score flow central. Bring a required review/correction duty forward when relevant; preserve submitted ballot access and existing head duties. Limit changes to coherence with the organizer redesign and verified usability needs. | Organizer/judge separation, note privacy, named confirmation, immutable submitted ballots and exact permission gates remain. Do not rebuild the judging engine or expand this into an unrelated public-site redesign. |
+
+The main action area should state where the user is, what needs attention, who is responsible and the next available action. Example copy is illustrative, not hard-coded logic: "2 of 3 judges submitted — waiting for Robin's ballot" with Open judge links; after all applicable submissions, "Prelims ready for review — head judge approval needed before Finals" with Review prelims. Handle pluralization, actual assignments, multi-heat stages and unavailable data accurately. Required pending requests must remain visible even when historical details are collapsed.
+
+### State and navigation acceptance matrix
+
+| Scenario | What the user should see and be able to do |
+| --- | --- |
+| Blank/incomplete setup | A concise explanation of the actual missing requirement and a shortcut to its field/section; no misleading Ready state. Empty program remains usable. |
+| Valid preparation | A clear Start action for the eligible stage; configured competition and actual stage scope are apparent. |
+| Active judging with missing coverage/submissions | Correct scoped progress and relevant judge links; no premature official placements or stage transition. |
+| Stage awaiting review | Review action leads to the exact competition/stage and pending duties. Organizer cannot perform head-only work. |
+| Pending correction / cutoff tie / head decision | Named blocker and correct-role route remain visible; cancelled/applied requests do not incorrectly block approval. |
+| Prelims approved / Finals not ready | Approved status plus the actual count or pairing requirement. Shortcuts preserve selection and drafts; unsaved/stale pairing guards remain. |
+| Finals active | The active round is obvious; completed Prelims controls are quiet; frozen rosters/pairings are not editable. |
+| Finals approved / another competition incomplete | Results are easy to locate; Publish names the unfinished competition and routes to it without offering partial publication. |
+| Event ready / awaiting website admin / released / invalidated | Each state has accurate copy, one useful primary action where available, exact preview and accessible history. Changed sources require renewed review. |
+| Archived event | Clear read-only status; prior ballots/results/history accessible; no active mutation controls. |
+| Navigation, reload and concurrent edit | User can return to the intended competition/round; no cross-event selection leak, dropped drafts, silently changed action target or bypass of stale-version checks. |
+
+### Implementation sequence and source routing
+
+1. Inspect current desktop and 360/390px layouts with isolated synthetic sessions. Compare the preserved remote interface read-only. Capture focused baseline evidence; never use owner event data for test mutations.
+2. Implement shell hierarchy, descriptive navigation and display selection/context first. Likely entry points: `components/live/shell.tsx`, `organizer-home.tsx`, `desk.tsx`, `stage-desk.tsx` and `app/globals.css`. Verify actual responsibilities before editing.
+3. Add truthful collapsed summaries in `setup.tsx` / `setup-section.tsx` and state-specific Run presentation in the existing desk components. Reuse `finals-pairings.tsx`; preserve setup/CAS handlers and underlying domain rules.
+4. Focus Results using `results.tsx` / `stage-review.tsx`, then reorder/clarify `publication.tsx` using the existing readiness helper. Keep current role-aware shared rendering; avoid parallel implementations or a speculative abstraction layer.
+5. Complete browser walkthrough and regression checks, inspect final phone/desktop visuals, and correct observed issues. Update these three canonical Markdown documents with implemented behavior, exact evidence, local commits and remaining limitations. Sync only affected source/test/doc files after guarded comparisons. Keep the new local preview available for owner review.
+
+No scoring, API, schema, approval or authorization changes are planned. If a presentation defect requires a small underlying fix, reproduce it, preserve the contract, add appropriate regression coverage and document it. Material policy ambiguity stays deferred; in particular do not invent post-Finals replacement/redance rules. Do not add dependencies, services or hosted work to solve layout concerns.
+
+### Verification and definition of done
+
+- Add behavior-focused browser coverage for truthful state/action transitions, retained selection, direct blocker navigation, keyboard/focus, phone layout and access to hidden details. Use semantic controls; do not weaken existing assertions just because labels moved. Avoid tests that merely mirror component structure or exact styling.
+- Walk one complete isolated fictional event through setup, Prelims, separate judge submissions, head review/advancement, actual J&J draw, Finals and complete-event publication using the local fake receiver and separate website-admin/public contexts. Include missing submission, pending correction, tie, unfinished competition and archived-state cases, plus existing count-cycle/stale-draft regressions as applicable. Assert independent numerical outcomes and role gates.
+- Run applicable existing unit, live API and browser suites plus lint, TypeScript, production build and `git diff --check`. Use an isolated compiled Worker/D1 store and receiver for publication state changes. Report exact passed/failed/unperformed checks and distinguish existing October 9 evidence from new verification. No real external sends.
+- At 360, 390 and desktop widths, primary context/action is readable, labels/focus work, controls do not overlap, main placement columns fit, and intentional detailed scorecard scrolling remains understandable. Confirm collapsed setup defaults and reachable historical detail.
+- The task is complete when existing supported behavior is retained and every matrix state communicates current context, responsibility and a useful next action without requiring the organizer to interpret internal mechanics. Keep unresolved visual or workflow issues explicit; automated checks do not establish ease of use or venue/hosted readiness on their own.
+
+### New-chat execution prompt
+
+Use GPT-6.1 Sol (`gpt-6.1-sol`) with high reasoning. Implement the next local organizer usability batch defined in this section. Start from the newly tagged **local** checkpoint, verify current branch/status and preferred/mirror parity, and create `codex/organizer-usability-redesign`. Read AGENTS.md, this specification and LOCAL_TEST_REPORT.md first. Use the older remote site only as a read-only design reference and preserve it exactly. Carry the local redesign through implementation, isolated browser/full-event verification, canonical documentation, guarded mirror synchronization and reviewable local commits. Preserve all current features, scoring/role/approval/privacy/history/frozen-Finals contracts and owner data. No push, hosted source sync, deployment, provisioning, real publication or purchase. Do not reopen settled implementation permission. Leave the updated local preview available and report what changed, the evidence and any remaining limitations.
 
 ## Product and workflow
 
