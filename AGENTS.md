@@ -23,6 +23,8 @@ The owner requested the next implementation chat using `gpt-6.1-sol` with `high`
 
 ## Implementation boundaries
 
+The October 11 scoped review reproduced and fixed two presentation defects: a full-panel advancement deadlock now names the head decision, and legacy manual finalist selection no longer claims head-approved advancement. These fixes are local on the same redesign branch; see the master reference and test report for review evidence. Preserve the original redesign commits and checkpoint.
+
 Preserve the original theme, numbered sidebar, cards/bibs and collapsed setup sections. Reuse shared components/routes for local and shared preparation; preserve legacy v2 meaning.
 
 - `/` is the organizer desk. New visitors get a fictional ready sample; saved event access stays intact. Navigation is Set up / Run / Results / Publish. Judge access and room controls belong in Run; corrections/withdrawals/history share a collapsed Results section; recovery belongs in Publish. Imports stay in Set up. Main standings hide observation counts, which remain in scorecards.
