@@ -1,6 +1,12 @@
-# Local implementation verification and handoff — 2026-10-11
+# Local implementation verification and handoff — 2026-10-15
 
 Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`. Completed functionality remains pushed on `codex/stage-heat-workflow`; the preserved cleanup is local on `codex/cleanup-workflow-polish`, and the new verified redesign is local on `codex/organizer-usability-redesign`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) for the earlier stage/setup batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
+
+## Verification cadence update — 2026-10-15
+
+The owner requested fast local unit/type/lint and other relevant inexpensive checks for small changes, using judgment about what the change needs, with full end-to-end testing saved for the end of major features or coherent delivery batches. Updated AGENTS.md and the master reference's Verification cadence, definition of done and major-delivery guidance to make that distinction explicit. Focused API/browser checks remain available when needed to verify an affected behavior; complete rehearsals are not a per-edit requirement. No application, scoring, permission, approval, storage/history or frozen-Finals behavior changed. The guided Results review remains pending.
+
+Before editing, the preferred checkout was clean on `codex/organizer-usability-redesign` at `042e0d8`; all three affected canonical documents matched the Documents mirror. Verification for this documentation-only update is factual/consistency review, local link/anchor checks, `git diff --check` and final preferred/mirror byte parity. Unit, API, browser, lint, TypeScript and build suites are intentionally not rerun for this process-only edit; the dated October 11 evidence below remains historical. Changes remain local, with no parent-workspace commit, push, hosted source sync, deployment, provisioning or real publication.
 
 ## Browser-reviewed Publish clarification — 2026-10-11
 
