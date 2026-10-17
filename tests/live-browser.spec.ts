@@ -66,7 +66,7 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
   const setup = liveFixture(22); setup.name = 'Local browser rehearsal'; setup.judges.push({ id: crypto.randomUUID(), name: 'Rehearsal Judge Two' });
   await command(request, organizer, { action: 'setup', setup }); await desk.reload(); await openJudgeAccess(desk);await expect(desk.getByRole('heading', { name: 'Event-long private judge links' })).toBeVisible();
   const ready = await api<LiveView>(request, organizer); const tokens = [ready.judgeLinks![0], ready.judgeLinks![2], ready.judgeLinks![1]].map((l) => l.path.split('/').at(-1)!);
-  await desk.locator('.rail-item').nth(0).click(); await expandSetup(desk); await desk.getByRole('button',{name:'02 Run',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start prelims judging', exact: true }));
+  await desk.locator('.rail-item').nth(0).click(); await expandSetup(desk); await desk.getByRole('button',{name:'02 Score',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start prelims judging', exact: true }));
   await Promise.all([judge.goto(`${base}${ready.judgeLinks![0].path}`), second.goto(`${base}${ready.judgeLinks![2].path}`), head.goto(`${base}${ready.judgeLinks![1].path}`)]);
   const firstRow = judge.locator('.phone-row').first(); await expect(firstRow).toBeVisible();
   const geometry = await judge.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, rail: document.querySelector('.side-rail')!.getBoundingClientRect().width }));
@@ -119,7 +119,7 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
     finals.heats[0].subjectIds = finals.subjects.map((s) => s.id);
   }
   await command(request, organizer, { action: 'setup', setup: finalsSetup }); await desk.reload(); await desk.locator('.rail-item').nth(0).click(); await expandSetup(desk);
-  await desk.getByRole('button',{name:'02 Run',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start finals judging', exact: true })); await finishBlock(request, organizer, tokens);
+  await desk.getByRole('button',{name:'02 Score',exact:true}).click();await clickCommand(desk, desk.getByRole('button', { name: 'Start finals judging', exact: true })); await finishBlock(request, organizer, tokens);
   const finalView = await api<LiveView>(request, organizer); const finalSong = finalView.rounds.flatMap((r) => r.definition.heats.flatMap((h) => h.songs)).find((p) => p.id === finalView.context.performanceId)!;
   await expect(desk.getByRole('heading', { name: finalSong.title, exact: true }).first()).toBeVisible({ timeout: 10000 });
   await clickCommand(desk, desk.getByRole('button', { name: 'Start discussion after all songs' })); await submitAndApprove([judge, second, head], head);
@@ -161,7 +161,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   await command(request, organizer, { action: 'setup', setup }); await page.goto(`${base}${created.path}`); await expandSetup(page);
   await expect(page.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
   await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
-  await page.getByRole('button',{name:'02 Run',exact:true}).click();
+  await page.getByRole('button',{name:'02 Score',exact:true}).click();
   const start = page.getByRole('button', { name: 'Start prelims judging', exact: true });
   await expect(start).toBeDisabled();
   await expect(page.getByText('Strictly · Beginner / Intermediate · prelims: Heat 2 has no entrants. Assign contestants or remove this heat.', { exact: true })).toBeVisible();
@@ -191,7 +191,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   ready.setup.rounds[6].subjects = advancedSubjects; ready.setup.rounds[6].heats = advancedHeats;
   await command(request, organizer, { action: 'setup', setup: ready.setup }); await page.reload();
   await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
-  await page.getByRole('button',{name:'02 Run',exact:true}).click();await expect(start).toBeEnabled(); await clickCommand(page, start);
+  await page.getByRole('button',{name:'02 Score',exact:true}).click();await expect(start).toBeEnabled(); await clickCommand(page, start);
   // SQL result order is not the running order; every status read must follow the configured block.
   await page.route('**/api/live', async (route) => {
     if (route.request().method() !== 'GET') { await route.continue(); return; }
@@ -202,7 +202,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
   await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
   saved = (await api<LiveView>(request, organizer)).rounds[0].definition;
   expect(saved.heats).toHaveLength(1); expect(saved.heats[0].name).toBe('Heat 2');
-  await page.getByRole('button',{name:'02 Run',exact:true}).click();
+  await page.getByRole('button',{name:'02 Score',exact:true}).click();
   const discussion = page.getByRole('button', { name: 'Start discussion after all songs', exact: true });
   await expect(discussion).toBeDisabled();
   const view = await api<LiveView>(request, organizer), count = view.rounds.flatMap((r) => r.definition.heats.flatMap((h) => h.songs)).length;

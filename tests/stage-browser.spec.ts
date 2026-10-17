@@ -7,7 +7,7 @@ import { stageFixture } from './stage-fixture';
 import { cellKey, type LiveView, type RoundView } from '../lib/live/types';
 
 async function click(page: Page, locator: Locator, action: string) {
-  if (['open-stage','next','lineup','conclude-stage'].includes(action) && await page.locator('.rail-item').count()>1) await page.getByRole('button',{name:'02 Run',exact:true}).click();
+  if (['open-stage','next','lineup','conclude-stage'].includes(action) && await page.locator('.rail-item').count()>1) await page.getByRole('button',{name:'02 Score',exact:true}).click();
   const ack = page.waitForResponse((r) => r.url().endsWith('/api/live') && r.request().method() === 'POST' && r.request().postDataJSON()?.action === action);
   await locator.click(); const response = await ack; expect(response.status(), JSON.stringify(await response.json())).toBe(200);
   if(action==='conclude-stage') await expect(page.getByRole('button',{name:'03 Results',exact:true})).toHaveAttribute('aria-current','step');
@@ -178,7 +178,7 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   // Complete the isolated multi-division mock through separate organizer/owner publication and revision.
   const ownerContext=await browser.newContext({viewport:{width:1440,height:1000}}),publicContext=await browser.newContext({viewport:{width:390,height:844}});
   const ownerPage=await ownerContext.newPage(),publicPage=await publicContext.newPage();
-  await rail(desk,1);await expect(desk.getByRole('heading',{name:'Run competition',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:/^Bib \d+:/})).toHaveCount(0);await expect(desk.getByRole('button',{name:'Submit this heat',exact:true})).toHaveCount(0);await rail(desk,3);
+  await rail(desk,1);await expect(desk.getByRole('heading',{name:'Score the competition',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:/^Bib \d+:/})).toHaveCount(0);await expect(desk.getByRole('button',{name:'Submit this heat',exact:true})).toHaveCount(0);await rail(desk,3);
   const firstCompetition=setup.competitions[0];const prepare=desk.getByRole('button',{name:'Review results to publish',exact:true});
   await click(desk,prepare,'prepare-event-publication');v=await api<LiveView>(organizer);const releaseOne=v.publications!.find((p)=>p.competitionId===firstCompetition.id)!;
   const previewOne=desk.locator(`[data-publication-id="${releaseOne.id}"]`);await expect(previewOne.getByRole('heading',{name:`${firstCompetition.format} · ${firstCompetition.division}`,exact:true})).toBeVisible();expect(JSON.stringify(releaseOne.snapshot)).not.toContain('PRIVATE_BROWSER_STAGE_NOTE');expect(releaseOne.snapshot.stages[1].entrants[0].average).toBe(10);

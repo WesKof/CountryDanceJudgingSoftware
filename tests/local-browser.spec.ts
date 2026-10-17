@@ -137,7 +137,7 @@ test('main-page organizer reopens existing events and keeps judge links separate
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(base+'/?event='+token);
   await openJudgeAccess(page);const judgeOpen=page.waitForEvent('popup');await page.getByRole('link',{name:'Open judge page',exact:true}).first().click();
   const judge=await judgeOpen;await expect(judge).toHaveURL(/\/judge\//);await expect(judge.locator('.rail-item')).toHaveCount(1);
-  await page.getByRole('button',{name:'02 Run',exact:true}).click();await page.getByRole('button',{name:'Start prelims stage',exact:true}).click();
+  await page.getByRole('button',{name:'02 Score',exact:true}).click();await page.getByRole('button',{name:'Start prelims stage',exact:true}).click();
   await judge.reload();await expect(judge.locator('.phone-row')).toHaveCount(2);
   const response=judge.waitForResponse((r)=>r.request().postDataJSON()?.action==='save-cell');
   await judge.locator('.phone-row').first().getByRole('button',{name:'Bib 101: Yes',exact:true}).click();expect((await response).status()).toBe(200);

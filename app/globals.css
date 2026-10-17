@@ -674,3 +674,77 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .shared-shell .publication-record-facts { grid-template-columns: minmax(0, 1fr); gap: 5px; }
   .shared-shell .publication-record-facts dd { margin-bottom: 9px; }
 }
+
+/* Organizer desk: the online reference's proportions, with local duties retained. */
+.organizer-shell .topbar { flex-wrap: nowrap; }
+.organizer-shell .topbar > div:first-child { min-width: 0; }
+.organizer-shell .topbar h1 { overflow-wrap: anywhere; }
+.organizer-shell .save-state { flex: 0 0 auto; max-width: 245px; }
+.organizer-shell .save-state strong { font-size: 12px; overflow-wrap: anywhere; }
+.organizer-shell .rail-item { min-height: 56px; font-size: 12px; }
+.organizer-shell .rail-copy strong { font-size: 12px; }
+.organizer-shell .rail-copy small { font-size: 9px; line-height: 1.3; color: rgba(255,255,255,.38); }
+.organizer-shell .rail-item.active .rail-copy small { color: rgba(255,255,255,.62); }
+.organizer-shell .primary-button, .organizer-shell .quiet-button, .organizer-shell .file-button { min-height: 38px; font-size: 11px; }
+.organizer-shell input, .organizer-shell select, .organizer-shell textarea { min-height: 40px; padding: 9px 11px; border-radius: 9px; font-size: 12px; }
+.organizer-shell label > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.organizer-shell .section-summary { font-size: 12px; }
+.organizer-shell .setup-toolbar { padding: 0 2px; }
+.organizer-shell .setup-hero p { max-width: 640px; }
+.organizer-shell .setup-editor-grid { grid-template-columns: minmax(0, .78fr) minmax(0, 1.45fr); }
+.organizer-shell .setup-editor-grid > :last-child { grid-column: auto; }
+.organizer-shell .setup-editor-grid > details { min-width: 0; }
+.organizer-shell .setup-editor-grid > [data-section='Event details'] { grid-column: 1; grid-row: 1; }
+.organizer-shell .setup-editor-grid > [data-section='Program & stages'] { grid-column: 2; grid-row: 1; }
+.organizer-shell .setup-editor-grid > [data-section='Judges'] { grid-column: 1; grid-row: 2; }
+.organizer-shell .setup-editor-grid > [data-section='Round setup'] { grid-column: 2; grid-row: 2; }
+.organizer-shell .round-context { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 0; margin: 30px 0 20px; padding: 0; border-radius: 14px; background: rgba(255,253,248,.82); box-shadow: 0 12px 35px rgba(48,42,32,.05); }
+.organizer-shell .round-context > label { padding: 15px 20px; border-right: 1px solid var(--line); gap: 4px; }
+.organizer-shell .round-context > label > span, .organizer-shell .context-status .kicker { color: var(--muted); font-size: 10px; letter-spacing: .11em; }
+.organizer-shell .round-context select { padding: 4px 0; min-height: 28px; border: 0; border-radius: 0; background: transparent; font-size: 13px; font-weight: 800; }
+.organizer-shell .context-status { padding: 15px 20px; gap: 4px; font-size: 13px; }
+.organizer-shell .round-overview { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; background: transparent; padding: 12px 20px; font-size: 12px; }
+.organizer-shell .round-overview > summary { min-height: 24px; }
+.organizer-shell .organizer-home-intro { margin-top: 20px; }
+.organizer-shell .sample-guide { background: var(--panel); }
+.organizer-shell .sample-guide h2 { font-family: Georgia, serif; font-size: 24px; font-weight: 500; }
+.organizer-shell .run-work > .form-body { margin-top: 0; }
+
+@media (max-width: 1100px) {
+  .organizer-shell .setup-editor-grid { grid-template-columns: minmax(0, 1fr); }
+  .organizer-shell .setup-editor-grid > details[data-section] { grid-column: auto; grid-row: auto; }
+  .organizer-shell .topbar { flex-wrap: wrap; }
+  .organizer-shell .result-group table { min-width: 0; table-layout: fixed; }
+  .organizer-shell .result-group th:first-child { width: 18%; }
+  .organizer-shell .result-group th:last-child { width: 30%; }
+  .organizer-shell .result-group th, .organizer-shell .result-group td { padding: 10px 5px; overflow-wrap: anywhere; }
+  .organizer-shell .result-group th { font-size: 10px; letter-spacing: .03em; }
+  .organizer-shell .result-group td, .organizer-shell .result-group td small { font-size: 14px; }
+  .organizer-shell .result-group td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+@media (max-width: 720px) {
+  .organizer-shell { grid-template-columns: 88px minmax(0, 1fr); }
+  .organizer-shell .side-rail { padding: 14px 8px; }
+  .organizer-shell .workspace { padding: 22px 14px 34px; }
+  .organizer-shell .rail-item { padding: 9px 3px; }
+  .organizer-shell .rail-copy strong { font-size: 9px; line-height: 1.15; }
+  .organizer-shell .topbar { gap: 12px; }
+  .organizer-shell .topbar h1 { font-size: 27px; }
+  .organizer-shell .save-state { max-width: 100%; }
+  .organizer-shell .save-state span:last-child { display: block; }
+  .organizer-shell .save-state small, .organizer-shell .save-check { display: none; }
+  .organizer-shell .primary-button, .organizer-shell .quiet-button, .organizer-shell .file-button { min-height: 44px; font-size: 13px; }
+  .organizer-shell input, .organizer-shell select, .organizer-shell textarea { min-height: 44px; font-size: 14px; }
+  .organizer-shell .hero-panel { padding: 22px 18px; gap: 18px; }
+  .organizer-shell .hero-panel h2 { font-size: 26px; }
+  .organizer-shell .round-context { grid-template-columns: minmax(0, 1fr); margin: 24px 0 20px; }
+  .organizer-shell .round-context > label { border-right: 0; border-bottom: 1px solid var(--line); padding: 14px; }
+  .organizer-shell .context-status, .organizer-shell .round-overview { padding: 14px; }
+  .organizer-shell .round-context select { min-height: 44px; font-size: 14px; }
+}
+@media (max-width: 420px) {
+  .organizer-shell { grid-template-columns: 74px minmax(0, 1fr); }
+  .organizer-shell .side-rail { padding-inline: 6px; }
+  .organizer-shell .workspace { padding: 18px 10px 30px; }
+  .organizer-shell .topbar h1 { font-size: 25px; }
+}

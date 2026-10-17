@@ -8,7 +8,7 @@ export async function expandSetup(page: Page) {
 }
 
 export async function openJudgeAccess(page: Page) {
-  await page.getByRole('button', {name:'02 Run',exact:true}).click();
+  await page.getByRole('button', {name:'02 Score',exact:true}).click();
   const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:'Event-long private judge links',exact:true})});
   if (await section.getAttribute('open') === null) await section.locator(':scope > summary').click();
 }

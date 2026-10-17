@@ -9,7 +9,7 @@ async function click(page: Page, button: Locator, action: string) {
   await button.click(); expect((await response).status()).toBe(200);
 }
 async function layouts(page: Page, stem: string) {
-  for (const width of [360, 390, 1440]) {
+  for (const width of [360, 390, 727, 1100, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     for (const table of await page.locator('.result-group .table-wrap').all()) expect(await table.evaluate((t) => t.scrollWidth <= t.clientWidth)).toBe(true);
@@ -26,7 +26,7 @@ test('blank setup has an actionable section route, descriptive keyboard navigati
   expect(await page.locator('details.setup-section[open]').count()).toBe(0);
   const before = await api<LiveView>(organizer); const posts: string[] = [];
   page.on('request', (r) => { if (r.url().endsWith('/api/live') && r.method() === 'POST') posts.push(r.postDataJSON().action); });
-  const run = page.getByRole('button', { name: '02 Run', exact: true });
+  const run = page.getByRole('button', { name: '02 Score', exact: true });
   await expect(run).toHaveAccessibleDescription('Judges & rounds');
   await run.focus(); await run.press('Enter');
   await expect(run).toHaveAttribute('aria-current', 'step');
@@ -38,6 +38,15 @@ test('blank setup has an actionable section route, descriptive keyboard navigati
   await expect(program.locator(':scope > summary')).toBeFocused();
   await program.locator(':scope > summary').press('Enter'); await expect(program).not.toHaveAttribute('open');
   await layouts(page, 'blank-setup');
+  await expect(page.getByRole('heading', { name: 'Set up the desk once', exact: true })).toBeVisible();
+  const eventCard = page.locator('[data-section="Event details"]');
+  const programCard = page.locator('[data-section="Program & stages"]');
+  const eventBox = (await eventCard.boundingBox())!, programBox = (await programCard.boundingBox())!;
+  expect(programBox.x).toBeGreaterThan(eventBox.x + eventBox.width);
+  expect(programBox.y).toBe(eventBox.y);
+  await eventCard.locator(':scope > summary').press('Enter');
+  await expect(page.getByLabel('Event name', { exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/online-layout-setup-desktop.png', fullPage: false });
   expect((await api<LiveView>(organizer)).version).toBe(before.version); expect(posts).toEqual([]);
   await context.close();
 });
@@ -46,13 +55,13 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   const setup = limitedStage(2, 4); setup.rounds[0].judgeIds = [setup.judges[0].id, setup.headJudgeId];
   const { organizer, tokens, path } = await createStage(setup);
   const context = await browser.newContext(), page = await context.newPage();
-  await page.goto(base + path); await tab(page, '02 Run');
+  await page.goto(base + path); await tab(page, '02 Score');
   await click(page, page.getByRole('button', { name: 'Start prelims stage', exact: true }), 'open-stage');
   let view = await api<LiveView>(organizer); const round = view.rounds[0], heat = round.definition.heats[0];
   await expect(page.getByText(/0 of 2 required judges submitted this heat/)).toBeVisible();
   for (const id of heat.subjectIds) await save(tokens[0], round, heat.songs[0].id, id, 'Yes');
   await command(organizer, { action: 'next' }); await command(organizer, { action: 'lineup' }); await submitHeat(tokens[0], round, heat.id);
-  await page.reload(); await tab(page, '02 Run');
+  await page.reload(); await tab(page, '02 Score');
   await expect(page.getByText(/1 of 2 required judges submitted this heat/)).toBeVisible();
   await expect(page.getByText(/Waiting for Synthetic head\./)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Conclude stage & open review', exact: true })).toBeDisabled();
@@ -60,7 +69,7 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   const before = await api<LiveView>(organizer), other = setup.rounds.find((r) => r.competitionId === setup.competitions[1].id && r.kind === 'finals')!;
   await page.getByLabel('Competition and round view', { exact: true }).selectOption(other.id);
   await tab(page, '03 Results'); await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(other.id);
-  await expect(page.locator('.result-sheet')).toHaveCount(0); await page.reload(); await tab(page, '02 Run');
+  await expect(page.locator('.result-sheet')).toHaveCount(0); await page.reload(); await tab(page, '02 Score');
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(other.id);
   await expect(page.locator('.hero-panel').getByText(/prelims · Strictly · Beginner/)).toBeVisible();
   await page.getByRole('button', { name: 'Open judge links', exact: true }).click();
@@ -76,7 +85,7 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   const eventSection = page.locator('details[data-section="Event details"]');
   await eventSection.locator(':scope > summary').click();
   await page.getByLabel('Event name', { exact: true }).fill('Unsaved synthetic event name');
-  await tab(page, '02 Run');
+  await tab(page, '02 Score');
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(setup.rounds[2].id);
   await expect(page.getByText('Save setup before starting judging.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next heat / division', exact: true })).toBeDisabled();
@@ -123,7 +132,7 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   await finish(setup, organizer, tokens, head, true);
   const context = await browser.newContext(), page = await context.newPage(), headPage = await context.newPage();
   const errors: string[] = []; page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(base + path); await tab(page, '02 Run');
+  await page.goto(base + path); await tab(page, '02 Score');
   await expect(page.getByRole('button', { name: /^Start .* stage$/ })).toHaveCount(0);
   await tab(page, '04 Publish'); await expect(page.getByRole('button', { name: 'Review results to publish', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Open Strictly · Advanced · Results', exact: true }).click();
@@ -153,7 +162,7 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   await expect(page.getByText('Published. The approved results are available on the results website.', { exact: true })).toBeVisible({ timeout: 15000 });
   // No public URL is carried by LiveView; the organizer must not invent one.
   await expect(page.getByRole('link', { name: 'View published results', exact: true })).toHaveCount(0);
-  await command(organizer, { action: 'archive' }); await page.reload(); await tab(page, '02 Run');
+  await command(organizer, { action: 'archive' }); await page.reload(); await tab(page, '02 Score');
   await expect(page.getByRole('heading', { name: 'Archived event', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Start .* stage$/ })).toHaveCount(0);
   await layouts(page, 'archived-run');
