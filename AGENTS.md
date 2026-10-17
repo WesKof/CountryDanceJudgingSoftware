@@ -7,6 +7,8 @@
 
 Keep these three working documents. The completed approved temporary specification is folded into the master reference/test report; Git preserves its history. Do not create separate timeline, closeout, branding or handoff files. Update each fact in its canonical home and link to it elsewhere.
 
+At every handoff or stopping point, review and update the relevant Markdown documents before yielding. Keep PROJECT_SPEC.md current with implemented behavior and approved next scope; record fresh verification, limitations, unfinished work and next steps in LOCAL_TEST_REPORT.md; update AGENTS.md when working rules change. Include branch/commit and preferred/mirror status in repository handoffs. Update other affected Markdown where needed, without duplicating handoff files or rewriting unrelated history. Distinguish completed, proposed and unverified work. If an interruption prevents an update, record and close that gap at the next opportunity.
+
 ## Checkout and preservation
 
 Preferred checkout: `C:\Users\Iam\Projects\Country Dance Judging App\app`; `C:\Users\Iam\Documents\ChatGPT\Country Dance Judging App\app` is the mirror. Inspect branch/status and compare affected files before edits/sync. Preserve unrelated/uncommitted work, event/browser state, legacy scoring/revisions and v2 backups. Never commit the parent workspace. Preferred-checkout writes may need filesystem approval.
@@ -15,7 +17,13 @@ Authorized repository: `https://github.com/WesKof/CountryDanceJudgingSoftware.gi
 
 Preserved local cleanup branch: `codex/cleanup-workflow-polish`, based on pushed documentation checkpoint `5732336`. Keep it local for review. It aligns review controls with existing correction/archive rules, consolidates review rendering and polishes phone/public tables; the master reference and test report contain current evidence. The original `codex/stage-heat-workflow` checkpoint remains available. Compare affected files again before later edits or returning the mirror to a different branch.
 
-## Current local organizer usability redesign
+## Approved next work: match the online layout locally
+
+On October 17 the owner authorized matching the local layout as closely as possible to the online site while retaining every added capability. Start with the overall layout, then review individual sections with the owner. The online labels are accepted, including Set up / Score / Results / Publish; place additional features in appropriate subsections. This supersedes the earlier defect-only review scope and requirement to keep the organizer label Run. An organizer Score label does not grant judge scoring access or merge roles.
+
+Use the current local implementation as the base and the online site only as a read-only visual reference. Follow [Online layout match and new-chat handoff](PROJECT_SPEC.md#online-layout-match-and-new-chat-handoff). Save this handoff in a local commit and start the explicitly requested new project chat for implementation. No push, hosted sync, deployment, provisioning or real publication. Apply the verification cadence below and update relevant Markdown at every stopping point.
+
+## Current local organizer usability redesign (October 11 delivery)
 
 The October 11 checkpoint preserves the complete current **local** implementation (application baseline `122cd23` plus the documentation checkpoint), on `codex/cleanup-workflow-polish`. The local annotated tag `checkpoint/local-before-usability-redesign-2026-10-11` identifies the handoff commit. The remote Sites version 3 / `4416e2f` is a separate, older design reference; preserve that deployed site exactly. Do not reset local code to the remote implementation.
 

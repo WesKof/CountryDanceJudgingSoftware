@@ -1,6 +1,16 @@
-# Local implementation verification and handoff — 2026-10-15
+# Local implementation verification and handoff — 2026-10-17
 
 Implemented in `C:\Users\Iam\Projects\Country Dance Judging App\app`. Completed functionality remains pushed on `codex/stage-heat-workflow`; the preserved cleanup is local on `codex/cleanup-workflow-polish`, and the new verified redesign is local on `codex/organizer-usability-redesign`. The Documents mirror was compared before selected edits/syncs. Earlier uncommitted work was preserved in the explicitly approved/pushed checkpoint `d9ea167`; see [batch closeout](LOCAL_TEST_REPORT.md#batch-closeout-and-git-delivery) for the earlier stage/setup batch's delivery. No deployment, hosted provisioning, purchase or real results publication occurred.
+
+## Online layout direction and new-chat handoff — 2026-10-17
+
+The owner approved matching the local overall layout and labels to the older online site while retaining all added functionality, then reviewing individual sections together. Accepted navigation labels include Set up / Score / Results / Publish, with extra features in subsections. The owner requested saving/committing completed work before starting a new implementation chat, and updating relevant Markdown as a standing requirement at every handoff or stopping point. AGENTS.md and master revision 1.34 now record this scope and process. **No layout implementation is included in this documentation handoff.** Earlier Results hierarchy/song-average questions remain open for later guided review and do not block the overall-layout pass.
+
+The preferred checkout began clean on `codex/organizer-usability-redesign` at `03c4c02`; all **124 tracked files** matched the Documents mirror. The preserved checkpoint tag remains `714d2be88261adf2b34e0afa2b93e8975147b0c3`. All earlier application changes are committed. This handoff changes only the three canonical Markdown documents, with factual/consistency review, local link/anchor checks, `git diff --check` and preferred/mirror byte parity. No application suites are needed for this documentation-only change; earlier runtime results below remain dated historical evidence.
+
+For the owner's comparison, the local preview was restarted October 17 and returned HTTP 200 at `http://127.0.0.1:3000/`. Vinext required `--hostname 127.0.0.1 --port 3000`; `--host` did not set the intended binding. Recheck the current listener before starting another process. The online site was inspected read-only. Preview availability is not verification of the new layout, which remains pending. No owner data mutation, hosted source sync, push, deployment, provisioning or real publication occurred.
+
+Next: begin the explicitly requested new project chat, reverify branch/status/parity, inspect the online layout read-only, implement the overall local layout match and show it for comparison before guided section review. Preserve the existing functional base, checkpoint and owner state. Apply fast relevant checks during iteration and full end-to-end verification at the end of a major stable delivery; update relevant Markdown at each handoff or stopping point.
 
 ## Verification cadence update — 2026-10-15
 
