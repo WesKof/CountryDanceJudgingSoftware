@@ -1,5 +1,19 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Live deployment and verification — October 19
+
+**Live:** https://country-dance-judging.wes6969.chatgpt.site/ now runs the reviewed cream/forest/gold application as public Sites version 4. Existing project identity and audience are unchanged. Deployed source is `da371cb943ef6531818cc76098a21fb41218493f`; saved version is `appgprj_6a88bd08a1788191a1ce28105cd3a251~appgver_43130b7ea1d48191b6a78928646c9caf`; successful deployment is `appgdep_6ad6abdd96f481919b7432b193427470`, completed October 19 at 6:46 PM America/Chicago. GitHub publication alone was not used as deployment.
+
+Preflight confirmed a clean preferred checkout on main at `da371cb`, 139/139 tracked files identical to the Documents mirror, public version 3, no hosted D1 bindings and no production environment entries. The Sites source helper opened the same checkout and pushed it without replacing local source or rewriting history. Normal build, archive preparation and save/deploy produced version 4. The archive contains six immutable existing SQL migrations and no local environment files/private runtime values. Sites provisioned `DB`, applied the migrations and exposes all 16 expected application tables; R2 remains unused. No hosted event rows were present before synthetic verification.
+
+Actual hosted checks cover saved setup/reload, three isolated judge sessions, UI scoring and acknowledged heat submission, live organizer marks, server permissions/note privacy, exact head approval and automatic advancement, independently checked Strictly Finals means 6.5000/4.5000, complete-event preview/request without release, backup redaction, last-page/round refresh recovery, 360–1440px layouts and unchanged synthetic v2 storage bytes/marks/revision. Additional hosted J&J verification and cleanup are recorded in LOCAL_TEST_REPORT.md. These checks use disposable synthetic events and fresh browser contexts; they do not establish physical-phone/venue network performance or migrate the owner's browser profile. Existing v2 browser data stays on its original device; opening the upgraded home uses its setup while retaining the original record.
+
+**Remaining external limitation:** no legitimate production results publisher is available in the inspected project/configuration. Sites lists only the judging app, production environment revision 0 has no entries, and the retained publisher/admin implementation is explicitly loopback-only. Production `/api/publication-owner` returns 404. Organizer preparation/request records can be persisted, but a request cannot reach a website admin or produce a public-results URL in this deployment. No synthetic or owner results were publicly released. Judging, review, corrections and backups do not require this optional service. A separate production publisher must preserve authenticated independent admin release and the exact complete-event contract; this rollout does not invent a service or weaken those gates.
+
+Version 3 remains saved as `appgprj_6a88bd08a1788191a1ce28105cd3a251~appgver_6220d7c61a888191a518db8eca0794f8`, source `4416e2f`, with its original archive and pushed `checkpoint/live-site-v3-before-upgrade-2026-10-19`. Retain that reference and the version-4 checkpoint. A code rollback is not a D1/browser backup or database rollback. Assess newer event compatibility and preserve D1 before deploying older code; do not remove tables/migrations or reset main to simulate rollback. No rollback was performed.
+
+The closeout commit updates documentation and the sample browser regression for approved refresh behavior; it does not change the deployed application bundle. Main/mirror delivery status and fresh local/hosted evidence are in LOCAL_TEST_REPORT.md. Historical "implemented locally" and "online unchanged" sections below document their original review dates; this section is the current deployment state.
+
 ## Set up layout — October 19 (implemented locally)
 
 **Current implementation:** after the complete layout and utility-placement review, the owner explicitly authorized local implementation while preserving functionality/data and leaving the online site unchanged. The shared editor now follows the agreed structure below. Responsive sizing, wrapping and stacking provide compatibility; phone and desktop have the same controls and initial expansion states. Expansion choices survive resizing and in-page section navigation; they reset when the editor remounts. Changes still require Save setup. The completed Set up source/tests, including collapsed defaults and banner-first order, are committed locally as `03f7e8c` on `codex/organizer-usability-redesign`.
@@ -124,6 +138,8 @@ All tag names below start with `checkpoint/`:
 | results-summary-2026-10-19 | aef7668 | Top 3/5/All and complete scorecards |
 | publish-layout-2026-10-19 | 3bf46d5 | Agreed Publish and recovery layout |
 | refresh-recovery-2026-10-19 | 04411cc | Last-page refresh recovery |
+| live-site-v4-deployed-2026-10-19 | da371cb | Exact public version-4 source |
+| live-site-v4-verified-2026-10-19 | See tag | Hosted verification and documentation/test closeout |
 
 Use `git show <tag>` to inspect or a new `codex/` branch from a tag to compare. Do not force-push/reset main as a rollback shortcut. A Git checkpoint preserves source history, not localStorage, D1 data, private runtime configuration or hosted database state. Sites version 3 remains an additional deployment rollback reference; assess data compatibility before redeploying old code.
 

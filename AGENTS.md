@@ -1,5 +1,15 @@
 # Country Dance Judging — working instructions
 
+## Live rollout — October 19
+
+The reviewed application is deployed at https://country-dance-judging.wes6969.chatgpt.site/ as public Sites version 4, source `da371cb943ef6531818cc76098a21fb41218493f`, deployment `appgdep_6ad6abdd96f481919b7432b193427470` (succeeded). The original project/audience are preserved. Sites provisioned logical D1 `DB` and applied the six existing migrations; the previous deployment had no D1 binding. No R2 or production environment values were added. Version 3 and its existing checkpoint remain rollback references; source rollback does not restore data.
+
+Hosted synthetic verification establishes setup persistence, private judge scoring/heat submissions, live organizer marks, note isolation, exact head review, Finals numeric results, publication preparation/request without release, refresh recovery, responsive operation and byte-preserved legacy v2 records. See LOCAL_TEST_REPORT.md for exact scope and cleanup evidence. Owner events, browser profiles, local runtime files and the port-3000 preview were not used as mutation fixtures.
+
+The separate public-results publisher is not deployed/configured. Sites lists only this judging app; production environment revision is 0 with no entries. Local publisher controls intentionally return 404 on the hosted origin. Preparing/sending a request is not external delivery or public release. Keep this limitation explicit and preserve independent website-admin approval. Do not install localhost credentials in production or expose the fake receiver. Judging/review/backups remain available.
+
+The rollout closeout changes documentation and a stale sample-browser assertion only; deployed runtime source remains `da371cb`. Main is the source baseline after normal fast-forward integration. Historical local-only notes below describe prior deliveries and do not undo this completed authorized rollout.
+
 ## Current authorization — October 19
 
 Current branch is `main`, tracking `github/main`. Former feature/legacy branch tips and all local UI milestones are preserved as pushed `checkpoint/*` tags; use the rollback map in PROJECT_SPEC.md. Historical branch names below describe prior deliveries, not branches to recreate. The live version-3 source is preserved at `checkpoint/live-site-v3-before-upgrade-2026-10-19`.

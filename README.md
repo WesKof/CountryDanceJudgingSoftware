@@ -10,7 +10,9 @@ Organizer and private-judge software for Strictly and Jack & Jill events, with s
 - [AGENTS.md](AGENTS.md): working instructions and current authorization.
 - [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md): dated checks, evidence and limitations.
 
-The existing live site is a separate deployment. Updating GitHub does not deploy it. Its version-3 source is preserved at `checkpoint/live-site-v3-before-upgrade-2026-10-19`; the current deployment status is recorded in the canonical documents.
+The [live judging site](https://country-dance-judging.wes6969.chatgpt.site/) runs public Sites version 4, deployed October 19, 2026 from source `da371cb`. The reviewed local design, shared judging and refresh recovery are now online with Sites-managed D1 `DB`. Updating GitHub alone does not deploy it. Version 3 remains preserved at `checkpoint/live-site-v3-before-upgrade-2026-10-19`; deployment IDs, verification and rollback limits are in the canonical documents.
+
+The separate public-results publisher is not deployed/configured. Publish can prepare and record an organizer approval request, but there is no production website-admin delivery/release service or public-results URL. Judging, review and backups work independently. Local fake-receiver release tests are local evidence only; the independent website-admin approval gate remains enforced.
 
 ## Current behavior
 

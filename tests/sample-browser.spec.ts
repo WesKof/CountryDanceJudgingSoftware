@@ -31,7 +31,9 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  const saved=judge.waitForResponse((r)=>r.request().postDataJSON()?.action==='save-cell');await judge.locator('.phone-row').first().getByRole('button',{name:'Bib 101: Yes',exact:true}).click();expect((await saved).status()).toBe(200);
  const judgeToken=new URL(judge.url()).pathname.split('/').at(-1)!;const observed=await api<LiveView>(judgeToken);expect(Object.values(observed.ballots[0].cells)[0].mark).toBe('Yes');
  await page.locator('.rail-item').nth(1).click();await expect(page.getByRole('button',{name:'Next song',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:/^Bib \d+:/})).toHaveCount(0);await page.screenshot({path:'test-results/organizer-run-390.png',fullPage:true});
- await page.reload();await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();await expandSetup(page);
+ await page.reload();await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'02 Score',exact:true})).toHaveAttribute('aria-current','step');
+ await page.getByRole('button',{name:'01 Set up',exact:true}).click();await expandSetup(page);
  page.once('dialog',(d)=>void d.accept());await page.getByRole('button',{name:'Try a fresh sample',exact:true}).click();
  await expect.poll(()=>page.evaluate((old)=>{const next=JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!);return Boolean(next.configured&&next.path&&next.path!==old);},binding.path)).toBe(true);
  await expect(page.getByRole('button',{name:'Save setup',exact:true})).toBeDisabled();
