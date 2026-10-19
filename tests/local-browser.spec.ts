@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expandSetup, openJudgeAccess, openRecovery } from './setup-browser-helpers';
+import { selectSetupRound, expandSetup, openJudgeAccess, openRecovery } from './setup-browser-helpers';
 import { readFile } from 'node:fs/promises';
 import { createDefaultState, type AppState } from '../lib/domain';
 import { stageFixture } from './stage-fixture';
@@ -20,25 +20,25 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
   const localSetupCopy = (await api<LiveView>(openedLocal.path.split('/').at(-1)!)).setup;
   for (const page of [local, shared]) {
     const pageSetup = page===local ? localSetupCopy : setup;
-    await expect(page.locator('details.setup-section[open]')).toHaveCount(0);
+    await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);
     await expect(page.getByLabel('Event name', { exact: true })).toHaveCount(1);
     await expect(page.getByText('Event overview · legacy ballots', { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
     await page.screenshot({ path: page === local ? 'test-results/local-setup-collapsed-390.png' : 'test-results/shared-setup-collapsed-1440.png' });
-    const eventSection = page.locator('details.setup-section').filter({ has: page.getByRole('heading', { name: 'Event details', exact: true }) });
-    await eventSection.locator('summary').focus(); await page.keyboard.press('Enter');
+    const eventSection = page.locator('details.setup-section').filter({ has: page.getByRole('heading', { name: 'Details', exact: true }) });
+    await eventSection.locator(':scope > summary').focus(); await page.keyboard.press('Enter');
     await expect(page.getByLabel('Event name', { exact: true })).toBeVisible();
-    await eventSection.locator('summary').click(); await expect(page.getByLabel('Event name', { exact: true })).toBeHidden();
-    await page.locator('details.setup-section').filter({ has: page.getByRole('heading', { name: 'Program & stages', exact: true }) }).locator('summary').click();
+    await eventSection.locator(':scope > summary').click(); await expect(page.getByLabel('Event name', { exact: true })).toBeHidden();
+    await page.getByLabel('Go to section').selectOption('Program & stages');
     await page.locator('.competition-card').first().click();
     await expect(page.getByLabel('Select round to configure')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
     await expandSetup(page);
-    await expect(page.getByRole('heading', { name: 'Program & stages', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Program', exact: true })).toBeVisible();
     await expect(page.getByLabel('Event name', { exact: true }).last()).toHaveValue(pageSetup.name);
     await expect(page.getByRole('combobox', { name: 'Event head judge', exact: true })).toHaveValue(pageSetup.headJudgeId);
-    await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(4);
-    await page.getByLabel('Select round to configure').selectOption(pageSetup.rounds[0].id);
+    await expect(page.locator('.competition-card')).toHaveCount(4);
+    await selectSetupRound(page, pageSetup, pageSetup.rounds[0].id);
     await expect(page.locator('.shared-heat')).toHaveCount(3);
     page.once('dialog', (d) => void d.dismiss()); await page.getByRole('button', { name: 'Remove Heat 1', exact: true }).click(); await expect(page.locator('.shared-heat')).toHaveCount(3);
     page.once('dialog', (d) => void d.accept()); await page.getByRole('button', { name: 'Remove Heat 1', exact: true }).click();
@@ -56,10 +56,10 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await page.reload();
     if (page === local) await local.locator('.rail-item').nth(0).click(); await expandSetup(page);
     await expect(page.getByLabel('Venue', { exact: true }).last()).toHaveValue('Parity venue');
-    await page.getByLabel('Select round to configure').selectOption(pageSetup.rounds[0].id);
+    await selectSetupRound(page, pageSetup, pageSetup.rounds[0].id);
     const remove = page.getByRole('button', { name: 'Remove Strictly Beginner / Intermediate competition', exact: true });
-    page.once('dialog', (d) => void d.dismiss()); await remove.click(); await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(4);
-    page.once('dialog', (d) => void d.accept()); await remove.click(); await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(3);
+    page.once('dialog', (d) => void d.dismiss()); await remove.click(); await expect(page.locator('.competition-card')).toHaveCount(4);
+    page.once('dialog', (d) => void d.accept()); await remove.click(); await expect(page.locator('.competition-card')).toHaveCount(3);
     await expect(page.getByLabel('Select round to configure')).not.toHaveValue(pageSetup.rounds[0].id);
     await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
   }
@@ -92,13 +92,13 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
     await page.reload(); if (page === local) await page.locator('.rail-item').nth(0).click(); await expandSetup(page);
     await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Add competition', exact: true }).click(); await expandSetup(page);
+    await page.getByRole('button', { name: '+ J&J', exact: true }).click(); await page.getByRole('button', { name: 'Add competition', exact: true }).click(); await expandSetup(page);
     await expect(page.getByLabel('Select round to configure').locator('option')).toHaveCount(2);
     // Exercise roster addition and import controls on the freshly added J&J prelim.
     await page.getByLabel('Bib', { exact: true }).fill('701'); await page.getByLabel('Name', { exact: true }).last().fill('Synthetic Lead');
     await page.getByRole('button', { name: 'Add entrant', exact: true }).click();
     await expect(page.getByLabel('Heat for bib 701', { exact: true })).not.toHaveValue('');
-    await page.getByText('Import roster CSV', { exact: true }).click(); await page.locator('textarea[name=csv]').fill('Number,Name,Role\n701,Synthetic Lead,Lead\n702,Synthetic Follow,Follow');
+    await page.locator('textarea[name=csv]').fill('Number,Name,Role\n701,Synthetic Lead,Lead\n702,Synthetic Follow,Follow');
     page.once('dialog', (d) => void d.accept()); await page.getByRole('button', { name: 'Replace unopened roster', exact: true }).click();
     await expect(page.getByLabel('Heat for bib 702', { exact: true })).not.toHaveValue('');
     await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
@@ -132,8 +132,8 @@ test('main-page organizer reopens existing events and keeps judge links separate
   const creations:string[]=[];page.on('request',(r)=>{if(r.method()==='POST'&&r.url().endsWith('/api/live')&&r.postDataJSON()?.action==='create')creations.push(r.url());});
   await page.goto(base);await expect(page.getByRole('heading',{level:1,name:setup.name})).toBeVisible();
   await expect(page.getByRole('button',{name:'Open organizer page',exact:true})).toHaveCount(0);
-  await expect(page.locator('details.setup-section[open]')).toHaveCount(0);await expandSetup(page);
-  await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
+  await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);await expandSetup(page);
+  await page.locator('.setup-event-tools > summary').click(); await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(base+'/?event='+token);
   await openJudgeAccess(page);const judgeOpen=page.waitForEvent('popup');await page.getByRole('link',{name:'Open judge page',exact:true}).first().click();
   const judge=await judgeOpen;await expect(judge).toHaveURL(/\/judge\//);await expect(judge.locator('.rail-item')).toHaveCount(1);

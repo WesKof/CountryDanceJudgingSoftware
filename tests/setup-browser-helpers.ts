@@ -1,8 +1,18 @@
 import { expect, type Page } from '@playwright/test';
+import type { LiveSetup } from '../lib/live/types';
+
+export async function selectSetupRound(page: Page, setup: LiveSetup, roundId: string) {
+  const round = setup.rounds.find((r) => r.id === roundId)!;
+  const competition = setup.competitions.find((c) => c.id === round.competitionId)!;
+  const program = page.locator('details[data-section="Program & stages"]');
+  if (await program.getAttribute('open') === null) await program.locator(':scope > summary').click();
+  await program.locator('.competition-card').filter({ has: page.locator('strong', { hasText: competition.format }) }).filter({ has: page.locator('small', { hasText: competition.division }) }).click();
+  await page.getByLabel('Select round to configure', { exact: true }).selectOption(roundId);
+}
 
 // Navigate the real accordion controls, including nested sections after changing rounds.
 export async function expandSetup(page: Page) {
-  await expect(page.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
   const closed = page.locator('details.setup-section:not([open]) > summary');
   while (await closed.count()) await closed.first().click();
 }

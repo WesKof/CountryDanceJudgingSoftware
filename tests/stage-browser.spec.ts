@@ -1,5 +1,5 @@
 import { localKey, receiver } from './publication-helpers';
-import { expandSetup, openRecovery, openResultManagement } from './setup-browser-helpers';
+import { selectSetupRound, expandSetup, openRecovery, openResultManagement } from './setup-browser-helpers';
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { api, command, base, observedMark } from './stage-helpers';
@@ -142,7 +142,7 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   // Approved finalists populate automatically; enter only the actual fixed J&J draw through setup controls.
   await desk.reload(); await expandSetup(desk);
   for (const f of v.setup.rounds.filter((r) => r.kind === 'finals')) {
-    await desk.getByLabel('Select round to configure').selectOption(f.id); await expandSetup(desk);
+    await selectSetupRound(desk, v.setup, f.id); await expandSetup(desk);
     const pre = v.rounds.find((r) => r.id === f.prelimRoundId)!;
     expect(f.finalistIds).toEqual(pre.standings!.advancingIds!);
     for (const id of f.finalistIds) {
@@ -216,7 +216,7 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   const withdrawalBackup = JSON.parse(await readFile((await (await historyDownload).path())!, 'utf8')); expect(withdrawalBackup.history.heatSubmissions.length).toBe(backup.history.heatSubmissions.length+1); for(const original of backup.history.heatSubmissions)expect(withdrawalBackup.history.heatSubmissions.some((s:{id:string})=>s.id===original.id)).toBe(true); expect(JSON.stringify(withdrawalBackup)).not.toContain('synthetic-key');
   const oldPath = desk.url(); desk.once('dialog', (d) => void d.accept());
   await desk.locator('label').filter({ hasText: 'Restore as a new shared event' }).locator('input[type=file]').setInputFiles({ name: 'shared-stage.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(withdrawalBackup)) });
-  await expect(desk).not.toHaveURL(oldPath); await expect(desk.getByRole('heading', { name: 'Event details', exact: true })).toBeVisible();
+  await expect(desk).not.toHaveURL(oldPath); await expect(desk.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
   const restored = await api<LiveView>(new URL(desk.url()).searchParams.get('event')!); expect(restored.rounds).toHaveLength(0); expect(restored.restoredHistory).toBeTruthy(); expect(restored.judgeLinks!.some((l) => tokens.includes(l.path.split('/').at(-1)!))).toBe(false);
   await Promise.all([organizerContext.close(), oneContext.close(), twoContext.close(), headContext.close()]);
   expect(errors).toEqual([]);

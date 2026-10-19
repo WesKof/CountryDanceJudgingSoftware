@@ -16,8 +16,8 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  await page.goto(base);await expect(page.getByText('Synthetic lost setup response',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Retry',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();await expect(page).toHaveURL(base+'/');
- await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
- await expect(page.locator('details.setup-section[open]')).toHaveCount(0);expect(creates).toHaveLength(1);
+ await expect(page.locator('.setup-hero .setup-sample-help > summary')).toHaveText('Sample help · fictional event'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
+ await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);expect(creates).toHaveLength(1);
  const binding=await page.evaluate(()=>JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!) as {path:string}),token=binding.path.split('/').at(-1)!;
  const initial=await api<LiveView>(token);expect(initial.setup.competitions.map((c)=>c.format)).toEqual(['Strictly','Jack & Jill']);
  expect(initial.setup.rounds.filter((r)=>r.kind==='prelims').map((r)=>r.subjects.map((s)=>s.number))).toEqual([[101,102,103,104],[201,202,301,302]]);
@@ -56,6 +56,6 @@ test('main-page private organizer link checks the role before changing saved acc
  await expect(page.getByRole('button',{name:'Save setup',exact:true})).toHaveCount(0);
  expect(await page.evaluate(()=>localStorage.getItem('country-dance-judging:rehearsal'))).toBe(raw);
  await page.goto(base+'/?event='+binding.path.split('/').at(-1)!);await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
- await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
+ await expect(page.locator('.setup-hero .setup-sample-help > summary')).toHaveText('Sample help · fictional event'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
  expect((await api<LiveView>(binding.path.split('/').at(-1)!)).eventId).toBe(view.eventId);await context.close();
 });

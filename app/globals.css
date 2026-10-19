@@ -203,6 +203,64 @@ button:focus-visible { outline: 3px solid rgba(214,164,73,.7); outline-offset: 2
   .topbar h1 { font-size: 25px; }
 }
 
+/* Agreed Set up structure: identical controls and open states at every width. */
+.organizer-shell .setup-page .setup-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.setup-save-controls { display: flex; flex: 1 1 280px; flex-wrap: wrap; align-items: center; gap: 10px; }
+.setup-save-controls > span { flex: 1 1 160px; font-size: 12px; }
+.setup-section-picker { flex: 1 1 180px; max-width: 240px; }
+.shared-shell .setup-event-tools { position: relative; padding: 0; margin: 0; border: 0; background: transparent; }
+.setup-event-tools > summary { display: flex; align-items: center; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; font-weight: 800; }
+.setup-event-tools > summary::after { content: '▾'; margin-left: 12px; }
+.setup-tool-actions { display: grid; gap: 8px; padding: 12px; position: absolute; z-index: 5; right: 0; min-width: 200px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 12px 30px #183b3320; }
+.setup-tool-notice { flex-basis: 100%; margin: 0; }
+.organizer-shell .setup-page .primary-button, .organizer-shell .setup-page .quiet-button { min-height: 44px; }
+.organizer-shell .setup-page input, .organizer-shell .setup-page select { min-height: 44px; }
+.organizer-shell .setup-page label, .organizer-shell .setup-page input, .organizer-shell .setup-page select { min-width: 0; max-width: 100%; }
+.organizer-shell .setup-page .setup-editor-grid { align-items: start; }
+.organizer-shell .setup-page .setup-editor-grid > [data-section='Roster'] { grid-column: 2; grid-row: 2; }
+.setup-page .setup-editor > .setup-section { margin-top: 24px; }
+.shared-shell .setup-main-card > summary { min-height: 76px; justify-content: space-between; }
+.shared-shell .setup-main-card > summary::before { display: none; }
+.shared-shell .setup-main-card > summary::after { content: '▸'; flex: 0 0 auto; font-size: 18px; color: var(--green); }
+.shared-shell .setup-main-card[open] > summary::after { content: '▾'; }
+.setup-main-card > summary > div { flex: 1; min-width: 0; }
+.setup-main-card[open]:not(.setup-needs-attention) > summary .section-summary { display: none; }
+.setup-needs-attention > summary .section-summary { color: #9b4326; }
+.setup-page .setup-section { scroll-margin-block: 24px; }
+.setup-page .setup-section > summary:focus-visible, .setup-event-tools > summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.setup-page .setup-section .setup-section { margin-top: 16px; box-shadow: none; }
+.setup-page .setup-section .setup-section > summary h2 { font-family: inherit; font-size: 16px; font-weight: 750; }
+.setup-page .setup-section .setup-section > summary { padding: 16px; }
+.setup-page .setup-section .setup-section > .form-body { padding: 16px; }
+.setup-page .setup-basic-fields { padding: 0; margin: 0; border: 0; min-width: 0; }
+.setup-competition-list { display: grid; gap: 10px; margin-block: 18px; }
+.setup-competition-list .competition-card { width: 100%; text-align: left; }
+.setup-selected-competition { padding-top: 4px; }
+.setup-selected-competition > p { font-size: 12px; color: var(--muted); }
+.setup-roster-list { display: grid; gap: 12px; margin-block: 20px; }
+.setup-roster-entry { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.setup-roster-entry > label { flex: 1 1 120px; }
+.setup-roster-entry > label:first-child { flex: 0 1 76px; }
+.setup-roster-entry .roster-role { padding-block: 12px; }
+.shared-shell .setup-sample-help { margin-top: 20px; padding: 12px 16px; border: 1px solid #ffffff40; border-radius: 12px; background: transparent; color: inherit; }
+.setup-sample-help > summary { min-height: 24px; cursor: pointer; font-weight: 700; }
+.organizer-shell .setup-sample-help h2 { font-size: 22px; margin-top: 8px; }
+.setup-sample-help .kicker { margin-top: 16px; }
+.organizer-shell .setup-page .organizer-home-intro { margin-top: 0; }
+@media (max-width: 1100px) {
+  .organizer-shell .setup-page .setup-editor-grid > details[data-section] { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 600px) {
+  .organizer-shell .setup-page .setup-toolbar { padding: 12px; }
+  .setup-section-picker { max-width: none; }
+  .setup-save-controls { flex-basis: 100%; }
+  .setup-save-controls > span { flex-basis: 100%; }
+  .setup-event-tools { flex: 1 1 140px; }
+  .setup-tool-actions { left: 0; right: auto; min-width: 0; width: 100%; }
+  .organizer-shell .setup-page .setup-roster-entry > label { flex-basis: 130px; }
+  .organizer-shell .setup-page .setup-roster-entry > label:first-child { flex: 1 1 76px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }

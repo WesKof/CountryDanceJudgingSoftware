@@ -15,7 +15,7 @@ test('legacy setup distinguishes manually selected finalists from head-approved 
   expect(before.rounds).toHaveLength(0);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } }), page = await context.newPage();
   await page.goto(base + path);
-  await page.locator('details[data-section="Round setup"] > summary').click();
+  await page.getByLabel('Go to section').selectOption('Round setup');
   const summary = page.locator('details[data-section="Finalists & pairings"] > summary');
   await expect(summary).toContainText('Finalists selected manually');
   await expect(summary).not.toContainText('Advancement approved');

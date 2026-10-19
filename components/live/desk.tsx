@@ -6,11 +6,12 @@ import { freezeRound, roundOpeningIssues } from '@/lib/live/validation';
 import { creationNonce, download, liveApi, useLive } from './client';
 import { LiveShell } from './shell';
 import SetupEditor from './setup';
+import SetupPage from './setup-page';
 import SetupSection from './setup-section';
 import { LiveResults } from './results';
 import StageDesk from './stage-desk';
 
-export default function LiveDesk({ token, setupIntro, recoveryExtra }: { token: string; setupIntro?: ReactNode; recoveryExtra?: ReactNode }) {
+export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra }: { token: string; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode }) {
   const { data, error, refresh } = useLive(token);
   const [page, setPage] = useState(0); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<LiveSetup | null>(null); const [draftVersion, setDraftVersion] = useState(0);
@@ -43,7 +44,7 @@ export default function LiveDesk({ token, setupIntro, recoveryExtra }: { token: 
   if (data && data.role !== 'organizer') return <p role="alert">Organizer access required.</p>;
   if (!data) return <LiveShell navigationDisabled title="Shared event" identity="Organizer desk" status="Connecting…" items={['Set up', 'Score', 'Results', 'Publish']} current={0} navigate={setPage}><p role="status">{error || 'Loading the private event…'}</p><button className="quiet-button" onClick={() => void refresh()}>Retry</button></LiveShell>;
   if (data.role !== 'organizer') return <p role="alert">Open the organizer link to use this desk.</p>;
-  if (data.setup.workflow === 'stage-v1') return <StageDesk token={token} data={data} error={error} refresh={refresh} setupIntro={setupIntro} recoveryExtra={recoveryExtra} />;
+  if (data.setup.workflow === 'stage-v1') return <StageDesk token={token} data={data} error={error} refresh={refresh} setupIntro={setupIntro} sampleHelp={sampleHelp} recoveryExtra={recoveryExtra} />;
   const activeRound = data.rounds.find((r) => r.definition.heats.some((h) => h.songs.some((p) => p.id === data.context.performanceId)));
   const activeHeat = activeRound?.definition.heats.find((h) => h.songs.some((p) => p.id === data.context.performanceId));
   const song = activeHeat?.songs.find((p) => p.id === data.context.performanceId);
@@ -72,12 +73,12 @@ export default function LiveDesk({ token, setupIntro, recoveryExtra }: { token: 
   }
   return <LiveShell title={data.setup.name} identity={`Organizer · Head judge: ${data.setup.judges.find((j) => j.id === data.setup.headJudgeId)?.name ?? 'Choose in setup'}`} status={error ? 'Connection interrupted' : data.status === 'archived' ? 'Archived · read only' : busy ? 'Saving…' : 'Shared event connected'} items={['Set up', 'Score', 'Results', 'Publish']} current={page} navigate={setPage}>
     {(notice || error) && <p className="notice" role="status">{notice || error}</p>}
-    {page === 0 && <div className="page-stack"><section className="hero-panel setup-hero"><div><p className="kicker">Event foundation</p><h2>Set up the desk once</h2><p>Prepare event details, competitions, judges and entries. Save setup before starting the stage.</p></div><span className="format-stamp">{data.setup.competitions.length} competitions</span></section><div className="shared-inline setup-toolbar"><button className="primary-button" disabled={!draft || busy || data.status !== 'active'} onClick={() => void saveSetup()}>Save setup</button>{draft && <><span>Unsaved setup edits</span><button className="quiet-button" onClick={() => { if (window.confirm('Discard the unsaved setup edits?')) setDraft(null); }}>Discard edits</button></>}<button className="quiet-button" onClick={() => void navigator.clipboard.writeText(new URL(`/?event=${token}`, window.location.origin).href).then(() => setNotice('Organizer link copied. Keep it private.')).catch(() => setNotice('Copy the organizer link from your browser address bar.'))}>Copy organizer link</button></div>
+    {page === 0 && <SetupPage token={token} competitionCount={setup.competitions.length} hasRounds={setup.rounds.length > 0} hasDraft={Boolean(draft)} sampleHelp={sampleHelp} otherEvents={setupIntro} toolbar={<><button className="primary-button" disabled={!draft || busy || data.status !== 'active'} onClick={() => void saveSetup()}>Save setup</button>{draft && <><span>Unsaved setup edits</span><button className="quiet-button" onClick={() => { if (window.confirm('Discard the unsaved setup edits?')) setDraft(null); }}>Discard edits</button></>}{!draft && <span className="setup-save-feedback">Saved setup · changes need Save setup</span>}</>}>
       {data.rounds.length > 0 && data.status === 'active' && <details><summary>Versioned setup correction</summary><label className="check-label"><input type="checkbox" checked={correction} onChange={(e) => setCorrection(e.target.checked)} />Unlock frozen setup for an explicit correction</label><label><span>Correction reason</span><input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label><p>Saving a correction invalidates current submissions and approvals and returns affected rounds to setup. Prior versions are retained.</p></details>}
       <fieldset disabled={data.status !== 'active'} className="shared-unframed"><SetupEditor setup={setup} update={(next) => { if (!draft) setDraftVersion(data.version); setDraft(next); }} frozenIds={data.rounds.filter((r) => r.phase !== 'setup').map((r) => r.id)} correction={correction} /></fieldset>
 
-    </div>}
-    {page === 0 && setupIntro}
+    </SetupPage>}
+
     {page === 1 && <SetupSection title="Event-long private judge links" caption="Access" count={data.judgeLinks?.length ?? 0}><div className="form-body">{data.judgeLinks?.map((link) => <div className="shared-inline" key={link.id}><strong>{link.name}{link.id === data.setup.headJudgeId ? ' · Head judge' : ''}</strong><span>{link.revoked ? 'Revoked' : 'Active'}</span><button className="quiet-button" disabled={link.revoked} onClick={() => void navigator.clipboard.writeText(new URL(link.path, window.location.origin).href).then(() => setNotice(`${link.name}’s link copied. Send it individually.`)).catch(() => setNotice('Clipboard unavailable. Use Open judge page and copy its address.'))}>Copy judge link</button><a className="quiet-button" href={link.path} target="_blank" rel="noreferrer">Open judge page</a><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm(`Revoke ${link.name}’s current link?`)) void action({ action: 'revoke-link', judgeId: link.id }); }}>Revoke</button><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm(`Replace ${link.name}’s link? The old link will stop working.`)) void action({ action: 'replace-link', judgeId: link.id }); }}>Replace link</button></div>)}</div></SetupSection>}
     {page === 1 && <section className="form-panel"><div className="panel-heading"><h2>Score the competition</h2></div><div className="form-body page-stack">
       {draft && <p className="notice" role="status">Save your setup edits in Set up before starting judging. <button className="quiet-button" onClick={() => setPage(0)}>Go to Set up</button></p>}
