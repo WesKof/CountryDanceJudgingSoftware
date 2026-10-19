@@ -1,5 +1,11 @@
 # Local implementation verification and handoff — 2026-10-19
 
+## GitHub consolidation completed - 2026-10-19
+
+Refresh recovery is committed as 04411cc. Pushed main by fast-forward and all 17 annotated checkpoint tags atomically to GitHub, including the exact current live source 4416e2f and Sites versions 1/2. Verified every former remote branch tip against its remote peeled tag before deleting the three retired branch names with exact expected-tip guards. Switched the preferred checkout to main, fast-forwarded it, set github/main upstream and removed the merged local feature/cleanup branches. No force-pushed history or unpreserved branch tip. GitHub now has main as its only branch at this checkpoint; future rollout work may create a temporary codex branch.
+
+Updated README to describe the actual shared workflow, documented all tags and data-versus-source rollback limits, and recorded explicit deployment authorization. Local preview remains running (HTTP 200); isolated test services are stopped. Preferred checkout and Documents mirror contain the same 139 tracked/new files. Deployment will run in the new chat requested by the owner; no Sites source push or deployment occurred during this consolidation.
+
 ## Refresh recovery and checkpoint preparation - 2026-10-19
 
 Implemented per-event, per-tab organizer page persistence for stage and legacy desks, retaining the existing competition/round selection. Storage is view-only, range validated and exception safe. No credentials or unsaved forms are saved by this feature. Lint, TypeScript, production build and all eight targeted publication/navigation browser tests passed together (54.6 seconds, one worker, zero retries). The new test checks every organizer page after refresh, round selection, separation between events, invalid storage, storage denial and no event writes. The previous 34-unit baseline remains unchanged; no scoring/server/storage/schema code changed.

@@ -1,68 +1,55 @@
 # Country Dance Judging
 
-## Project reference
+Organizer and private-judge software for Strictly and Jack & Jill events, with shared stage/heat judging, Results review and independently approved publication.
 
-Read [PROJECT_SPEC.md](PROJECT_SPEC.md) for the product design, implemented behavior, scoring/data contracts, file map, deployment notes, and known limitations. [AGENTS.md](AGENTS.md) is the compact starting point for coding assistants and links each task to the relevant source.
+## Current source and references
 
-A local-first judging desk for Strictly and Jack & Jill competitions. The app keeps event setup, ballots, and result revisions in the browser on the current device. An internet connection is not required while judging.
+`main` is the current development baseline. Named `checkpoint/*` tags preserve the original GitHub branches, hosted versions and each reviewed UI milestone. See the complete [checkpoint and rollback map](PROJECT_SPEC.md#github-checkpoints-and-rollback-map).
 
-## Core behavior
+- [PROJECT_SPEC.md](PROJECT_SPEC.md): product behavior, scoring/data contracts, deployment context and rollback map.
+- [AGENTS.md](AGENTS.md): working instructions and current authorization.
+- [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md): dated checks, evidence and limitations.
 
-- Event, competition, judge, and contestant setup
-- Strictly couple rosters and Jack & Jill lead/follow rosters
-- Legacy mark values: Yes = 10, A1 = 4.5, A2 = 4.3, No = 0
-- Automatic local autosave
-- Incomplete-ballot checks and shared-place tie handling
-- Timestamped result revisions
-- CSV roster import, CSV results export, print layout, and full JSON backup/restore
-- Optional publishing-key-protected Google Apps Script endpoint
+The existing live site is a separate deployment. Updating GitHub does not deploy it. Its version-3 source is preserved at `checkpoint/live-site-v3-before-upgrade-2026-10-19`; the current deployment status is recorded in the canonical documents.
 
-## CSV formats
+## Current behavior
 
-Strictly contestants:
+- Organizer flow: Set up, Score, Results, Publish. The last page and selected competition/round survive a refresh within the same browser tab, separately per event.
+- Private judge links, autosaved song drafts and acknowledged heat submissions. Setup changes require Save setup.
+- Strictly couples and Jack & Jill leads/follows, approved advancement and actual Finals pairings.
+- Yes = 10, A1 = 4.5, A2 = 4.3, No = 0; blanks are excluded. Each judge average carries equal weight.
+- Exact head approvals, tie decisions, versioned corrections/withdrawals, retained history and role boundaries.
+- Complete-event publication previews and separate website-admin release approval. A hosted results publisher is separate from the judging app; local fake-receiver tests do not establish a hosted service.
+- JSON recovery backups exclude private notes and access credentials by default. Restore creates a new event and links, retaining previous results as history.
+- Legacy device records remain preserved separately. Old exports and direct Google Apps Script publication are historical compatibility source, not current organizer features.
 
-```csv
-Number,Lead,Follow
-128,Lead name,Follow name
-```
-
-Jack & Jill contestants:
-
-```csv
-Number,Name,Role
-204,Dancer name,Lead
-```
-
-Judges:
-
-```csv
-Name
-Judge name
-```
-
-Templates are also downloadable from the Data screen.
-
-## Google Apps Script publishing
-
-The connector is optional; the app never contacts Google unless an organizer configures it and presses **Send completed results**. Configure a deployed HTTPS web-app `/exec` URL and its publishing key on the Data screen. Completed results are sent as a form field named `results` containing an array-of-arrays JSON payload, plus `publishingKey`.
-
-Use the secured template in [`google-apps-script/Do_Post.gs`](google-apps-script/Do_Post.gs) and follow [`google-apps-script/README.md`](google-apps-script/README.md). Do not use the Apps Script editor URL or a private spreadsheet CSV URL as the publishing endpoint.
-
-The endpoint URL and publishing key stay in local browser storage and are excluded from event backup files.
+Shared judging requires access to its server. There is no guaranteed offline reload or service worker. Browser/device data is not included in Git source checkpoints.
 
 ## Local development
 
-Requirements: Node.js 22.13 or newer and pnpm.
+Requirements: Node.js 22.13 or newer and pnpm. The application uses React, TypeScript, Vinext/Vite and logical D1 binding `DB`.
 
 ```sh
 pnpm install
-pnpm dev
+pnpm dev --hostname 127.0.0.1 --port 3000
 ```
 
-Quality checks:
+Use the preferred uncompressed checkout named in AGENTS.md. Preserve ignored local stores and environment files. Follow the specification for local D1 preparation and use isolated synthetic stores for testing.
 
 ```sh
 pnpm test
 pnpm lint
+pnpm exec tsc --noEmit
 pnpm build
 ```
+
+API/browser integration suites require the separately configured synthetic Worker/D1 and fake results receiver; never point mutation tests at an owner's event. See LOCAL_TEST_REPORT.md for the latest verified scope.
+
+## Inspect an earlier checkpoint safely
+
+```sh
+git show checkpoint/publish-layout-2026-10-19
+git switch -c codex/inspect-publish checkpoint/publish-layout-2026-10-19
+```
+
+Start from a clean checkout and preserve ignored runtime state separately. Prefer a new branch or a revert commit over resetting shared history. A source rollback does not roll a database back.

@@ -20,7 +20,7 @@ Implementation detail: Program’s + Strictly / + J&J actions reveal division se
 Implementation reuses the current setup handlers, expected-version saves, import validators, frozen-round controls and server approval/permission checks. No server, schema, dependency, scoring, publication or storage-policy change is included. Regression fixtures use isolated stores; the owner’s preview is inspected read-only. The previous walkthrough and mockup were design evidence only; fresh application evidence is recorded in LOCAL_TEST_REPORT.md. Other page reviews remain pending.
 
 
-Document version: 1.42 (agreed Set up, Score, Results and Publish layouts plus organizer live marks implemented locally; further page review stays guided by the owner). Current organizer navigation is Set up → Score → Results → Publish, with separate private judge Score pages. The online reference's rail/header proportions, typography, cards, buttons and responsive setup grouping are restored while retaining view-only competition/round context, collapsible setup cards and summaries, organizer room actions/progress, focused Results and improved publication before recovery. Exact approved advancement, actual J&J draws, frozen Finals, scoring, permissions, history and complete-event independent publication approvals are preserved. The redesign is committed locally as `240dcc3` and documentation `66c1c7c` on `codex/organizer-usability-redesign`, based on checkpoint `714d2be`. The scoped October 11 follow-up is committed locally as `6b54369` and corrects two reproduced summary labels without changing judging rules. Earlier stage/access functionality remains pushed as `b0b3368`, with documentation checkpoint `5732336`; cleanup/checkpoint branches remain intact. No push, hosted source sync, deployment, provisioning, real publication or purchase occurred. See [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) for fresh October 19 verification and earlier evidence and limits.
+Document version: 1.43 (agreed Set up, Score, Results and Publish layouts plus organizer live marks implemented locally; further page review stays guided by the owner). Current organizer navigation is Set up → Score → Results → Publish, with separate private judge Score pages. The online reference's rail/header proportions, typography, cards, buttons and responsive setup grouping are restored while retaining view-only competition/round context, collapsible setup cards and summaries, organizer room actions/progress, focused Results and improved publication before recovery. Exact approved advancement, actual J&J draws, frozen Finals, scoring, permissions, history and complete-event independent publication approvals are preserved. The redesign is committed locally as `240dcc3` and documentation `66c1c7c` on `codex/organizer-usability-redesign`, based on checkpoint `714d2be`. The scoped October 11 follow-up is committed locally as `6b54369` and corrects two reproduced summary labels without changing judging rules. Earlier stage/access functionality remains preserved at `b0b3368` and `5732336`. On October 19 the owner authorized GitHub consolidation and the next live rollout: current source and named checkpoints are now pushed to main, and retired branch tips are preserved by tags. Hosted deployment is delegated to the explicitly requested rollout chat; source cleanup itself does not deploy. See [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) for fresh October 19 verification and earlier evidence and limits.
 
 This describes the inspected implementation and the owner's decisions. It is intended for people and coding assistants. Source links are relative to the application repository. External hosting and Google configuration are dated observations, not live guarantees. If code and this document disagree, investigate and update the document; do not silently change behavior to fit stale prose.
 
@@ -98,6 +98,34 @@ Use the established forest/cream/gold theme and the same layout order, controls 
 The implementation uses OrganizerResults with separate standings/scorecard, request and withdrawal components. Judge/head review stays on private routes. The narrow organizer-only resultAudit payload projects already-loaded submission, vote, decision, approval and request records; no schema or database query was added. History includes readable names, recorded timestamps, retained submitted marks and approval snapshots, with no private notes or internal participant identities. When no current competition remains, Audit trail defaults to All competitions and still exposes retained history. Viewing records does not restore or replace current results. Publication delivery history remains in Publish.
 
 Correction requests retain immutable submission identity, explicit before/after marks, optional mistaken-bib transfer and exact dual approval. Pending withdrawal revisions repopulate the named pairing controls and reset approvals through existing server behavior. Reviewed pairings display names/bibs instead of raw JSON. Visited pairings, current eligibility validation, frozen Finals and the unresolved changed-membership/redance policy remain unchanged. No numeric scoring, mutation authorization, storage or publication rule changes were made. The online reference and owner event data remain unchanged; fresh local synthetic evidence and limits are in LOCAL_TEST_REPORT.md.
+
+## GitHub checkpoints and rollback map
+
+GitHub now uses `main` as the current baseline. The former `StrictlyMaster`, `codex/country-dance-judging-app` and `codex/stage-heat-workflow` branches were removed only after their exact tips were tagged, pushed and verified. The former local cleanup/redesign branches were merged by fast-forward and their work remains in main and tags. No history was rewritten. New work should use a descriptive `codex/` branch when isolation is useful, then integrate and retain a milestone tag.
+
+All tag names below start with `checkpoint/`:
+
+| Tag suffix | Commit | Preserved point |
+| --- | --- | --- |
+| github-main-before-consolidation-2026-10-19 | 7131dab | Original GitHub main |
+| legacy-strictly-master | 80a51a0 | Original StrictlyMaster branch |
+| initial-app-development | e70bc46 | Original app-development branch |
+| live-site-v1 | f07478b | Hosted source version 1 |
+| live-site-v2 | 5107f82 | Hosted source version 2 |
+| live-site-v3-before-upgrade-2026-10-19 | 4416e2f | Exact live version 3 before rollout |
+| stage-heat-workflow-2026-10-09 | 5732336 | Shared judging/approval workflow |
+| local-before-usability-redesign-2026-10-11 | 714d2be | Original preserved local checkpoint |
+| organizer-usability-2026-10-11 | 240dcc3 | Organizer usability baseline |
+| online-layout-match-2026-10-17 | ed32f91 | Reference appearance match |
+| setup-layout-2026-10-19 | 03f7e8c | Agreed Set up layout |
+| score-layout-2026-10-19 | ad684c8 | Agreed Score layout |
+| live-score-view-2026-10-19 | 3eaf572 | Organizer live marks/progress |
+| results-layout-2026-10-19 | ad4a30b | Agreed Results and audit trail |
+| results-summary-2026-10-19 | aef7668 | Top 3/5/All and complete scorecards |
+| publish-layout-2026-10-19 | 3bf46d5 | Agreed Publish and recovery layout |
+| refresh-recovery-2026-10-19 | 04411cc | Last-page refresh recovery |
+
+Use `git show <tag>` to inspect or a new `codex/` branch from a tag to compare. Do not force-push/reset main as a rollback shortcut. A Git checkpoint preserves source history, not localStorage, D1 data, private runtime configuration or hosted database state. Sites version 3 remains an additional deployment rollback reference; assess data compatibility before redeploying old code.
 
 ## Refresh recovery and deployment handoff - October 19
 

@@ -2,6 +2,8 @@
 
 ## Current authorization — October 19
 
+Current branch is `main`, tracking `github/main`. Former feature/legacy branch tips and all local UI milestones are preserved as pushed `checkpoint/*` tags; use the rollback map in PROJECT_SPEC.md. Historical branch names below describe prior deliveries, not branches to recreate. The live version-3 source is preserved at `checkpoint/live-site-v3-before-upgrade-2026-10-19`.
+
 The owner authorized refresh recovery, GitHub checkpoint preservation and branch cleanup, followed by a new chat to update the existing live site from this local implementation and verify it. This request supersedes historical local-only restrictions for the requested rollout. Preserve owner data, original live-site source and all checkpoint history. Use synthetic verification events and keep the local preview available. See PROJECT_SPEC.md for the current rollback map and deployment handoff.
 
 Organizer navigation now remembers the last page separately for each event in browser session storage, alongside the existing competition/round selection. New events and invalid/unavailable storage fall back to Set up. This does not autosave unsaved forms or persist accordion/scroll state across full reloads.
