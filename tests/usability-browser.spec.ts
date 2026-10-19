@@ -13,7 +13,7 @@ async function layouts(page: Page, stem: string) {
   for (const width of [360, 390, 727, 1100, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    for (const table of await page.locator('.result-group .table-wrap').all()) expect(await table.evaluate((t) => t.scrollWidth <= t.clientWidth)).toBe(true);
+    for (const table of await page.locator('.result-group .table-wrap').all()) expect(await table.evaluate((t) => t.scrollWidth <= t.clientWidth), await table.evaluate((t) => JSON.stringify({ viewport: innerWidth, visible: !!t.getClientRects().length, scroll: t.scrollWidth, client: t.clientWidth, cells: [...t.querySelectorAll('th')].map((c) => c.getBoundingClientRect().width) }))).toBe(true);
     await page.screenshot({ path: `test-results/usability-${stem}-${width}.png`, fullPage: false });
   }
 }
@@ -81,7 +81,7 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   const before = await api<LiveView>(organizer), other = setup.rounds.find((r) => r.competitionId === setup.competitions[1].id && r.kind === 'finals')!;
   await page.getByLabel('Competition and round view', { exact: true }).selectOption(other.id);
   await tab(page, '03 Results'); await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(other.id);
-  await expect(page.locator('.result-sheet')).toHaveCount(0); await page.reload(); await tab(page, '02 Score');
+  await expect(page.locator('.results-highlights')).toHaveCount(0); await page.reload(); await tab(page, '02 Score');
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(other.id);
   await expect(page.locator('.hero-panel').getByText(/prelims · Strictly · Beginner/)).toBeVisible();
   await page.getByRole('button', { name: 'Judge access', exact: true }).click();
@@ -142,8 +142,8 @@ test('focused Results expose pending work elsewhere and route into the exact ret
   const result = await command(organizer, { action: 'request-correction', roundKey: round.key, heatId: source.heatId, judgeId: source.judgeId, submissionId: source.id, reason: 'Synthetic pending request in another competition', changes: [{ performanceId: round.definition.heats[0].songs[0].id, subjectId: round.definition.subjects[0].id, after: 'A1' }] }) as { reviewRequestId: string };
   const context = await browser.newContext(), page = await context.newPage(); await page.goto(base + path); await tab(page, '03 Results');
   await page.getByLabel('Competition and round view', { exact: true }).selectOption(rounds[1].id);
-  await expect(page.locator('.result-sheet')).toHaveCount(1);
-  await expect(page.locator('.result-sheet')).toContainText('Strictly · Advanced · prelims');
+  await expect(page.locator('.results-highlights')).toHaveCount(1);
+  await expect(page.locator('.results-highlights')).toContainText('Strictly · Advanced');
   await expect(page.getByRole('button', { name: 'Approve these exact submissions', exact: true })).toHaveCount(0);
   const management = page.locator('details[data-section="Corrections & withdrawals"]'); await expect(management).not.toHaveAttribute('open');
   await page.getByRole('button', { name: 'Review request · Beginner / Intermediate · prelims', exact: true }).click();
@@ -170,8 +170,8 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   await page.getByRole('button', { name: 'Open Strictly · Advanced · Results', exact: true }).click();
   const finalId = setup.rounds.find((r) => r.competitionId === setup.competitions[1].id && r.kind === 'finals')!.id;
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(finalId);
-  await expect(page.locator('.result-sheet')).toHaveCount(1); await expect(page.locator('.result-sheet')).toContainText('Strictly · Advanced · finals');
-  await expect(page.locator('.result-sheet').getByText('10.0000', { exact: true })).toBeVisible();
+  await expect(page.locator('.results-highlights')).toHaveCount(1); await expect(page.locator('.results-highlights')).toContainText('Strictly · Advanced');
+  await expect(page.locator('.results-highlights').getByText('10.0000', { exact: true })).toBeVisible();
   await page.getByText('All competitions & pending work', { exact: true }).click();
   await expect(page.locator('.round-overview-list')).toContainText('Head review needed');
   await page.getByText('All competitions & pending work', { exact: true }).click();

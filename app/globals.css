@@ -847,7 +847,6 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .results-pending h3 { color: inherit; }
 .result-card-link { display: block; background: none; border: 0; padding: 8px 0; color: var(--forest); text-decoration: underline; font-size: 12px; cursor: pointer; }
 .result-entry-status { color: var(--forest); font-weight: 700; }
-.result-withdrawn { padding: 18px; border-top: 1px solid var(--line); }
 .result-audit-entry { border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-wrap: anywhere; }
 .result-audit-entry summary { cursor: pointer; }
 .result-audit-entry summary > span, .result-audit-entry time { display: block; color: var(--muted); margin-top: 6px; }
@@ -858,3 +857,30 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .withdrawal-pair label { flex: 1; min-width: 140px; }
 .organizer-results .shared-unframed { min-width: 0; }
 @media (max-width: 600px) { .result-card-link { min-height: 44px; } .withdrawal-pair { align-items: stretch; flex-direction: column; } .result-audit-entry td, .result-audit-entry th { padding: 5px; font-size: 12px; } }
+
+/* Results summary uses the reference's clear place treatment. */
+.organizer-results .result-place-badge { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--forest); color: var(--panel); font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
+.organizer-results .results-places { table-layout: fixed; min-width: 0; }
+.organizer-results .results-places th:first-child { width: 70px; }
+.organizer-results .results-places th.results-bib-column { width: 100px; }
+.organizer-results .results-places th:last-child { width: 112px; }
+.organizer-results .results-places th, .organizer-results .results-places td { padding: 14px 12px; vertical-align: middle; }
+.organizer-results .results-places td:last-child { font-size: 20px; }
+.organizer-results .results-places td strong { color: var(--ink); }
+.organizer-results .results-mobile-bib { display: none; }
+.organizer-results .results-highlight-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; padding-bottom: 22px; border-bottom: 2px solid var(--forest); }
+.organizer-results .results-highlight-heading h2 { margin: 8px 0; font: 500 30px Georgia, serif; }
+.organizer-results .results-highlight-heading p { margin: 0; color: var(--muted); }
+.organizer-results .results-highlight-heading .kicker { color: var(--copper); }
+.organizer-results .results-highlight-heading label { min-width: 110px; margin: 0; }
+.organizer-results .results-highlight-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.organizer-results .results-highlight-footer p, .organizer-results .results-approval-detail { color: var(--muted); font-size: 13px; margin: 0; }
+@media (max-width: 600px) {
+  .organizer-results .results-places .results-bib-column { display: none; }
+  .organizer-results .results-mobile-bib { display: block; color: var(--muted); font-size: 12px; margin-bottom: 3px; }
+  .organizer-results .results-places th:first-child { width: 44px; }
+  .organizer-results .results-places th:last-child { width: 80px; }
+  .organizer-results .results-places th, .organizer-results .results-places td { padding: 12px 4px; }
+  .organizer-results .results-places td:last-child { font-size: 16px; }
+  .organizer-results .result-place-badge { width: 30px; height: 30px; font-size: 15px; }
+}
