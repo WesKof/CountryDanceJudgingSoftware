@@ -31,6 +31,6 @@ export async function openRecovery(page: Page) {
 
 export async function openResultManagement(page: Page) {
   await page.getByRole('button', {name:'03 Results',exact:true}).click();
-  const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:'Amendments & withdrawals',exact:true})});
+  const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:'Corrections & withdrawals',exact:true})});
   if (await section.getAttribute('open') === null) await section.locator(':scope > summary').click();
 }

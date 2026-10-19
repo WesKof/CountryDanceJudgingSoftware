@@ -29,7 +29,7 @@ test('head review recovers after a revised correction is cancelled and preserves
   await expect(approve).toBeDisabled();
   await desk.goto(base + path);
   await desk.getByRole('button', { name: '03 Results', exact: true }).click();
-  await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Amendments & withdrawals', exact: true }) }).locator(':scope > summary').click();
+  await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Corrections & withdrawals', exact: true }) }).locator(':scope > summary').click();
   await click(desk, desk.getByRole('button', { name: 'Cancel request', exact: true }), 'cancel-request');
   await headPage.reload();
   await expect(headPage.getByText('Cancelled; records retained', { exact: true })).toBeVisible();
@@ -76,7 +76,7 @@ test('archived review keeps votes and correction management read only while pres
   for (const checkbox of await votes.getByRole('checkbox').all()) await expect(checkbox).toBeDisabled();
   await expect(votes.getByRole('button', { name: 'Submit advancement vote', exact: true })).toBeDisabled();
   await desk.goto(base + path); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
-  await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Amendments & withdrawals', exact: true }) }).locator(':scope > summary').click();
+  await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Corrections & withdrawals', exact: true }) }).locator(':scope > summary').click();
   await expect(desk.getByRole('button', { name: 'Cancel request', exact: true })).toBeDisabled();
   const withdrawals = desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Withdraw a started entrant/couple', exact: true }) }).last();
   await withdrawals.locator(':scope > summary').click();

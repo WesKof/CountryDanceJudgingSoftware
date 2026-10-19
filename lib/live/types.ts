@@ -28,11 +28,17 @@ export type TieDecision = { key: string; order: string[]; shared: boolean; expla
 export type LiveResult = { subjectId: string; number: number; primary: string; secondary: string; group: string; average: number; sumTenths: number; denominator: number; place: number; tied: boolean; decided: boolean; judgeMeans?: { judgeId: string; average: number; observations: number }[]; songs: { id: string; title: string; sumTenths: number; denominator: number; average: number }[] };
 export type LiveStandings = { rows: LiveResult[]; ties: { key: string; group: string; subjectIds: string[] }[]; complete: boolean; submitted: number; required: number; fingerprint: string; decisions: TieDecision[]; approved: boolean; approvedAt?: string; advancementTies?: AdvancementTie[]; advancingIds?: string[]; finalistCount?: number };
 export type RoundView = { id: string; key: string; generation: number; version: number; phase: 'dancing' | 'discussion' | 'approved' | 'setup'; definition: FrozenRound; liveScores?: LiveScoreFeed[]; standings?: LiveStandings; submissions?: Omit<LiveSubmission, 'cells'>[]; submittedMarks?: { judgeId: string; performanceId: string; subjectId: string; mark: LiveMark }[]; draftProgress?: { judgeId: string; filled: number; required: number; ballotVersion: number; savedAt?: string; locked: boolean }[] };
+export type ResultAuditEntry = {
+  id: string; roundId?: string; competitionId?: string; context: string; at: string; actor: string;
+  title: string; outcome: string; details: string[];
+  rows?: { number: number; primary: string; secondary: string; place: number; average: number; advancing?: boolean }[];
+  marks?: { entrant: string; song: string; mark: LiveMark }[];
+};
 export type LiveView = {
   eventId: string; version: number; status: 'active' | 'archived'; setup: LiveSetup; context: LiveContext;
   role: 'organizer' | 'judge' | 'head'; judgeId: string | null; rounds: RoundView[]; ballots: LiveBallot[];
   judgeLinks?: { id: string; name: string; path: string; revoked: boolean }[];
-  restoredHistory?: unknown;
+  restoredHistory?: unknown; resultAudit?: ResultAuditEntry[];
   heatSubmissions?: Omit<HeatSubmission, 'cells'>[]; reviewRequests?: ReviewRequest[]; publications?: import('./publication.ts').PublicationRecord[];
 };
 export const cellKey = (performanceId: string, subjectId: string) => `${performanceId}:${subjectId}`;

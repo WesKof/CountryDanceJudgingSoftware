@@ -1,0 +1,55 @@
+'use client';
+
+import { useState } from 'react';
+import type { LiveView, ReviewRequest } from '@/lib/live/types';
+import { finalistCountIssues } from '@/lib/live/validation';
+import RoundContext from './round-context';
+import SetupSection from './setup-section';
+import { Correction, ReviewRequests } from './result-management';
+import { ResultStandings, ResultScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
+import ResultWithdrawals from './result-withdrawals';
+
+type Action = (input: Record<string, unknown>) => Promise<boolean>;
+export default function OrganizerResults({ data, action, selected, select, setupRoute, navigate, openHeadAccess }: { data: LiveView; action: Action; selected: string; select: (id: string) => void; setupRoute?: (id?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
+  const round = data.rounds.find((r) => r.id === selected), setup = data.setup.rounds.find((r) => r.id === selected), result = round?.standings;
+  const competition = data.setup.competitions.find((c) => c.id === (setup?.competitionId ?? round?.definition.competitionId));
+  const pending = (data.reviewRequests ?? []).filter((q) => !q.appliedAt && !q.cancelledAt);
+  const selectedPending = pending.filter((q) => q.payload.roundKey === round?.key || q.payload.competitionId === competition?.id);
+  const [revision, setRevision] = useState<ReviewRequest | undefined>();
+  const limits = round?.definition.kind === 'prelims' && result ? finalistCountIssues(round.definition.format, result.finalistCount ?? 0, round.definition.subjects.filter((s) => !round.definition.withdrawnIds?.includes(s.id))) : [];
+  const votes = result?.advancementTies?.filter((t) => !t.complete) ?? [];
+  const placement = round?.definition.kind === 'finals' && result?.rows.some((r) => !r.decided);
+  const head = data.setup.judges.find((j) => j.id === data.setup.headJudgeId)?.name ?? 'the head judge';
+  const otherReview = data.rounds.find((r) => r.id !== selected && r.phase === 'discussion' && !r.standings?.approved);
+  const allFinals = data.setup.competitions.length > 0 && data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'finals' && r.standings?.approved));
+  const allPrelims = data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'prelims' && r.standings?.approved));
+  return <div className="page-stack organizer-results">
+    <section className="hero-panel results-current" aria-label="Results status and next action"><div><p className="kicker">{competition || round ? `${competition?.format ?? round?.definition.format} · ${competition?.division ?? round?.definition.division} · ${setup?.kind ?? round?.definition.kind}` : 'Event records'}</p><h2>{!selected ? 'No current competition selected' : result?.approved ? 'Head-approved results' : result ? 'Results ready for review' : 'Judging not yet concluded'}</h2><p>{!selected ? 'Add a competition in Set up, or open Audit trail below to review retained event records.' : !result ? 'Results for this round become available after the whole stage concludes. Complete judging and all required submissions in Score.' : result.approved ? `This competition and round have current head approval from ${head}.` : `These results are provisional. ${head} reviews and approves this exact round from their private judge page.`}</p>
+      {data.status === 'archived' && <p>Archived event · records are read only.</p>}
+      {limits.map((issue) => <p className="score-blocker" key={issue}>{issue}</p>)}
+      {votes.length > 0 && <p className="score-blocker">{votes.some((t) => t.deadlocked) ? 'Head decision needed for the remaining cutoff vote tie.' : 'Panel votes needed at the advancement cutoff.'}</p>}
+      {placement && <p className="score-blocker">Head placement decisions are needed for equal-average groups.</p>}
+      {selectedPending.length > 0 && <p className="score-blocker">{selectedPending.length} pending correction/withdrawal requests affect this competition. Review each exact request before final approval.</p>}
+      <div className="shared-inline">
+        {selected && !result && <button className="primary-button" onClick={() => navigate?.(1)}>Go to Score</button>}
+        {result && !result.approved && <><button className="primary-button" onClick={() => revealResult('results-decisions')}>Review tie decisions & approval</button><button className="quiet-button" onClick={openHeadAccess}>Open head judge access</button></>}
+        {result && !result.approved && setup?.kind === 'prelims' && <button className="quiet-button" onClick={() => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')}>Review finalist count</button>}
+        {result?.approved && otherReview && <button className="primary-button" onClick={() => select(otherReview.id)}>Review remaining competition</button>}
+        {result?.approved && !otherReview && setup?.kind === 'prelims' && allPrelims && <button className="primary-button" onClick={() => { const finals = data.setup.rounds.find((r) => r.prelimRoundId === selected); if (finals) select(finals.id); navigate?.(1); }}>Continue to Finals</button>}
+        {result?.approved && setup?.kind === 'finals' && <button className={allFinals ? 'primary-button' : 'quiet-button'} onClick={() => navigate?.(3)}>{allFinals ? 'Review event to publish' : 'Review remaining event requirements'}</button>}
+      </div>
+      {pending.length > 0 && <section className="results-pending" aria-label="Pending review duties"><h3>Pending requests · {pending.length}</h3>{pending.map((q) => { const r = data.rounds.find((r) => r.key === q.payload.roundKey), c = data.setup.competitions.find((c) => c.id === (r?.definition.competitionId ?? q.payload.competitionId)); return <div key={q.id}><span>{c?.format ?? 'Retained competition'} · {c?.division} · {q.kind === 'correction' ? 'Recording error' : 'Withdrawal'}</span><button className="quiet-button" onClick={() => revealResult(`review-request-${q.id}`)}>Review request · {c?.division ?? 'event'}{r ? ` · ${r.definition.kind}` : ''}</button></div>; })}</section>}
+    </div></section>
+    <RoundContext data={data} selected={selected} select={select} overview />
+    {result && round && <ResultStandings round={round} />}
+    <ResultScorecards round={round} headId={data.setup.headJudgeId} />
+    <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} />
+    <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
+      <ReviewRequests data={data} action={action} embedded pendingOnly onReviseWithdrawal={(q) => { setRevision(q); revealResult('results-withdrawals'); }} />
+      {round?.standings ? <fieldset className="shared-unframed" disabled={data.status !== 'active'}><h3>{round.definition.format} · {round.definition.division} · {round.definition.kind}</h3><Correction key={round.key} data={data} round={round} action={action} /></fieldset> : <p>Score corrections are available after the selected stage concludes.</p>}
+      <ResultWithdrawals data={data} action={action} selected={selected} revision={revision} />
+      <button className="quiet-button" onClick={() => revealResult('results-audit')}>View completed requests in Audit trail</button>
+    </div></SetupSection>
+    <ResultAudit data={data} selected={selected} />
+  </div>;
+}

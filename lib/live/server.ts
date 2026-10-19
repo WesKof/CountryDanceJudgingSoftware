@@ -1,3 +1,4 @@
+import { resultAudit } from './result-audit.ts';
 import { cellKey, roundKey, type Cells, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
 import { deriveStandings, missingCells, requiredCells, LIVE_MARKS } from './scoring.ts';
 import { finalistLimitIssues, finalistCountIssues, freezeRound, id, integer, LiveError, record, requireRule, text, validateSetup } from './validation.ts';
@@ -11,8 +12,8 @@ type RoundRow = { id: string; generation: number; version: number; phase: RoundV
 type BallotRow = { round_key: string; judge_id: string; version: number; cells: string; locked: number };
 type SubmissionRow = { id: string; round_key: string; judge_id: string; ballot_version: number; snapshot: string; created_at: string };
 type DecisionRow = { round_key: string; fingerprint: string; decision: string };
-type ApprovalRow = { round_key: string; fingerprint: string; created_at: string; snapshot: string };
-type Snapshot = { event: EventRow; setup: LiveSetup; context: LiveContext; rounds: RoundView[]; ballots: LiveBallot[]; submissions: LiveSubmission[]; decisions: DecisionRow[]; approvals: ApprovalRow[]; heatSubmissions: HeatSubmission[]; requests: ReviewRequest[]; votes: StageVote[]; publications: PublicationRecord[] };
+type ApprovalRow = { id: string; judge_id?: string; round_key: string; fingerprint: string; created_at: string; snapshot: string };
+type Snapshot = { event: EventRow; setup: LiveSetup; context: LiveContext; rounds: RoundView[]; historyRounds: { key: string; definition: FrozenRound }[]; ballots: LiveBallot[]; submissions: LiveSubmission[]; decisions: DecisionRow[]; approvals: ApprovalRow[]; heatSubmissions: HeatSubmission[]; requests: ReviewRequest[]; votes: StageVote[]; publications: PublicationRecord[] };
 
 const now = () => new Date().toISOString();
 const uid = () => crypto.randomUUID();
@@ -59,7 +60,7 @@ async function load(db: D1Database, codeHash: string): Promise<Snapshot> {
   const requests = (result[7].results as unknown as { data: string }[]).map((r) => parse<ReviewRequest>(r.data));
   const votes = (result[8].results as unknown as { round_key: string; fingerprint: string; tie_key: string; judge_id: string; selected: string; created_at: string }[]).map((v) => ({ roundKey: v.round_key, fingerprint: v.fingerprint, tieKey: v.tie_key, judgeId: v.judge_id, selected: parse<string[]>(v.selected), createdAt: v.created_at }));
   for (const r of rounds) r.definition = applyEligibility(r.definition, requests);
-  return { publications: (result[9].results as unknown as { data: string }[]).map((r) => parse<PublicationRecord>(r.data)), event: current, setup, context: parse<LiveContext>(current.context), rounds, ballots, submissions, decisions: result[4].results as unknown as DecisionRow[], approvals: result[5].results as unknown as ApprovalRow[], heatSubmissions, requests, votes };
+  return { historyRounds: (result[1].results as unknown as RoundRow[]).map((r) => ({ key: roundKey(r.id, r.generation), definition: parse<FrozenRound>(r.definition) })), publications: (result[9].results as unknown as { data: string }[]).map((r) => parse<PublicationRecord>(r.data)), event: current, setup, context: parse<LiveContext>(current.context), rounds, ballots, submissions, decisions: result[4].results as unknown as DecisionRow[], approvals: result[5].results as unknown as ApprovalRow[], heatSubmissions, requests, votes };
 }
 function organizer(s: Snapshot) { if (s.event.role !== 'organizer') throw new LiveError(403, 'An organizer link is required.'); }
 function head(s: Snapshot) { if (s.event.role !== 'judge' || s.event.judge_id !== s.setup.headJudgeId) throw new LiveError(403, 'The event head judge must make this decision.'); }
@@ -140,6 +141,7 @@ async function view(db: D1Database, s: Snapshot): Promise<LiveView> {
     payload.reviewRequests = s.requests.filter((q) => (isOrganizer || isHead || q.payload.judgeId === s.event.judge_id || q.kind === 'withdrawal' && rounds.some((r) => r.definition.competitionId === q.payload.competitionId)) && !s.requests.some((newer) => newer.id === q.id && newer.version > q.version)).map((q)=>isOrganizer ? q : {...q,requester:'Organizer',approvals:q.approvals.map((a)=>({...a,participantId:a.role==='organizer'?'Organizer':'Head judge'}))});
   }
   if (isOrganizer) {
+    if (s.setup.workflow === 'stage-v1') payload.resultAudit = resultAudit({ ...s, rounds });
     payload.publications = s.publications;
     const links = await stmt(db, 'SELECT judge_id, code, slug, revoked FROM live_links WHERE event_id = ? AND role = ? ORDER BY rowid', s.event.id, 'judge').all<{ judge_id: string; code: string; slug: string; revoked: number }>();
     payload.judgeLinks = s.setup.judges.map((j) => { const l = links.results.filter((l) => l.judge_id === j.id).at(-1); return { id: j.id, name: j.name, path: l ? `/judge/${l.slug}/${l.code}` : '', revoked: !l || Boolean(l.revoked) }; });

@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createStage, limitedStage, dance, exact } from './publication-helpers.ts';
+import { api, command } from './stage-helpers.ts';
+import type { LiveView } from '../lib/live/types.ts';
+
+test('Results audit retains immutable approval/correction/withdrawal history with organizer-only allowlisted data', async () => {
+  const setup = limitedStage(1, 2), { organizer, tokens, head } = await createStage(setup);
+  await command(organizer, { action: 'open-stage', kind: 'prelims' });
+  let view = await api<LiveView>(organizer); const round = view.rounds[0], heat = round.definition.heats[0];
+  await dance(organizer, tokens, round); await command(organizer, { action: 'conclude-stage' }); await exact(head, round.id, 'approve');
+  view = await api<LiveView>(organizer);
+  const approval = view.resultAudit!.find((e) => e.title === 'Results approved')!;
+  assert.equal(approval.outcome, 'Current head approval'); assert.equal(approval.rows![0].average, 10);
+  assert.ok(view.resultAudit!.some((e) => e.title === 'Heat submitted' && e.marks?.some((m) => m.mark === '')));
+  const serialized = JSON.stringify(view.resultAudit);
+  for (const secret of ['PUBLICATION_PRIVATE_NOTE_SENTINEL', setup.organizerParticipantId!, ...setup.judges.map((j) => j.participantId!)]) assert.ok(!serialized.includes(secret));
+  for (const token of [tokens[0], head]) assert.equal((await api<LiveView>(token)).resultAudit, undefined);
+  const sub = view.heatSubmissions!.find((s) => s.judgeId === setup.judges[0].id)!;
+  const request = await command(organizer, { action: 'request-correction', roundKey: round.key, heatId: heat.id, judgeId: sub.judgeId, submissionId: sub.id, changes: [{ performanceId: heat.songs[0].id, subjectId: heat.subjectIds[0], after: 'A1' }], reason: 'Synthetic recorded mark correction' }) as { reviewRequestId: string };
+  await command(organizer, { action: 'approve-request', reviewRequestId: request.reviewRequestId, requestVersion: 1 });
+  assert.equal((await api<LiveView>(organizer)).rounds[0].standings!.approved, true);
+  await command(head, { action: 'approve-request', reviewRequestId: request.reviewRequestId, requestVersion: 1 });
+  view = await api<LiveView>(organizer);
+  assert.equal(view.rounds[0].standings!.approved, false);
+  assert.equal(view.resultAudit!.find((e) => e.id === approval.id)!.rows![0].average, 10);
+  assert.match(view.resultAudit!.find((e) => e.id === approval.id)!.outcome, /Historical approval/);
+  assert.ok(view.resultAudit!.some((e) => e.title === 'Heat submission amended' && e.marks?.some((m) => m.mark === 'A1')));
+  assert.ok(view.resultAudit!.some((e) => e.title === 'Correction applied' && e.details.some((d) => d.includes('Yes → A1'))));
+  const withdrawal = await command(organizer, { action: 'request-withdrawal', competitionId: setup.competitions[0].id, reason: 'Synthetic retained competition' }) as { reviewRequestId: string };
+  await command(organizer, { action: 'approve-request', reviewRequestId: withdrawal.reviewRequestId, requestVersion: 1 });
+  await command(head, { action: 'approve-request', reviewRequestId: withdrawal.reviewRequestId, requestVersion: 1 });
+  view = await api<LiveView>(organizer);
+  assert.equal(view.rounds.length, 0);
+  assert.equal(view.resultAudit!.find((e) => e.id === approval.id)!.context, `${round.definition.format} · ${round.definition.division} · prelims`);
+  assert.ok(view.resultAudit!.some((e) => e.title === 'Competition withdrawal applied'));
+  assert.ok(!JSON.stringify(view.resultAudit).includes('PUBLICATION_PRIVATE_NOTE_SENTINEL'));
+});

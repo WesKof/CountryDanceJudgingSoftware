@@ -109,11 +109,12 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   await one.reload(); await rail(one, 1); await expect(one.getByText('Strictly · Beginner / Intermediate · submitted scorecards are read only', { exact: true })).toBeVisible();
   expect(await one.getByRole('button', { name: /^Bib \d+: / }).count()).toBe(0);
   await desk.reload(); await rail(desk,2);
-  const correction = desk.getByText('Request a genuine recording-error correction', { exact: true }).first().locator('..');
+  const correction = desk.getByText('Request a score correction', { exact: true }).first().locator('..');
   await correction.locator(':scope > summary').click();
   await correction.getByLabel('Correction song', { exact: true }).selectOption(setup.rounds[0].heats[0].songs[0].id);
   await correction.getByLabel('Wrong or affected bib', { exact: true }).selectOption(setup.rounds[0].subjects[1].id);
   await correction.getByLabel('Corrected mark for affected bib', { exact: true }).selectOption('');
+  await correction.getByText('Mark entered against the wrong bib', { exact: true }).click();
   await correction.getByLabel('Intended bib for mistaken-bib transfer (optional)', { exact: true }).selectOption(setup.rounds[0].subjects[0].id);
   await correction.getByLabel('Correction reason', { exact: true }).fill('Observed bib 101 recorded as bib 102');
   await click(desk, correction.getByRole('button', { name: 'Request correction', exact: true }), 'request-correction');
@@ -191,7 +192,7 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   await desk.reload();await rail(desk,2);v=await api<LiveView>(organizer);const finalSource=v.rounds.find((r)=>r.definition.competitionId===firstCompetition.id&&r.definition.kind==='finals')!,finalHeat=finalSource.definition.heats[0],ownSubmission=v.heatSubmissions!.find((s)=>s.roundKey===finalSource.key&&s.judgeId===setup.judges[0].id)!;
 
   // There are separate prelim/finals cards; select the exact source submission on the finals card.
-  const finalCorrection=desk.getByText('Request a genuine recording-error correction',{exact:true}).locator('..').filter({has:desk.locator(`option[value="${ownSubmission.id}"]`)}).first();
+  const finalCorrection=desk.getByText('Request a score correction',{exact:true}).locator('..').filter({has:desk.locator(`option[value="${ownSubmission.id}"]`)}).first();
   await finalCorrection.locator(':scope > summary').click();await finalCorrection.getByLabel('Submitted heat / judge',{exact:true}).selectOption(ownSubmission.id);await finalCorrection.getByLabel('Correction song',{exact:true}).selectOption(finalHeat.songs[0].id);await finalCorrection.getByLabel('Wrong or affected bib',{exact:true}).selectOption(finalHeat.subjectIds[0]);await finalCorrection.getByLabel('Corrected mark for affected bib',{exact:true}).selectOption('A1');await finalCorrection.getByLabel('Correction reason',{exact:true}).fill('PRIVATE_REVISION_REASON_SENTINEL');await click(desk,finalCorrection.getByRole('button',{name:'Request correction',exact:true}),'request-correction');
   const requestArticle=desk.locator('article').filter({hasText:'PRIVATE_REVISION_REASON_SENTINEL'});desk.once('dialog',(d)=>void d.accept());await click(desk,requestArticle.getByRole('button',{name:'Approve request as organizer',exact:true}),'approve-request');await head.reload();const headRequest=head.locator('article').filter({hasText:'PRIVATE_REVISION_REASON_SENTINEL'});head.once('dialog',(d)=>void d.accept());await click(head,headRequest.getByRole('button',{name:'Approve request as head',exact:true}),'approve-request');
   await ownerPage.getByText('Sending & website controls',{exact:true}).click();await ownerPage.getByRole('button',{name:'Retry sending',exact:true}).click();await publicPage.goto(receiver+'/results/'+releaseOne.id);await expect(publicPage.getByText(/Under review/).first()).toBeVisible();expect(await publicPage.locator('main').innerText()).not.toContain('PRIVATE_REVISION_REASON_SENTINEL');

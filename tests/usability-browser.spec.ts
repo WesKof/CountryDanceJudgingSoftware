@@ -145,7 +145,7 @@ test('focused Results expose pending work elsewhere and route into the exact ret
   await expect(page.locator('.result-sheet')).toHaveCount(1);
   await expect(page.locator('.result-sheet')).toContainText('Strictly · Advanced · prelims');
   await expect(page.getByRole('button', { name: 'Approve these exact submissions', exact: true })).toHaveCount(0);
-  const management = page.locator('details[data-section="Amendments & withdrawals"]'); await expect(management).not.toHaveAttribute('open');
+  const management = page.locator('details[data-section="Corrections & withdrawals"]'); await expect(management).not.toHaveAttribute('open');
   await page.getByRole('button', { name: 'Review request · Beginner / Intermediate · prelims', exact: true }).click();
   await expect(management).toHaveAttribute('open'); await expect(page.locator(`#review-request-${result.reviewRequestId}`)).toBeFocused();
   await click(page, page.getByRole('button', { name: 'Cancel request', exact: true }), 'cancel-request');
