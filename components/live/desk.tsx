@@ -1,5 +1,6 @@
 'use client';
 import Recovery from './recovery';
+import { useRememberedPage } from './remembered-page';
 
 import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { LiveSetup, LiveView } from '@/lib/live/types';
@@ -14,7 +15,7 @@ import StageDesk from './stage-desk';
 
 export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra }: { token: string; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode }) {
   const { data, error, refresh } = useLive(token);
-  const [page, setPage] = useState(0); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
+  const [page, setPage] = useRememberedPage(data?.role === 'organizer' && data.setup.workflow !== 'stage-v1' ? data.eventId : undefined); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<LiveSetup | null>(null); const [draftVersion, setDraftVersion] = useState(0);
   const [correction, setCorrection] = useState(false); const [reason, setReason] = useState('');
   const [includeNotes, setIncludeNotes] = useState(false);

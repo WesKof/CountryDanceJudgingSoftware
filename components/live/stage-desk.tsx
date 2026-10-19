@@ -1,5 +1,6 @@
 'use client';
 import Recovery from './recovery';
+import { useRememberedPage } from './remembered-page';
 
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { LiveSetup, LiveView } from '@/lib/live/types';
@@ -18,7 +19,7 @@ import LiveScores, { RoundScoreProgress } from './live-scores';
 
 type Props = { token: string; data: LiveView; error: string; refresh: () => Promise<LiveView | null>; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode };
 export default function StageDesk({ token, data, error, refresh, setupIntro, sampleHelp, recoveryExtra }: Props) {
-  const [page, setPage] = useState(0), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  const [page, setPage] = useRememberedPage(data.eventId), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [setupRoundId, setSetupRoundId] = useState<string | undefined>();
   const [setupSection, setSetupSection] = useState<string | undefined>();
   const [accessRequested, setAccessRequested] = useState(false);

@@ -203,3 +203,28 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   view = await api<LiveView>(organizer); expect(view.publications!.every((p) => p.status === 'released')).toBe(true); expect(view.heatSubmissions).toHaveLength(12); expect(errors).toEqual([]);
   await Promise.all([context.close(), adminContext.close()]);
 });
+
+
+test('refresh restores each event page and round without writing event data; invalid or blocked storage falls back safely', async ({ browser }) => {
+  const one = await createStage(limitedStage(2, 4)), two = await createStage(limitedStage(1, 4));
+  const context = await browser.newContext(), page = await context.newPage();
+  const before = await api<LiveView>(one.organizer), otherRound = before.setup.rounds.at(-1)!.id;
+  const posts: string[] = []; page.on('request', (r) => { if (r.url().endsWith('/api/live') && r.method() === 'POST') posts.push(r.postDataJSON().action); });
+  await page.goto(base + one.path); await expect(page.getByRole('button', { name: '01 Set up', exact: true })).toHaveAttribute('aria-current', 'step');
+  await tab(page, '02 Score'); await page.getByLabel('Competition and round view', { exact: true }).selectOption(otherRound);
+  for (const name of ['02 Score', '03 Results', '04 Publish', '01 Set up']) {
+    await tab(page, name); await page.reload(); await expect(page.getByRole('button', { name, exact: true })).toHaveAttribute('aria-current', 'step');
+    if (name === '02 Score' || name === '03 Results') await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(otherRound);
+  }
+  await tab(page, '04 Publish'); await page.goto(base + two.path); await expect(page.getByRole('button', { name: '01 Set up', exact: true })).toHaveAttribute('aria-current', 'step');
+  await tab(page, '03 Results'); await page.goto(base + one.path); await expect(page.getByRole('button', { name: '04 Publish', exact: true })).toHaveAttribute('aria-current', 'step');
+  await page.goto(base + two.path); await expect(page.getByRole('button', { name: '03 Results', exact: true })).toHaveAttribute('aria-current', 'step');
+  const second = await api<LiveView>(two.organizer);
+  await page.evaluate((id) => sessionStorage.setItem(`country-dance-judging:page:${id}`, '99'), second.eventId); await page.reload();
+  await expect(page.getByRole('button', { name: '01 Set up', exact: true })).toHaveAttribute('aria-current', 'step');
+  expect(posts).toEqual([]); expect((await api<LiveView>(one.organizer)).version).toBe(before.version);
+  const blockedContext = await browser.newContext(); await blockedContext.addInitScript(() => { Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('Synthetic unavailable storage'); } }); });
+  const blocked = await blockedContext.newPage(); await blocked.goto(base + one.path); await tab(blocked, '04 Publish'); await blocked.reload();
+  await expect(blocked.getByRole('button', { name: '01 Set up', exact: true })).toHaveAttribute('aria-current', 'step');
+  await Promise.all([context.close(), blockedContext.close()]);
+});

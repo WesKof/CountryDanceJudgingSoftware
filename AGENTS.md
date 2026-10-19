@@ -1,5 +1,11 @@
 # Country Dance Judging — working instructions
 
+## Current authorization — October 19
+
+The owner authorized refresh recovery, GitHub checkpoint preservation and branch cleanup, followed by a new chat to update the existing live site from this local implementation and verify it. This request supersedes historical local-only restrictions for the requested rollout. Preserve owner data, original live-site source and all checkpoint history. Use synthetic verification events and keep the local preview available. See PROJECT_SPEC.md for the current rollback map and deployment handoff.
+
+Organizer navigation now remembers the last page separately for each event in browser session storage, alongside the existing competition/round selection. New events and invalid/unavailable storage fall back to Set up. This does not autosave unsaved forms or persist accordion/scroll state across full reloads.
+
 ## Current review direction — October 19
 
 The approved Set up layout is implemented locally, preserving functionality and data and leaving the online site unchanged. The shared local editor now has the Event foundation banner first, followed by Save setup/status, Go to section and Event tools; initially collapsed Details / Program and Judges / Couples-or-Contestants cards; and an initially collapsed Round settings panel with three initially collapsed subsections. All Set up sections start collapsed on phone and desktop; explicit Go to section/blocker links still open their target. Phone and desktop use the same controls, initial states and behavior with responsive wrapping/stacking. Go to section opens/scrolls without closing other cards or losing drafts. Event tools contains Copy organizer link and an Other events shortcut; sample help is inside the fictional-sample banner; Other events is collapsed at the bottom. See PROJECT_SPEC.md for behavior and LOCAL_TEST_REPORT.md for fresh evidence and limits.
