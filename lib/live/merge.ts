@@ -10,7 +10,15 @@ export function mergeLiveView(current: LiveView | null, incoming: LiveView): Liv
     if (i < 0) heatSubmissions.push(previous);
     else if (heatSubmissions[i].version < previous.version) heatSubmissions[i] = previous;
   }
-  return { ...incoming, heatSubmissions, ballots: incoming.ballots.map((ballot) => {
+  const rounds = incoming.rounds.map((round) => {
+    const previous = current.rounds.find((r) => r.key === round.key);
+    if (incoming.role !== 'organizer' || current.version !== incoming.version || !round.liveScores || !previous?.liveScores) return round;
+    return { ...round, liveScores: round.liveScores.map((feed) => {
+      const prior = previous.liveScores!.find((f) => f.heatId === feed.heatId && f.judgeId === feed.judgeId);
+      return prior && (prior.submissionVersion > feed.submissionVersion || prior.submissionVersion === feed.submissionVersion && prior.ballotVersion > feed.ballotVersion) ? prior : feed;
+    }) };
+  });
+  return { ...incoming, rounds, heatSubmissions, ballots: incoming.ballots.map((ballot) => {
     const previous = current.ballots.find((b) => b.roundKey === ballot.roundKey && b.judgeId === ballot.judgeId);
     if (!previous) return ballot;
     const cells = { ...ballot.cells };

@@ -13,6 +13,7 @@ import { PublicationPanel } from './publication';
 import { StageReview } from './stage-review';
 import RoundContext from './round-context';
 import ScoreProgress from './score-progress';
+import LiveScores, { RoundScoreProgress } from './live-scores';
 
 type Props = { token: string; data: LiveView; error: string; refresh: () => Promise<LiveView | null>; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode };
 export default function StageDesk({ token, data, error, refresh, setupIntro, sampleHelp, recoveryExtra }: Props) {
@@ -138,8 +139,9 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
       </div>}
       <div className="shared-inline score-shortcuts"><button className="quiet-button" onClick={() => openScoreSection('run-judge-access')}>Judge access</button><button className="quiet-button" onClick={() => openScoreSection('run-submissions')}>View submission details</button></div>
       </div></section>
-      <RoundContext data={data} selected={selectedRoundId} select={selectRound} />
+      <RoundContext data={data} selected={selectedRoundId} select={selectRound}><RoundScoreProgress data={data} selected={selectedRoundId} error={error} open={() => openScoreSection('run-live-scores')} /></RoundContext>
       <p className="score-view-hint">The competition/round selector changes your view only. The current stage and floor controls above follow the saved event running order.</p>
+      <LiveScores data={data} selected={selectedRoundId} error={error} />
       <div className="stage-status-list">{(['prelims', 'finals'] as const).map((kind) => {
         const rounds = data.rounds.filter((r) => r.definition.kind === kind), opened = rounds.length > 0, approved = opened && rounds.every((r) => r.standings?.approved);
         const future = kind === 'finals' && !prelimsApproved;

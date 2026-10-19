@@ -113,7 +113,17 @@ async function view(db: D1Database, s: Snapshot): Promise<LiveView> {
       const reviewed = ['discussion', 'approved'].includes(r.phase);
       const latest = latestHeatSubmissions(s.heatSubmissions).filter((sub) => sub.roundKey === r.key);
       const draftProgress = isOrganizer || isHead ? r.definition.judgeIds.map((judgeId) => { const b = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === judgeId); return { judgeId, filled: r.definition.heats.reduce((n, h) => n + h.subjectIds.filter((id)=>!h.withdrawnIds?.includes(id)).length - missingHeatSubjects(h, b?.cells ?? {}).length, 0), required: r.definition.subjects.filter((s)=>!r.definition.withdrawnIds?.includes(s.id)).length, ballotVersion: b?.version ?? 0, locked: r.definition.heats.every((h) => latest.some((sub) => sub.heatId === h.id && sub.judgeId === judgeId)) }; }) : undefined;
-      return { ...base, draftProgress, ...(reviewed ? { standings: await standings(s, r), submittedMarks: latest.flatMap((sub) => Object.entries(sub.cells).map(([key, cell]) => ({ judgeId: sub.judgeId, performanceId: key.split(':')[0], subjectId: key.split(':')[1], mark: cell.mark }))) } : {}) };
+      const liveScores = isOrganizer ? r.definition.heats.flatMap((heat) => r.definition.judgeIds.map((judgeId) => {
+        const ballot = s.ballots.find((b) => b.roundKey === r.key && b.judgeId === judgeId);
+        const submitted = latest.find((sub) => sub.heatId === heat.id && sub.judgeId === judgeId);
+        const cells = submitted?.cells ?? ballot?.cells ?? {};
+        const marks = Object.fromEntries(heat.songs.filter((song) => s.context.visited.includes(song.id)).flatMap((song) => heat.subjectIds.flatMap((subjectId) => {
+          const key = cellKey(song.id, subjectId);
+          return cells[key] ? [[key, cells[key].mark]] : [];
+        })));
+        return { heatId: heat.id, judgeId, ballotVersion: submitted?.ballotVersion ?? ballot?.version ?? 0, submissionVersion: submitted?.version ?? 0, marks };
+      })) : undefined;
+      return { ...base, draftProgress, ...(isOrganizer ? { liveScores } : {}), ...(reviewed ? { standings: await standings(s, r), submittedMarks: latest.flatMap((sub) => Object.entries(sub.cells).map(([key, cell]) => ({ judgeId: sub.judgeId, performanceId: key.split(':')[0], subjectId: key.split(':')[1], mark: cell.mark }))) } : {}) };
     }
     if (!isOrganizer && !isHead) return base;
     const submitted = s.submissions.filter((item) => item.roundKey === r.key);

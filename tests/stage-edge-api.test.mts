@@ -60,6 +60,10 @@ test('stage CAS race, panel deadlock, amended approved advancement and explicit 
   await command(head, { action: 'approve-request', reviewRequestId: q.reviewRequestId, requestVersion: 1 }); await command(organizer, { action: 'approve-request', reviewRequestId: q.reviewRequestId, requestVersion: 1 });
   v = await api<LiveView>(head); r = v.rounds[0];
   assert.equal(r.phase, 'discussion'); assert.equal(r.standings!.approved, false); assert.notEqual(r.standings!.fingerprint, priorFingerprint);
+  const amendedFeed = (await api<LiveView>(organizer)).rounds[0].liveScores!.find((f) => f.judgeId === setup.judges[0].id && f.heatId === h.id)!;
+  assert.equal(amendedFeed.submissionVersion, 2);
+  assert.equal(amendedFeed.marks[cellKey(h.songs[0].id, all[0])], 'A1');
+  assert.equal(r.liveScores, undefined);
   assert.equal(r.standings!.advancementTies![0].votes.length, 0); assert.equal(r.standings!.decisions.length, 0);
   assert.ok(Math.abs(r.standings!.rows.find((s) => s.subjectId === all[0])!.average - (4.5 + 10 + 10) / 3) < 1e-9);
   for (const token of tokens) await exact(token, r.id, 'vote', { tieKey: r.standings!.advancementTies![0].key, selected: [all[1], all[2]] });

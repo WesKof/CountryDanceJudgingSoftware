@@ -817,3 +817,24 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .organizer-shell .workspace { padding: 18px 10px 30px; }
   .organizer-shell .topbar h1 { font-size: 25px; }
 }
+
+/* Organizer read-only score viewing shares the existing event palette. */
+.score-round-progress { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px solid var(--line); padding: 18px 20px; }
+.score-round-progress > div { flex: 1; min-width: 0; }
+.score-round-progress .progress-copy { font-size: 14px; gap: 12px; }
+.live-score-selectors { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.live-score-selectors label { display: grid; gap: 8px; flex: 1; min-width: 0; }
+.live-score-selectors select { width: 100%; min-width: 0; }
+.live-score-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.live-score-table { width: 100%; border-collapse: collapse; text-align: left; }
+.live-score-table th, .live-score-table td { padding: 16px; border-bottom: 1px solid var(--line); min-width: 130px; }
+.live-score-table thead { background: var(--paper); }
+.live-score-table tbody th { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.live-score-table .bib { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; padding: 8px; border-radius: 10px; background: var(--sage); color: var(--forest); font-weight: 800; }
+.live-score-table small { display: block; color: var(--muted); font-weight: normal; margin-top: 4px; }
+.live-mark { display: inline-block; padding: 10px; border-radius: 9px; color: var(--muted); white-space: nowrap; }
+.live-mark-yes { background: var(--forest); color: var(--panel); }
+.live-mark-a1 { background: var(--gold); color: var(--ink); }
+.live-mark-a2 { background: var(--sage); color: var(--forest-dark); }
+.live-mark-no { border: 1px solid var(--line); color: var(--ink); }
+@media (max-width: 600px) { .score-round-progress { align-items: stretch; flex-direction: column; } .live-score-selectors { flex-direction: column; align-items: stretch; } }
