@@ -31,9 +31,18 @@ test('blank setup has an actionable section route, descriptive keyboard navigati
   await expect(run).toHaveAccessibleDescription('Judges & rounds');
   await run.focus(); await run.press('Enter');
   await expect(run).toHaveAttribute('aria-current', 'step');
+  for (const id of ['run-prelims','run-finals','run-judge-access','run-submissions']) await expect(page.locator('#'+id)).not.toHaveAttribute('open');
+  const hero = (await page.locator('.score-current').boundingBox())!, selector = (await page.locator('.round-context').boundingBox())!;
+  expect(selector.y).toBeGreaterThanOrEqual(hero.y + hero.height);
+  await page.getByRole('button',{name:'View submission details',exact:true}).click();
+  await expect(page.locator('#run-submissions')).toHaveAttribute('open');
+  await expect(page.locator('#run-submissions > summary')).toBeFocused();
+  await expect(page.locator('#run-submissions > summary')).toContainText('Not started');
+  await page.locator('#run-submissions > summary').press('Enter');
+
   await expect(page.getByRole('button', { name: 'Start prelims stage', exact: true })).toBeDisabled();
-  await expect(page.getByText('Add competitions and save setup.', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Review prelims setup', exact: true }).click();
+  await expect(page.locator('.score-current').getByText('Add competitions and save setup.', { exact: true })).toBeVisible();
+  await page.locator('.score-current').getByRole('button', { name: 'Review prelims setup', exact: true }).click();
   const program = page.locator('details[data-section="Program & stages"]');
   await expect(program).toHaveAttribute('open');
   await expect(program.locator(':scope > summary')).toBeFocused();
@@ -57,6 +66,8 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   const { organizer, tokens, path } = await createStage(setup);
   const context = await browser.newContext(), page = await context.newPage();
   await page.goto(base + path); await tab(page, '02 Score');
+  await layouts(page, 'score-ready');
+  for (const id of ['run-prelims','run-finals','run-judge-access','run-submissions']) await expect(page.locator('#'+id)).not.toHaveAttribute('open');
   await click(page, page.getByRole('button', { name: 'Start prelims stage', exact: true }), 'open-stage');
   let view = await api<LiveView>(organizer); const round = view.rounds[0], heat = round.definition.heats[0];
   await expect(page.getByText(/0 of 2 required judges submitted this heat/)).toBeVisible();
@@ -73,9 +84,25 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   await expect(page.locator('.result-sheet')).toHaveCount(0); await page.reload(); await tab(page, '02 Score');
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(other.id);
   await expect(page.locator('.hero-panel').getByText(/prelims · Strictly · Beginner/)).toBeVisible();
-  await page.getByRole('button', { name: 'Open judge links', exact: true }).click();
+  await page.getByRole('button', { name: 'Judge access', exact: true }).click();
   await expect(page.locator('#run-judge-access')).toHaveAttribute('open');
   await expect(page.locator('#run-judge-access > summary')).toBeFocused();
+  await expect(page.locator('#run-judge-access .judge-link-maintenance[open]')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Copy judge link',exact:true}).first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Revoke',exact:true}).first()).toBeHidden();
+  await page.getByRole('button',{name:'View submission details',exact:true}).click();
+  await expect(page.locator('#run-judge-access')).toHaveAttribute('open');
+  const heatDetails=page.getByRole('region',{name:'Heat submissions',exact:true});
+  await expect(heatDetails.locator('.score-detail-group').first().locator('.score-progress-row')).toHaveCount(2);
+  await expect(heatDetails.locator('.score-detail-group').first()).not.toContainText('Synthetic two');
+  await expect(heatDetails.locator('.score-detail-group').first()).toContainText('Received');
+  await expect(heatDetails.locator('.score-detail-group').first()).toContainText('Awaiting submission');
+  await expect(page.getByRole('region',{name:'Scoring coverage',exact:true})).toContainText('at least one recorded mark');
+  await page.route('**/api/live',route=>route.request().method()==='GET'?route.abort():route.continue());
+  await expect(page.locator('#run-submissions > summary')).toContainText('Last connected status',{timeout:10000});
+  await expect(page.locator('.score-current')).toContainText('Last connected status');
+  await page.unroute('**/api/live');
+
   await layouts(page, 'missing-submission');
   view = await api<LiveView>(organizer); expect(view.context).toEqual(before.context); expect(view.version).toBe(before.version); expect(posts).toEqual([]);
   await tab(page, '01 Set up');
@@ -92,6 +119,7 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(setup.rounds[2].id);
   await expect(page.getByText('Save setup before starting judging.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next heat / division', exact: true })).toBeDisabled();
+  await page.screenshot({path:'test-results/score-unsaved-setup.png',fullPage:false});
   await tab(page, '03 Results'); await tab(page, '01 Set up');
   await page.getByLabel('Go to section').selectOption('Event details');
   await expect(eventSection).toHaveAttribute('open');

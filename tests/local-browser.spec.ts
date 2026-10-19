@@ -71,7 +71,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
   const saved = await api<LiveView>(token); expect(saved.setup.rounds.some((r) => r.competitionId === setup.competitions[0].id)).toBe(false);
   // Real private-link controls: cancellation, revocation, replacement and opening the new page.
   await openJudgeAccess(shared);
-  const judgeCard = shared.locator('details.setup-section').filter({has: shared.getByRole('heading',{name:'Event-long private judge links',exact:true})}).locator('.form-body > .shared-inline').first();
+  const judgeCard = shared.locator('details.setup-section').filter({has: shared.getByRole('heading',{name:'Judge access',exact:true})}).locator('.form-body > .shared-inline').first();
   await judgeCard.getByText('Manage link', { exact: true }).click();
   const oldLink = saved.judgeLinks![0].path;
   shared.once('dialog', (d) => void d.dismiss()); await judgeCard.getByRole('button', { name: 'Revoke', exact: true }).click();
