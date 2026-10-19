@@ -171,7 +171,7 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   await desk.reload(); await rail(desk, 3);
   await expect(desk.getByRole('button', {name:/Export|Print results|Send head-approved/})).toHaveCount(0);
   await openRecovery(desk);
-  const backupDownload = desk.waitForEvent('download'); await desk.getByRole('button', { name: 'Download shared backup', exact: true }).click();
+  const backupDownload = desk.waitForEvent('download'); await desk.getByRole('button', { name: 'Download event backup', exact: true }).click();
   const backup = JSON.parse(await readFile((await (await backupDownload).path())!, 'utf8')); expect(JSON.stringify(backup)).not.toContain('PRIVATE_BROWSER_STAGE_NOTE'); expect(backup.history.heatSubmissions.length).toBeGreaterThan(30);
   await rail(desk, 2); await desk.screenshot({ path: 'test-results/stage-results-desktop.png', fullPage: false });
   const firstSource = setup.rounds[0].heats[0].songs[0].id, firstSubject = setup.rounds[0].subjects[0].id;
@@ -213,9 +213,10 @@ test('full isolated stage UI rehearsal: heat lineup/submission, organizer correc
   expect((await api<LiveView>(organizer)).setup.competitions).toHaveLength(4);
   await head.reload(); await rail(head, 1); head.once('dialog', (d) => void d.accept()); await click(head, head.getByRole('button', { name: 'Approve request as head', exact: true }), 'approve-request');
   expect((await api<LiveView>(organizer)).setup.competitions).toHaveLength(3);
-  await desk.reload(); await openRecovery(desk); const historyDownload = desk.waitForEvent('download'); await desk.getByRole('button', { name: 'Download shared backup', exact: true }).click();
+  await desk.reload(); await openRecovery(desk); const historyDownload = desk.waitForEvent('download'); await desk.getByRole('button', { name: 'Download event backup', exact: true }).click();
   const withdrawalBackup = JSON.parse(await readFile((await (await historyDownload).path())!, 'utf8')); expect(withdrawalBackup.history.heatSubmissions.length).toBe(backup.history.heatSubmissions.length+1); for(const original of backup.history.heatSubmissions)expect(withdrawalBackup.history.heatSubmissions.some((s:{id:string})=>s.id===original.id)).toBe(true); expect(JSON.stringify(withdrawalBackup)).not.toContain('synthetic-key');
   const oldPath = desk.url(); desk.once('dialog', (d) => void d.accept());
+  await desk.getByText('Restore from backup', { exact: true }).click();
   await desk.locator('label').filter({ hasText: 'Restore as a new shared event' }).locator('input[type=file]').setInputFiles({ name: 'shared-stage.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(withdrawalBackup)) });
   await expect(desk).not.toHaveURL(oldPath); await expect(desk.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
   const restored = await api<LiveView>(new URL(desk.url()).searchParams.get('event')!); expect(restored.rounds).toHaveLength(0); expect(restored.restoredHistory).toBeTruthy(); expect(restored.judgeLinks!.some((l) => tokens.includes(l.path.split('/').at(-1)!))).toBe(false);

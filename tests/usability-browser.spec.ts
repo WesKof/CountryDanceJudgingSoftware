@@ -180,7 +180,9 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   const headResult = headPage.locator('.result-sheet').filter({ hasText: 'Strictly · Advanced · finals' });
   await click(headPage, headResult.getByRole('button', { name: 'Approve these exact submissions', exact: true }), 'approve');
   await page.reload(); await tab(page, '04 Publish'); await click(page, page.getByRole('button', { name: 'Review results to publish', exact: true }), 'prepare-event-publication');
-  await expect(page.locator('[data-publication-id]')).toHaveCount(2);
+  const previews = page.locator('[data-publication-id]'); await expect(previews).toHaveCount(2);
+  for (const preview of await previews.all()) { await expect(preview).not.toHaveAttribute('open'); await preview.locator(':scope > summary').click(); }
+  await expect(previews.nth(0)).toHaveAttribute('open'); await expect(previews.nth(1)).toHaveAttribute('open');
   expect(await page.locator('details[data-section="Data & recovery"]').evaluate((recovery) => [...document.querySelectorAll('[data-publication-id]')].every((preview) => Boolean(preview.compareDocumentPosition(recovery) & Node.DOCUMENT_POSITION_FOLLOWING)))).toBe(true);
   await layouts(page, 'publication-preview');
   await click(page, page.getByRole('button', { name: 'Send results for approval', exact: true }), 'approve-event-publication');

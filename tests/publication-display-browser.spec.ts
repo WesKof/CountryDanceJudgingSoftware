@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
 import { api, base, command, save, submitHeat } from './stage-helpers';
 import { createStage, limitedStage, dance, exact, receiver, localKey } from './publication-helpers';
@@ -39,6 +40,8 @@ test('Publish clearly distinguishes review, send and released states while score
   await expect(task.getByRole('button', { name: 'Send results for approval', exact: true })).toBeVisible();
   const before = await api<LiveView>(organizer), snapshot = before.publications![0].snapshot;
   const preview = page.locator('[data-publication-id]').first();
+  await expect(preview).not.toHaveAttribute('open');
+  await preview.locator(':scope > summary').focus(); await preview.locator(':scope > summary').press('Enter');
   await expect(preview.locator('.result-group')).toContainText('6.5000');
   await preview.getByText('Prelims, scorecards & scoring details', { exact: true }).click();
   const finalCards = preview.locator('.snapshot-stage').filter({ has: page.getByRole('heading', { name: 'Finals', exact: true }) });
@@ -58,6 +61,7 @@ test('Publish clearly distinguishes review, send and released states while score
   await expect(zero.getByRole('row').nth(2).getByRole('cell')).toHaveText(['BlankNot observed', 'BlankNot observed', 'BlankNot observed']);
   await zero.locator(':scope > summary').click();
   await first.scrollIntoViewIfNeeded(); await layout(page, 'scorecard');
+  await expect(preview).toHaveAttribute('open'); await expect(first).toHaveAttribute('open');
   const history = page.locator('.publication-history').first(); await history.locator(':scope > summary').click();
   await expect(history).toContainText('Ready to send for approval'); await expect(history).toContainText('Not published');
   expect((await api<LiveView>(organizer)).version).toBe(before.version);
@@ -80,6 +84,26 @@ test('Publish clearly distinguishes review, send and released states while score
   await task.scrollIntoViewIfNeeded(); await layout(page, 'published');
   await history.scrollIntoViewIfNeeded(); await layout(page, 'history');
   expect((await api<LiveView>(organizer)).publications![0].snapshot).toEqual(snapshot);
+  // Renew two exact versions; history must distinguish a published version from one never sent.
+  for (const after of ['A1', 'A2']) {
+    const current = await api<LiveView>(organizer), submission = current.heatSubmissions!.find((h) => h.roundKey === finals.key && h.judgeId === setup.judges[0].id)!;
+    const request = await command(organizer, { action: 'request-correction', roundKey: finals.key, heatId: heat.id, judgeId: submission.judgeId, submissionId: submission.id, changes: [{ performanceId: heat.songs[0].id, subjectId: heat.subjectIds[0], after }], reason: 'Synthetic publication history revision' }) as { reviewRequestId: string };
+    for (const token of [organizer, head]) await command(token, { action: 'approve-request', reviewRequestId: request.reviewRequestId, requestVersion: 1 });
+    await exact(head, finals.id, 'approve'); await page.reload(); await publishTab(page);
+    await expect(page.locator('[data-publication-id] > summary')).toContainText(/Under review|Needs renewed review/);
+    await page.getByRole('button', { name: 'Review results to publish', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Send results for approval', exact: true })).toBeVisible();
+  }
+  const retained = await api<LiveView>(organizer);
+  await history.locator(':scope > summary').click();
+  const past = history.locator('.publication-past'); await expect(past).not.toHaveAttribute('open'); await past.locator(':scope > summary').click();
+  const versions = past.locator('.publication-past-version'); await expect(versions).toHaveCount(2);
+  await expect(versions.nth(0)).toContainText('Past version · not published'); await expect(versions.nth(1)).toContainText('Previously published');
+  await expect(versions.nth(1).locator('time').first()).toHaveAttribute('datetime', retained.publications![0].releasedAt!);
+  await versions.nth(1).locator(':scope > details > summary').click();
+  await expect(versions.nth(1).locator('.result-group')).toContainText('6.5000');
+  await history.scrollIntoViewIfNeeded(); await layout(page, 'past-versions');
+  expect((await api<LiveView>(organizer)).version).toBe(retained.version);
   expect(errors).toEqual([]); await Promise.all([context.close(), adminContext.close()]);
 });
 
@@ -101,6 +125,7 @@ test('J&J publication groups Prelims by role and Finals by the actual couple wit
   await command(organizer, { action: 'conclude-stage' }); await exact(head, finals.id, 'approve');
   await command(organizer, { action: 'prepare-event-publication' }); const before = await api<LiveView>(organizer), snapshot = before.publications![0].snapshot;
   const context = await browser.newContext(), page = await context.newPage(); await page.goto(base + path); await publishTab(page);
+  const competitionCard = page.locator('[data-publication-id]'); await competitionCard.locator(':scope > summary').click();
   const preview = page.locator('.publication-preview'); await preview.getByText('Prelims, scorecards & scoring details', { exact: true }).click();
   const pre = preview.locator('.snapshot-stage').filter({ has: page.getByRole('heading', { name: 'Prelims', exact: true }) });
   await expect(pre.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible(); await expect(pre.getByRole('heading', { name: 'Follows', exact: true })).toBeVisible();
@@ -114,4 +139,40 @@ test('J&J publication groups Prelims by role and Finals by the actual couple wit
   await card.scrollIntoViewIfNeeded(); await layout(page, 'jj-scorecard');
   const after = await api<LiveView>(organizer); expect(after.version).toBe(before.version); expect(after.publications![0].snapshot).toEqual(snapshot);
   expect(after.rounds.find((r) => r.id === finals.id)!.definition).toEqual(finals.definition); await context.close();
+});
+
+
+test('Publish recovery keeps backup options, restore and archive explicit without changing the source event', async ({ browser }) => {
+  const setup = limitedStage(1, 4), { organizer, tokens, path } = await createStage(setup);
+  await command(organizer, { action: 'open-stage', kind: 'prelims' });
+  const original = await api<LiveView>(organizer), round = original.rounds[0], heat = round.definition.heats[0];
+  await save(tokens[0], round, heat.songs[0].id, heat.subjectIds[0], 'Yes', 'RECOVERY_PRIVATE_NOTE');
+  const context = await browser.newContext(), page = await context.newPage(); await page.goto(base + path); await publishTab(page);
+  const recovery = page.locator('details[data-section="Data & recovery"]');
+  await expect(recovery).not.toHaveAttribute('open'); await recovery.locator(':scope > summary').click();
+  await expect(recovery.getByRole('button', { name: 'Download event backup', exact: true })).toBeVisible();
+  const download = page.waitForEvent('download'); await recovery.getByRole('button', { name: 'Download event backup', exact: true }).click();
+  const backup = JSON.parse(await readFile((await (await download).path())!, 'utf8'));
+  expect(JSON.stringify(backup)).not.toContain('RECOVERY_PRIVATE_NOTE'); expect(JSON.stringify(backup)).not.toContain(organizer);
+  await recovery.getByText('Backup options', { exact: true }).click(); const notes = recovery.getByRole('checkbox'); await expect(notes).not.toBeChecked(); await notes.check();
+  await layout(page, 'recovery'); await expect(notes).toBeChecked();
+  const privateDownload = page.waitForEvent('download'); await recovery.getByRole('button', { name: 'Download event backup', exact: true }).click();
+  expect(await readFile((await (await privateDownload).path())!, 'utf8')).toContain('RECOVERY_PRIVATE_NOTE');
+  await recovery.getByText('Archive or delete event', { exact: true }).click();
+  await expect(recovery.getByRole('button', { name: 'Delete archived event', exact: true })).toBeDisabled();
+  const before = await api<LiveView>(organizer);
+  page.once('dialog', (d) => void d.dismiss()); await recovery.getByRole('button', { name: 'Archive event', exact: true }).click();
+  expect((await api<LiveView>(organizer)).version).toBe(before.version);
+  page.once('dialog', (d) => void d.accept()); await recovery.getByRole('button', { name: 'Archive event', exact: true }).click();
+  await expect(page.locator('.publication-task-status')).toHaveText('Archived · read only');
+  await expect(recovery.getByRole('button', { name: 'Delete archived event', exact: true })).toBeEnabled();
+  page.once('dialog', (d) => void d.dismiss()); await recovery.getByRole('button', { name: 'Delete archived event', exact: true }).click();
+  const archived = await api<LiveView>(organizer); expect(archived.status).toBe('archived');
+  await recovery.getByText('Restore from backup', { exact: true }).click();
+  page.once('dialog', (d) => void d.accept()); await recovery.getByLabel('Restore as a new shared event').setInputFiles({ name: 'synthetic.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await expect(page).toHaveURL(/\?event=/); const restored = await api<LiveView>(new URL(page.url()).searchParams.get('event')!);
+  expect(restored.eventId).not.toBe(archived.eventId); expect(restored.rounds).toHaveLength(0); expect(restored.restoredHistory).toBeTruthy();
+  expect(restored.judgeLinks!.some((j) => tokens.includes(j.path.split('/').at(-1)!))).toBe(false);
+  const unchanged = await api<LiveView>(organizer); expect(unchanged.version).toBe(archived.version); expect(unchanged.rounds).toEqual(archived.rounds);
+  await context.close();
 });
