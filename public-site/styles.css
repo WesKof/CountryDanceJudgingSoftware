@@ -36,3 +36,47 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
 .public-scoring-context { font-size:14px; }
 .admin-supporting > details.card { padding:14px 0; margin:12px 0; box-shadow:none; border-width:1px 0 0; border-radius:0; }
 .admin-supporting > summary { font-weight:600; cursor:pointer; }
+
+/* Keep final places and the next task in view; supporting records stay on demand. */
+.hero { gap:40px; padding:32px 0; }
+.hero h1 { font-size:clamp(36px,4.4vw,58px); margin:12px 0 18px; }
+.hero figure { max-width:400px; justify-self:end; }
+.recent-events { padding:20px 0 30px; border-top:1px solid var(--line); }
+.recent-events h2 { font-size:32px; margin-bottom:14px; }
+.event-directory { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.event-link { display:flex; gap:16px; justify-content:space-between; align-items:center; padding:18px 22px; background:var(--white); border:1px solid var(--line); border-radius:6px; text-decoration:none; min-width:0; }
+.event-link strong { font-size:17px; line-height:1.4; display:block; overflow-wrap:anywhere; }
+.event-link small { font-size:13px; color:var(--muted); margin-top:4px; }
+.event-link:hover { border-color:var(--accent); background:#f3eddf; color:var(--ink); }
+.event-back { font-size:14px; }
+.card > h2 { font-size:clamp(24px,3vw,32px); margin:0 0 10px; }
+.public-scorecards { margin-top:12px; }
+.public-scorecards > summary { padding:14px 0; font-weight:600; }
+.public-scorecards > details { margin-left:12px; }
+.revision > strong { line-height:1.6; }
+.revision > p { color:var(--ink); font-size:14px; margin:8px 0; }
+.revision-past > strong, .revision-review > strong { background:#f6e5bc; color:#5a3817; border-left:4px solid #9c6520; }
+.revision .version-list { padding-left:22px; }
+.version-list li { padding:7px 0; }
+.version-list time { display:inline; }
+.card .revision summary { padding:10px 0; min-height:40px; font-size:13px; }
+.admin-request > .eyebrow { color:#31583c; }
+.admin-complete { border-left:5px solid #31583c; }
+.about details { margin:18px 0; }
+@media(max-width:760px) {
+  .hero { grid-template-columns:minmax(0,1fr) 110px; gap:16px; padding:25px 0; align-items:start; }
+  .hero h1 { font-size:36px; }
+  .hero figure { padding:5px; margin-top:15px; }
+  .hero figcaption { font-size:10px; text-align:left; }
+  .hero .button { gap:12px; }
+  .hero > div > p:not(.eyebrow) { font-size:14px; }
+  .event-directory { grid-template-columns:1fr; }
+  .event-link { padding:16px; }
+  .recent-events .section-heading { align-items:baseline; }
+  .recent-events .section-heading > a { flex-shrink:0; }
+  .public-scorecards > details { margin-left:0; }
+}
+@media(max-width:420px) {
+  .hero { grid-template-columns:1fr; }
+  .hero figure { display:none; }
+}

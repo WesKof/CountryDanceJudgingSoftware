@@ -1,5 +1,5 @@
 import {publicationPreparationIssues} from '../lib/live/publication-readiness.ts';
-import {renderResults} from '../public-site/render.ts';
+import {renderResults,renderIndex} from '../public-site/render.ts';
 import type {PublicationRecord} from '../lib/live/publication.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,4 +57,25 @@ test('unreleased admin previews keep scorecards without broken public links or s
  assert.match(renderResults({...revised,status:'queued',ownerApprovedAt:'now'},store),/Approved · Sending pending/);
  const next:PublicationRecord={...revised,status:'released',releasedAt:'2026-10-21T21:01:00Z'};
  assert.match(renderResults(released,{records:{...store.records,[next.id]:next},current:{[scope]:next.id}}),/Superseded · <a href="\/results\/preview-next">Current revision/);
+});
+
+test('public navigation keeps releases discoverable and preserves linked original versions during correction review',async()=>{
+ const {view,competitionId}=await fixture(),snapshot=await buildPublicSnapshot(view,competitionId,1,null,'now','original');
+ const original:PublicationRecord={id:snapshot.id,competitionId,revision:1,sourceFingerprint:snapshot.sourceFingerprint,snapshot,status:'released',releasedAt:'2026-10-21T18:00:00Z',lastSynchronizedAt:'2026-10-21T18:01:00Z'};
+ const revised:PublicationRecord={...original,id:'corrected',revision:2,releasedAt:'2026-10-21T19:00:00Z',snapshot:{...snapshot,id:'corrected',revision:2,supersedes:original.id,changeSummary:'Approved recording-error correction'}};
+ const draft:PublicationRecord={...revised,id:'private-draft',revision:3,status:'requested',releasedAt:undefined,snapshot:{...revised.snapshot,id:'private-draft',revision:3,changeSummary:'PRIVATE_DRAFT_SENTINEL'}};
+ const scope=snapshot.eventId+'/'+snapshot.competitionId,store={records:{original,corrected:revised,'private-draft':draft},current:{[scope]:revised.id}},before=structuredClone(store);
+ const directory=renderIndex(store,true);
+ assert.equal((directory.match(/class="event-link"/g)??[]).length,1);
+ assert.doesNotMatch(directory,/Final places|PRIVATE_DRAFT_SENTINEL/);
+ const selected=renderIndex(store,true,snapshot.eventId);
+ assert.match(selected,/Final places/);assert.match(selected,/class="public-scorecards"><summary/);
+ assert.doesNotMatch(selected,/href="\/results\/private-draft|PRIVATE_DRAFT_SENTINEL/);
+ const old=renderResults(original,store);
+ assert.match(old,/earlier published version/);assert.match(old,/href="\/results\/corrected">Current revision/);
+ assert.match(old,/datetime="2026-10-21T18:00:00Z"/);assert.match(old,/Oct 21, 2026/);
+ assert.match(renderResults(revised,store),/href="\/results\/original">Revision 1/);
+ assert.match(renderResults({...revised,underReview:true},store),/correction is under review.*previously approved results/);
+ assert.match(renderResults(revised,store,snapshot.stages[1].entrants[0].id),/class="public-scorecards" open/);
+ assert.deepEqual(store,before);
 });
