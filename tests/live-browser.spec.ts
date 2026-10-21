@@ -135,8 +135,9 @@ test('four isolated sessions: phone saves/reload/retry, focus-safe context chang
 });
 
 test('legacy v2 local storage and wrapped backups still restore', async ({ page }) => {
-  await page.goto(base); const legacy = createDefaultState(); legacy.event.name = 'Legacy v2 rehearsal';
-  await page.evaluate((state) => { localStorage.setItem('country-dance-judging:v2', JSON.stringify(state)); localStorage.removeItem('country-dance-judging:rehearsal'); }, legacy); await page.reload();
+  const legacy = createDefaultState(); legacy.event.name = 'Legacy v2 rehearsal';
+  await page.addInitScript((state) => { if (!localStorage.getItem('country-dance-judging:v2')) localStorage.setItem('country-dance-judging:v2', JSON.stringify(state)); }, legacy);
+  await page.goto(base);
   await expect(page.getByRole('heading', { level: 1, name: 'Legacy v2 rehearsal' })).toBeVisible();
   await page.locator('.rail-item').nth(0).click(); await expandSetup(page);
   await openRecovery(page);await page.getByText('Legacy device backup & history',{exact:true}).click();
@@ -198,7 +199,7 @@ test('heat removal preserves entrants, block readiness explains problems, and di
     const response = await route.fetch(), body = await response.json();
     body.rounds.reverse(); await route.fulfill({ response, json: body });
   });
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
+  await page.reload(); await page.getByRole('button', { name: '01 Set up', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
   await page.getByRole('button', {name:'01 Set up',exact:true}).click(); await expandSetup(page);
   saved = (await api<LiveView>(request, organizer)).rounds[0].definition;
   expect(saved.heats).toHaveLength(1); expect(saved.heats[0].name).toBe('Heat 2');

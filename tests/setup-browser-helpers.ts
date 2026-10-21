@@ -12,6 +12,7 @@ export async function selectSetupRound(page: Page, setup: LiveSetup, roundId: st
 
 // Navigate the real accordion controls, including nested sections after changing rounds.
 export async function expandSetup(page: Page) {
+  await page.getByRole('button', { name: '01 Set up', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Details', exact: true })).toBeVisible();
   const closed = page.locator('details.setup-section:not([open]) > summary');
   while (await closed.count()) await closed.first().click();
@@ -19,6 +20,8 @@ export async function expandSetup(page: Page) {
 
 export async function openJudgeAccess(page: Page) {
   await page.getByRole('button', {name:'02 Score',exact:true}).click();
+  const supporting = page.locator('#score-supporting-details');
+  if (await supporting.count() && await supporting.getAttribute('open') === null) await supporting.locator(':scope > summary').click();
   const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:/^(Judge access|Event-long private judge links)$/,exact:true})});
   if (await section.getAttribute('open') === null) await section.locator(':scope > summary').click();
 }

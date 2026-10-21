@@ -32,12 +32,15 @@ test('head review recovers after a revised correction is cancelled and preserves
   await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Corrections & withdrawals', exact: true }) }).locator(':scope > summary').click();
   await click(desk, desk.getByRole('button', { name: 'Cancel request', exact: true }), 'cancel-request');
   await headPage.reload();
+  const history = headPage.locator('details.setup-section').filter({ has: headPage.getByRole('heading', { name: 'Completed judging & history', exact: true }) });
+  await expect(history).not.toHaveAttribute('open'); await history.locator(':scope > summary').click();
   await expect(headPage.getByText('Cancelled; records retained', { exact: true })).toBeVisible();
   await expect(approve).toBeEnabled();
   await expect(headPage.getByLabel('Current and past songs', { exact: true })).toHaveCount(0);
   await expect(headPage.getByText(/This stage’s submitted scores are locked/)).toBeVisible();
   await expect(headPage.getByText('PUBLICATION_PRIVATE_NOTE_SENTINEL', { exact: false })).toHaveCount(0);
   await judge.goto(base + view.judgeLinks![0].path);
+  await judge.locator('details.setup-section').filter({ has: judge.getByRole('heading', { name: 'Completed judging & history', exact: true }) }).locator(':scope > summary').click();
   await judge.getByText('My private submitted notes', { exact: true }).click();
   await expect(judge.getByText(/PUBLICATION_PRIVATE_NOTE_SENTINEL/)).toBeVisible();
   for (const width of [360, 390, 1440]) {

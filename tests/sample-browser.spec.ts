@@ -21,16 +21,16 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  const binding=await page.evaluate(()=>JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!) as {path:string}),token=binding.path.split('/').at(-1)!;
  const initial=await api<LiveView>(token);expect(initial.setup.competitions.map((c)=>c.format)).toEqual(['Strictly','Jack & Jill']);
  expect(initial.setup.rounds.filter((r)=>r.kind==='prelims').map((r)=>r.subjects.map((s)=>s.number))).toEqual([[101,102,103,104],[201,202,301,302]]);
- expect(initial.ballots).toEqual([]);expect(initial.rounds).toEqual([]);expect(initial.publications??[]).toEqual([]);
+ expect(initial.ballots).toEqual([]);expect(initial.context.automaticStages).toBe(true);expect(initial.rounds).toHaveLength(2);expect(initial.rounds.every((r)=>r.phase==='dancing')).toBe(true);expect(initial.publications??[]).toEqual([]);
  expect(await page.evaluate(()=>localStorage.getItem('country-dance-judging:v2'))).toBeNull();
  await page.screenshot({path:'test-results/organizer-main-sample-390.png',fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
  await expandSetup(page);await expect(page.getByRole('button',{name:'Start prelims stage',exact:true})).toHaveCount(0);
  await expect(page.getByRole('heading',{name:'Event-long private judge links',exact:true})).toHaveCount(0);await expect(page.getByRole('heading',{name:'Data & recovery',exact:true})).toHaveCount(0);await openRecovery(page);await expect(page.getByRole('button',{name:'Review results to publish',exact:true}).first()).toBeDisabled();await expect(page.getByText(/Approved Prelims automatically fill Finals/).first()).toBeVisible();await expect(page.getByRole('button',{name:'Download event backup',exact:true})).toBeVisible();await openJudgeAccess(page);const popup=page.waitForEvent('popup');await page.getByRole('link',{name:'Open judge page',exact:true}).first().click();const judge=await popup;
- await page.getByRole('button',{name:'02 Score',exact:true}).click();await expect(page.getByRole('button',{name:'Start prelims stage',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Start prelims stage',exact:true}).click();await judge.reload();await expect(judge.locator('.phone-row')).toHaveCount(4);
+ await page.getByRole('button',{name:'02 Score',exact:true}).click();await expect(page.getByRole('button',{name:'Start prelims stage',exact:true})).toHaveCount(0);await judge.reload();await expect(judge.locator('.phone-row')).toHaveCount(4);
  const saved=judge.waitForResponse((r)=>r.request().postDataJSON()?.action==='save-cell');await judge.locator('.phone-row').first().getByRole('button',{name:'Bib 101: Yes',exact:true}).click();expect((await saved).status()).toBe(200);
  const judgeToken=new URL(judge.url()).pathname.split('/').at(-1)!;const observed=await api<LiveView>(judgeToken);expect(Object.values(observed.ballots[0].cells)[0].mark).toBe('Yes');
- await page.locator('.rail-item').nth(1).click();await expect(page.getByRole('button',{name:'Next song',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:/^Bib \d+:/})).toHaveCount(0);await page.screenshot({path:'test-results/organizer-run-390.png',fullPage:true});
+ await page.locator('.rail-item').nth(1).click();await expect(page.getByRole('button',{name:'Open prelims review',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:/^Bib \d+:/})).toHaveCount(0);await page.screenshot({path:'test-results/organizer-run-390.png',fullPage:true});
  await page.reload();await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
  await expect(page.getByRole('button',{name:'02 Score',exact:true})).toHaveAttribute('aria-current','step');
  await page.getByRole('button',{name:'01 Set up',exact:true}).click();await expandSetup(page);
@@ -39,7 +39,7 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  await expect(page.getByRole('button',{name:'Save setup',exact:true})).toBeDisabled();
  const next=await page.evaluate(()=>JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!) as {path:string});
  const fresh=await api<LiveView>(next.path.split('/').at(-1)!);expect(fresh.setup.rounds.map((r)=>r.id).some((id)=>initial.setup.rounds.some((r)=>r.id===id))).toBe(false);
- expect((await api<LiveView>(judgeToken)).ballots).toEqual(observed.ballots);expect(fresh.rounds).toEqual([]);expect(fresh.ballots).toEqual([]);
+ expect((await api<LiveView>(judgeToken)).ballots).toEqual(observed.ballots);expect(fresh.rounds).toHaveLength(2);expect(fresh.rounds.every((r)=>r.phase==='dancing')).toBe(true);expect(fresh.ballots).toEqual([]);
  await expandSetup(page);page.once('dialog',(d)=>void d.accept());await page.getByRole('button',{name:'Start a blank event',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'New country dance event'})).toBeVisible();await expect(page.getByText('Sample event · fictional people',{exact:true})).toHaveCount(0);
  await expandSetup(page);await expect(page.getByRole('link',{name:'Open judge page',exact:true})).toHaveCount(0);

@@ -45,11 +45,11 @@ export function ResultHighlights({ round }: { round: RoundView }) {
   </section>;
 }
 
-export function ResultScorecards({ round, headId }: { round?: RoundView; headId: string }) {
+export function ResultScorecards({ round, headId, embedded = false }: { round?: RoundView; headId: string; embedded?: boolean }) {
   const marks = round?.submittedMarks ?? [];
   const order = round?.standings?.rows.map((r) => r.subjectId) ?? [];
   const subjects = round ? [...order.map((id) => round.definition.subjects.find((s) => s.id === id)!), ...round.definition.subjects.filter((s) => !order.includes(s.id))] : [];
-  return <SetupSection title="Scorecards" caption="Submitted marks" summaryText={round?.standings ? `${round.definition.subjects.length} entrant/couple records${round.definition.withdrawnIds?.length ? ` · ${round.definition.withdrawnIds.length} withdrawn` : ''} · Read only` : 'Available after stage review opens'} detailsRef={(n) => { if (n) n.id = 'results-scorecards'; }}>
+  const cards = <SetupSection title={embedded && round ? `${round.definition.kind === 'prelims' ? 'Prelims' : 'Finals'} · ${round.definition.heats.length} heats` : "Scorecards"} caption="Submitted marks" summaryText={round?.standings ? `${round.definition.subjects.length} entrant/couple records${round.definition.withdrawnIds?.length ? ` · ${round.definition.withdrawnIds.length} withdrawn` : ''} · Read only` : 'Available after stage review opens'} detailsRef={(n) => { if (n) n.id = embedded ? `scorecards-${round?.key}` : 'results-scorecards'; }}>
     <div className="form-body page-stack">{!round?.standings ? <p>Complete the whole stage and all required heat submissions to review scorecards.</p> : subjects.map((s) => {
       const row = round.standings!.rows.find((r) => r.subjectId === s.id), withdrawn = round.definition.withdrawnIds?.includes(s.id);
       const heats = round.definition.heats.filter((h) => h.subjectIds.includes(s.id));
@@ -62,6 +62,14 @@ export function ResultScorecards({ round, headId }: { round?: RoundView; headId:
       </details>;
     })}</div>
   </SetupSection>;
+  return cards;
+}
+
+export function AllRoundScorecards({ data }: { data: LiveView }) {
+  return <SetupSection title="Scorecards" caption="All rounds · submitted marks" summaryText={`${data.rounds.filter((r) => r.standings).length} reviewed rounds · ${data.rounds.reduce((n, r) => n + (r.definition.withdrawnIds?.length ?? 0), 0)} withdrawn records · every competition · Read only`} detailsRef={(n) => { if (n) n.id = 'results-scorecards'; }}><div className="form-body page-stack">
+    {data.setup.competitions.map((c) => <section key={c.id}><h3>{c.format} · {c.division}</h3>{data.setup.rounds.filter((r) => r.competitionId === c.id).sort((a, b) => Number(a.kind === 'finals') - Number(b.kind === 'finals')).map((r) => { const round = data.rounds.find((v) => v.id === r.id); return round?.standings ? <ResultScorecards key={r.id} round={round} headId={data.setup.headJudgeId} embedded /> : <p key={r.id}>{r.kind === 'prelims' ? 'Prelims' : 'Finals'} · {round ? 'Judging / submissions pending' : 'Not started'}</p>; })}</section>)}
+    <p>Earlier approvals and superseded records remain in Audit trail. Current scorecards retain every song, blank, recorded zero and withdrawn entrant.</p>
+  </div></SetupSection>;
 }
 
 export function ResultDecisions({ data, round, openHeadAccess }: { data: LiveView; round?: RoundView; openHeadAccess?: () => void }) {

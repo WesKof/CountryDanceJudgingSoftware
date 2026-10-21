@@ -11,7 +11,7 @@ export function RoundScoreProgress({ data, selected, error, open }: { data: Live
   return <div className="score-round-progress">
     <div><div className="progress-copy"><span>Heat submissions received</span><strong>{round ? `${received} / ${required}` : 'Not started'}</strong></div>
       {required > 0 && <div className="progress-track" role="progressbar" aria-label="Heat submissions received" aria-valuemin={0} aria-valuemax={required} aria-valuenow={received}><span style={{ width: `${received / required * 100}%` }} /></div>}
-      <p className="score-view-hint">Selected round · one submission per judge per heat.{error ? ' Last connected status.' : ''}</p>
+      <p className="score-view-hint">Selected round · retained heat records from each judge’s submission.{error ? ' Last connected status.' : ''}</p>
     </div><button className="primary-button" onClick={open}>View live scores</button>
   </div>;
 }
@@ -19,7 +19,7 @@ export function RoundScoreProgress({ data, selected, error, open }: { data: Live
 export default function LiveScores({ data, selected, error }: { data: LiveView; selected: string; error: string }) {
   const round = data.rounds.find((r) => r.id === selected && r.phase !== 'setup');
   return <SetupSection title="Live scores" caption="Read-only judging" detailsRef={(node) => { if (node) node.id = 'run-live-scores'; }} summaryText={round ? `${round.definition.format} · ${round.definition.division} · ${round.definition.kind === 'prelims' ? 'Prelims' : 'Finals'}${error ? ' · Last connected scores' : ' · Draft and submitted marks'}` : 'Not started'}>
-    <div className="form-body page-stack"><p>Saved marks update about every four seconds. Draft marks can change until the judge submits the heat. Results is where the round is reviewed and approved.</p>
+    <div className="form-body page-stack"><p>Saved marks update about every four seconds. Draft marks can change until the judge submits the stage. Results is where the round is reviewed and approved.</p>
       {error && <p role="status">Last connected scores. Reconnect to see new marks and confirm submission status.</p>}
       {round ? <ScoreTable key={round.key} round={round} data={data} /> : <p>Start this round to see judging progress.</p>}
     </div>
@@ -34,14 +34,14 @@ function ScoreTable({ round, data }: { round: RoundView; data: LiveView }) {
   const heat = heats.find((h) => h.songs.some((s) => s.id === selected)) ?? heats[0];
   const song = heat?.songs.find((s) => s.id === selected) ?? heat?.songs[0];
   if (!heat || !song) return <p>No heat songs configured.</p>;
-  const visited = data.context.visited.includes(song.id);
+  const visited = data.context.stageSubmission || data.context.visited.includes(song.id);
   return <>
     <div className="live-score-selectors">
       <label>Heat<select aria-label="Live scores heat" value={heat.id} onChange={(e) => setChosenSong(heats.find((h) => h.id === e.target.value)?.songs[0]?.id ?? null)}>{heats.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
       <label>Song<select aria-label="Live scores song" value={song.id} onChange={(e) => setChosenSong(e.target.value)}>{heat.songs.map((s, i) => <option key={s.id} value={s.id}>{i + 1}. {s.title || 'Untitled song'}</option>)}</select></label>
-      <button className="quiet-button" disabled={!currentHeat || chosenSong === null} onClick={() => setChosenSong(null)}>Follow current song</button>
+      {!data.context.stageSubmission && <button className="quiet-button" disabled={!currentHeat || chosenSong === null} onClick={() => setChosenSong(null)}>Follow current song</button>}
     </div>
-    <p>{chosenSong === null && currentHeat ? 'Following the current song in this round.' : 'Viewing the selected song.'} Viewing scores does not change the running floor. Blank means no mark recorded for that song; No is a scored zero. Scroll the table sideways to see every judge.</p>
+    <p>{!data.context.stageSubmission && chosenSong === null && currentHeat ? 'Following the current song in this round.' : 'Viewing the selected song.'} Viewing scores does not change the running floor. Blank means no mark recorded for that song; No is a scored zero. Scroll the table sideways to see every judge.</p>
     <div className="live-score-scroll" tabIndex={0} role="region" aria-label="Read-only live scores table">
       <table className="live-score-table"><thead><tr><th scope="col">Entrant / couple</th>{round.definition.judgeIds.map((id) => {
         const feed = round.liveScores?.find((f) => f.heatId === heat.id && f.judgeId === id);

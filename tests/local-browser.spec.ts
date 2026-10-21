@@ -13,6 +13,13 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
   const localContext = await browser.newContext({ viewport: { width: 390, height: 844 } }), sharedContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const local = await localContext.newPage(), shared = await sharedContext.newPage();
   const localPosts: string[] = []; local.on('request', (r) => { if (r.method() === 'POST' && r.url().endsWith('/api/live')) localPosts.push(r.postData() ?? ''); });
+  // This parity fixture deliberately retains editable manual preparation, matching
+  // the shared API fixture below. Automatic-ready samples are covered separately.
+  await localContext.route('**/api/live', async (route) => {
+    const request = route.request();
+    if (request.method() === 'POST' && request.postDataJSON()?.action === 'setup') await route.continue({ postData: JSON.stringify({ ...request.postDataJSON(), automaticStages: false }) });
+    else await route.continue();
+  });
   await localContext.addInitScript((s) => { if (!localStorage.getItem('country-dance-judging:v2')) localStorage.setItem('country-dance-judging:v2', JSON.stringify(s)); }, legacy); await local.goto(base); await local.locator('.rail-item').nth(0).click();
   const created = await api<{ path: string }>('', { action: 'create', requestId: nonce(), name: setup.name, venue: '', date: '' }), token = created.path.split('/').at(-1)!;
   await command(token, { action: 'setup', setup }); await shared.goto(base + created.path);

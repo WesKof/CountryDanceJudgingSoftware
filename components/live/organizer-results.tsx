@@ -6,7 +6,7 @@ import { finalistCountIssues } from '@/lib/live/validation';
 import RoundContext from './round-context';
 import SetupSection from './setup-section';
 import { Correction, ReviewRequests } from './result-management';
-import { ResultHighlights, ResultScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
+import { ResultHighlights, AllRoundScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
 import ResultWithdrawals from './result-withdrawals';
 
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
@@ -42,7 +42,7 @@ export default function OrganizerResults({ data, action, selected, select, setup
     </div></section>
     <RoundContext data={data} selected={selected} select={select} overview />
     {result && round && <ResultHighlights round={round} />}
-    <ResultScorecards round={round} headId={data.setup.headJudgeId} />
+    <AllRoundScorecards data={data} />
     <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} />
     <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
       <ReviewRequests data={data} action={action} embedded pendingOnly onReviseWithdrawal={(q) => { setRevision(q); revealResult('results-withdrawals'); }} />

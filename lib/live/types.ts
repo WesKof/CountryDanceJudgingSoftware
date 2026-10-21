@@ -12,7 +12,7 @@ export type LiveSetup = {
   blocks: { id: string; label: string; kind: 'prelims' | 'finals'; roundIds: string[] }[];
 };
 export type FrozenRound = LiveRound & { withdrawnIds?: string[]; format: 'Strictly' | 'Jack & Jill'; division: string; judges: { id: string; name: string }[] };
-export type LiveContext = { blockId: string | null; performanceId: string | null; visited: string[]; lineupHeatId?: string | null };
+export type LiveContext = { blockId: string | null; performanceId: string | null; visited: string[]; automaticStages?: boolean; stageSubmission?: boolean; stageReviewOpen?: boolean; lineupHeatId?: string | null };
 export type Cell = { mark: LiveMark; note: string; revision: number; mutationId: string; savedAt?: string };
 export type Cells = Record<string, Cell>;
 export type LiveBallot = { roundKey: string; judgeId: string; version: number; cells: Cells; locked: boolean };
@@ -27,7 +27,7 @@ export type AdvancementTie = { key: string; group: string; subjectIds: string[];
 export type TieDecision = { key: string; order: string[]; shared: boolean; explanation: string; decidedAt: string; judgeId: string; role: 'head'; fingerprint: string };
 export type LiveResult = { subjectId: string; number: number; primary: string; secondary: string; group: string; average: number; sumTenths: number; denominator: number; place: number; tied: boolean; decided: boolean; judgeMeans?: { judgeId: string; average: number; observations: number }[]; songs: { id: string; title: string; sumTenths: number; denominator: number; average: number }[] };
 export type LiveStandings = { rows: LiveResult[]; ties: { key: string; group: string; subjectIds: string[] }[]; complete: boolean; submitted: number; required: number; fingerprint: string; decisions: TieDecision[]; approved: boolean; approvedAt?: string; advancementTies?: AdvancementTie[]; advancingIds?: string[]; finalistCount?: number };
-export type RoundView = { id: string; key: string; generation: number; version: number; phase: 'dancing' | 'discussion' | 'approved' | 'setup'; definition: FrozenRound; liveScores?: LiveScoreFeed[]; standings?: LiveStandings; submissions?: Omit<LiveSubmission, 'cells'>[]; submittedMarks?: { judgeId: string; performanceId: string; subjectId: string; mark: LiveMark }[]; draftProgress?: { judgeId: string; filled: number; required: number; ballotVersion: number; savedAt?: string; locked: boolean }[] };
+export type RoundView = { id: string; key: string; generation: number; version: number; phase: 'dancing' | 'discussion' | 'approved' | 'setup'; definition: FrozenRound; liveScores?: LiveScoreFeed[]; standings?: LiveStandings; submissions?: Omit<LiveSubmission, 'cells'>[]; submittedMarks?: { judgeId: string; performanceId: string; subjectId: string; mark: LiveMark }[]; draftProgress?: { missing?: { heatId: string; subjectIds: string[] }[]; judgeId: string; filled: number; required: number; ballotVersion: number; savedAt?: string; locked: boolean }[] };
 export type ResultAuditEntry = {
   id: string; roundId?: string; competitionId?: string; context: string; at: string; actor: string;
   title: string; outcome: string; details: string[];

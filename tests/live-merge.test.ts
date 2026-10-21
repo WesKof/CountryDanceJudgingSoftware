@@ -36,3 +36,11 @@ test('organizer scores resist delayed draft/submission reads but accept new auth
   const judge = structuredClone(stale); judge.role = 'judge'; delete judge.rounds[0].liveScores;
   assert.equal(mergeLiveView(current, judge).rounds[0].liveScores, undefined);
 });
+
+test('late polls cannot unlock a submitted stage or move completed stage results back into dancing', () => {
+  const setup = liveFixture(2);
+  const current: LiveView = { eventId: 'stage', version: 7, status: 'active', setup, context: { blockId: 'b', performanceId: null, visited: [], stageSubmission: true, stageReviewOpen: true }, role: 'judge', judgeId: 'j', ballots: [{ roundKey: 'r:1', judgeId: 'j', version: 5, locked: true, cells: {} }], rounds: [{ id: 'r', key: 'r:1', generation: 1, version: 2, phase: 'discussion', definition: freezeRound(setup, setup.rounds[0]) }] };
+  const late = structuredClone(current); late.ballots[0].version = 4; late.ballots[0].locked = false; late.rounds[0].version = 1; late.rounds[0].phase = 'dancing';
+  const merged = mergeLiveView(current, late);
+  assert.equal(merged.ballots[0].locked, true); assert.equal(merged.rounds[0].phase, 'discussion');
+});

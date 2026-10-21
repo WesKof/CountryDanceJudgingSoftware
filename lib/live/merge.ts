@@ -12,6 +12,7 @@ export function mergeLiveView(current: LiveView | null, incoming: LiveView): Liv
   }
   const rounds = incoming.rounds.map((round) => {
     const previous = current.rounds.find((r) => r.key === round.key);
+    if (previous && current.version === incoming.version && previous.version > round.version) return previous;
     if (incoming.role !== 'organizer' || current.version !== incoming.version || !round.liveScores || !previous?.liveScores) return round;
     return { ...round, liveScores: round.liveScores.map((feed) => {
       const prior = previous.liveScores!.find((f) => f.heatId === feed.heatId && f.judgeId === feed.judgeId);
@@ -23,6 +24,6 @@ export function mergeLiveView(current: LiveView | null, incoming: LiveView): Liv
     if (!previous) return ballot;
     const cells = { ...ballot.cells };
     for (const [key, cell] of Object.entries(previous.cells)) if (cell.revision > (cells[key]?.revision ?? -1)) cells[key] = cell;
-    return { ...ballot, version: Math.max(ballot.version, previous.version), cells };
+    return { ...ballot, locked: ballot.locked || previous.locked && previous.version >= ballot.version, version: Math.max(ballot.version, previous.version), cells };
   }) };
 }

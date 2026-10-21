@@ -95,3 +95,23 @@ export function advancement(rows: LiveResult[], cutoff: number, judgeIds: string
   }
   return { advancingIds, advancementTies: ties };
 }
+
+// A stage spans every assigned competition in the current block. Heat identity is
+// kept in each coverage item; a mark in a different heat cannot fill a gap.
+export function stageAssignments(data: import('./types.ts').LiveView) {
+  const block = data.setup.blocks.find((b) => b.id === data.context.blockId);
+  return data.rounds.filter((r) => block?.roundIds.includes(r.id) && r.definition.judgeIds.includes(data.judgeId!));
+}
+export function stageReviewSignature(data: import('./types.ts').LiveView) {
+  return JSON.stringify([data.context.blockId, ...stageAssignments(data).map((r) => {
+    const ballot = data.ballots.find((b) => b.roundKey === r.key);
+    return [r.key, r.version, ...r.definition.heats.map((h) => heatReviewSignature(h, ballot?.cells ?? {}))];
+  })]);
+}
+export function stageCoverage(data: import('./types.ts').LiveView) {
+  return stageAssignments(data).flatMap((round) => round.definition.heats.map((heat) => {
+    const ballot = data.ballots.find((b) => b.roundKey === round.key);
+    const submitted = Boolean(data.heatSubmissions?.some((s) => s.roundKey === round.key && s.heatId === heat.id && s.judgeId === data.judgeId));
+    return { round, heat, ballot, submitted, missing: missingHeatSubjects(heat, ballot?.cells ?? {}) };
+  }));
+}

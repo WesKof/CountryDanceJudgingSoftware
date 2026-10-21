@@ -38,7 +38,7 @@ test('J&J approved dancers are visible before their actual draw; Run dropdowns a
   await expect(countDesk.getByRole('heading',{name:'Prelims review',exact:true})).toBeVisible();
   await expect(countDesk.locator('#run-prelims')).not.toHaveAttribute('open');
   await expect(countDesk.locator('#run-submissions')).not.toHaveAttribute('open');
-  await countDesk.getByRole('button',{name:'View submission details',exact:true}).click();
+  await countDesk.locator('#run-submissions > summary').click();
   await expect(countDesk.getByRole('region',{name:'Heat submissions',exact:true})).toContainText('Synthetic one');
   await expect(countDesk.getByRole('region',{name:'Heat submissions',exact:true})).toContainText('Received');
   await countDesk.locator('#run-prelims > summary').click();
@@ -59,7 +59,7 @@ test('J&J approved dancers are visible before their actual draw; Run dropdowns a
   const pair=card.getByLabel('#201 Entrant 1-0 1 pairs with',{exact:true});await pair.selectOption(expected[1]);await expect(desk.getByRole('button',{name:'Start finals stage',exact:true})).toBeDisabled();await expect(card.getByText(/Unsaved pairing edits/)).toBeVisible();
   const saved=desk.waitForResponse((r)=>r.url().endsWith('/api/live')&&r.request().postDataJSON()?.action==='setup');await card.getByRole('button',{name:'Save Finals pairings',exact:true}).click();expect((await saved).status()).toBe(200);await expect(desk.getByRole('button',{name:'02 Score',exact:true})).toHaveAttribute('aria-current','step');
   const start=desk.getByRole('button',{name:'Start finals stage',exact:true});await expect(start).toBeEnabled();const opened=desk.waitForResponse((r)=>r.url().endsWith('/api/live')&&r.request().postDataJSON()?.action==='open-stage');await start.click();expect((await opened).status()).toBe(200);await desk.reload();view=await api<LiveView>(organizer);expect(view.rounds.find((r)=>r.id===final.id)!.definition.subjects[0].members).toEqual(expected);
-  for(const [i,link]of view.judgeLinks!.entries()){const judgeContext=await browser.newContext({viewport:{width:390,height:844}}),page=await judgeContext.newPage();await page.goto(base+link.path);await expect(page.getByRole('heading',{level:1,name:setup.judges[i].name,exact:true})).toBeVisible();await expect(page).toHaveTitle(setup.judges[i].name+' · '+setup.name);await page.reload();await expect(page.getByRole('heading',{level:1,name:setup.judges[i].name,exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await judgeContext.close();}
+  for(const [i,link]of view.judgeLinks!.entries()){const judgeContext=await browser.newContext({viewport:{width:390,height:844}}),page=await judgeContext.newPage();await page.goto(base+link.path);await expect(page.getByRole('heading',{level:1,name:(setup.judges[i].id===setup.headJudgeId?'Head Judge — ':'')+setup.judges[i].name,exact:true})).toBeVisible();await expect(page).toHaveTitle(setup.judges[i].name+' · '+setup.name);await page.reload();await expect(page.getByRole('heading',{level:1,name:(setup.judges[i].id===setup.headJudgeId?'Head Judge — ':'')+setup.judges[i].name,exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await judgeContext.close();}
   await context.close();
 });
 
