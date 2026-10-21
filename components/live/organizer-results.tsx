@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { LiveView, ReviewRequest } from '@/lib/live/types';
 import { finalistCountIssues } from '@/lib/live/validation';
-import RoundContext from './round-context';
+import RoundContext, { RoundOverview } from './round-context';
 import SetupSection from './setup-section';
 import { Correction, ReviewRequests } from './result-management';
 import { ResultHighlights, AllRoundScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
@@ -42,8 +42,10 @@ export default function OrganizerResults({ data, action, selected, select, setup
       {pending.length > 0 && <section className="results-pending" aria-label="Pending review duties"><h3>Pending requests · {pending.length}</h3>{pending.map((q) => { const r = data.rounds.find((r) => r.key === q.payload.roundKey), c = data.setup.competitions.find((c) => c.id === (r?.definition.competitionId ?? q.payload.competitionId)); return <div key={q.id}><span>{c?.format ?? 'Retained competition'} · {c?.division} · {q.kind === 'correction' ? 'Recording error' : 'Withdrawal'}</span><button className="quiet-button" onClick={() => revealResult(`review-request-${q.id}`)}>Review request · {c?.division ?? 'event'}{r ? ` · ${r.definition.kind}` : ''}</button></div>; })}</section>}
     </>}
     </div></section>
-    <RoundContext data={data} selected={selected} select={select} overview />
+    <RoundContext data={data} selected={selected} select={select} compact />
     {result && round && <ResultHighlights round={round} />}
+    <details id="results-supporting" className="supporting-drawer"><summary>Scorecards, corrections &amp; history <small>All rounds &amp; retained records</small></summary><div className="supporting-content page-stack">
+    <RoundOverview data={data} selected={selected} select={select} />
     <AllRoundScorecards data={data} />
     <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} reviewFinalistCount={limits.length ? undefined : () => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')} />
     <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
@@ -53,5 +55,6 @@ export default function OrganizerResults({ data, action, selected, select, setup
       <button className="quiet-button" onClick={() => revealResult('results-audit')}>View completed requests in Audit trail</button>
     </div></SetupSection>
     <ResultAudit data={data} selected={selected} />
+    </div></details>
   </div>;
 }

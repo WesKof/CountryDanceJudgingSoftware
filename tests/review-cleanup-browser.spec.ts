@@ -1,3 +1,4 @@
+import { openResultsContext } from './setup-browser-helpers';
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { createStage, limitedStage, dance, exact } from './publication-helpers';
 import { api, base, command, save, submitHeat } from './stage-helpers';
@@ -27,8 +28,9 @@ test('head review recovers after a revised correction is cancelled and preserves
   await headPage.goto(base + view.judgeLinks!.find((j) => j.path.endsWith(head))!.path);
   const approve = headPage.getByRole('button', { name: 'Approve these exact submissions', exact: true });
   await expect(approve).toBeDisabled();
+  expect(await headPage.locator('.review-request.is-pending').evaluate((request)=>Boolean(request.compareDocumentPosition(document.querySelector('.result-sheet')!)&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await desk.goto(base + path);
-  await desk.getByRole('button', { name: '03 Results', exact: true }).click();
+  await desk.getByRole('button', { name: '03 Results', exact: true }).click();await openResultsContext(desk);
   await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Corrections & withdrawals', exact: true }) }).locator(':scope > summary').click();
   await click(desk, desk.getByRole('button', { name: 'Cancel request', exact: true }), 'cancel-request');
   await headPage.reload();
@@ -37,7 +39,8 @@ test('head review recovers after a revised correction is cancelled and preserves
   await expect(headPage.getByText('Cancelled; records retained', { exact: true })).toBeVisible();
   await expect(approve).toBeEnabled();
   await expect(headPage.getByLabel('Current and past songs', { exact: true })).toHaveCount(0);
-  await expect(headPage.getByText(/This stage’s submitted scores are locked/)).toBeVisible();
+  await expect(headPage.getByText(/This stage’s submitted scores are locked/)).toHaveCount(0);
+  await expect(headPage.getByText(/heat submissions acknowledged/).first()).toBeVisible();
   await expect(headPage.getByText('PUBLICATION_PRIVATE_NOTE_SENTINEL', { exact: false })).toHaveCount(0);
   await judge.goto(base + view.judgeLinks![0].path);
   await judge.locator('details.setup-section').filter({ has: judge.getByRole('heading', { name: 'Completed judging & history', exact: true }) }).locator(':scope > summary').click();
@@ -80,7 +83,7 @@ test('archived review keeps votes and correction management read only while pres
   await expect(votes).toBeVisible();
   for (const checkbox of await votes.getByRole('checkbox').all()) await expect(checkbox).toBeDisabled();
   await expect(votes.getByRole('button', { name: 'Submit advancement vote', exact: true })).toBeDisabled();
-  await desk.goto(base + path); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
+  await desk.goto(base + path); await desk.getByRole('button', { name: '03 Results', exact: true }).click();await openResultsContext(desk);
   await desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Corrections & withdrawals', exact: true }) }).locator(':scope > summary').click();
   await expect(desk.getByRole('button', { name: 'Cancel request', exact: true })).toBeDisabled();
   const withdrawals = desk.locator('details.setup-section').filter({ has: desk.getByRole('heading', { name: 'Withdraw a started entrant/couple', exact: true }) }).last();

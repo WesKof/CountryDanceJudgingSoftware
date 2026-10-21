@@ -9,6 +9,7 @@ import type { LiveView, LiveSetup } from '@/lib/live/types';
 import LiveDesk from './desk';
 import EventWorkspace, { type SavedEvent } from './event-workspace';
 import { LiveShell } from './shell';
+import { revealSetupSection } from './setup-section';
 import { creationNonce, download, liveApi } from './client';
 
 const BINDING_KEY = 'country-dance-judging:rehearsal';
@@ -128,8 +129,8 @@ export default function OrganizerHome() {
     }catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   const recovery=<details className="legacy-recovery"><summary>Legacy device backup &amp; history</summary>{legacyError&&<p role="alert">{legacyError}</p>}{legacy&&<><p>{legacy.event.name} · original v2 scores, sums and revisions retained separately from stage judging.</p><button className="quiet-button" onClick={()=>download('device-operational-backup.json',JSON.stringify({format:'country-dance-judging-backup',backupVersion:1,exportedAt:new Date().toISOString(),event:{...legacy,publisherUrl:''}},null,2))}>Download JSON</button><details><summary>Original scores and revision history</summary><pre className="shared-json">{JSON.stringify({competitions:legacy.competitions,removedCompetitions:legacy.removedCompetitions},null,2)}</pre></details></>}<label className="file-button secondary">Restore JSON<input type="file" accept="application/json,.json" disabled={busy || !historyReady} onChange={(e)=>void restoreLegacy(e)}/></label></details>;
-  const sampleHelp=binding?.sample ? <details className="setup-sample-help"><summary>Sample help · fictional event</summary><p className="kicker">Sample event · fictional people</p><h2>Try the competition flow</h2><p>Prelims scoring opens automatically when the sample is ready. Open Score, then each judge link to score, review and submit. Use Results for approved advancement; Finals entrants populate automatically. For J&J, enter the actual Finals pairing draw, then Save setup.</p><p>For a real competition, start a blank event and enter the actual organizer, judges and program before saving the complete setup.</p></details> : undefined;
-  const intro=<div className="page-stack organizer-home-intro">{error&&<p role="alert" className="notice">{error}</p>}<EventWorkspace key={binding?.path ?? 'opening'} events={events} current={binding?.path} busy={busy} ready={historyReady} create={(source)=>void create(source)} remember={(next)=>{
+  const sampleHelp=binding?.sample ? <details className="setup-sample-help"><summary>Sample walkthrough</summary><p>Sample event · fictional people</p><ol><li>Open Score and a judge’s page.</li><li>Score each bib in every assigned heat, then review and submit the stage.</li><li>Approve Prelims on the head judge’s page. Save the actual J&amp;J Finals draw, then repeat for Finals.</li></ol><p>For a real competition, use Events → Start a blank event.</p></details> : undefined;
+  const intro=<div className="page-stack organizer-home-intro"><EventWorkspace key={binding?.path ?? 'opening'} events={events} current={binding?.path} busy={busy} ready={historyReady} create={(source)=>void create(source)} remember={(next)=>{
     if (!historyReady) return;
     // A summary refresh can finish after a new event is added in another view/tab.
     // Merge only its known paths so a late read cannot remove saved organizer access.
@@ -138,6 +139,6 @@ export default function OrganizerHome() {
     for (const entry of next) if (!merged.some((saved)=>saved.path===entry.path)) merged.push(entry);
     localStorage.setItem(HISTORY_KEY,JSON.stringify(merged));setEvents(merged);
   }} /></div>;
-  if(!binding || busy) return <LiveShell title="Country Dance Judging" identity="Organizer" status={busy?'Opening your event…':'Event unavailable'} items={['Set up','Score','Results','Publish']} current={0} navigate={()=>{}} navigationDisabled>{intro}{!busy&&<button className="quiet-button" onClick={()=>window.location.reload()}>Retry</button>}{recovery}</LiveShell>;
+  if(!binding || busy) return <LiveShell title="Country Dance Judging" identity="Organizer" status={busy?'Opening your event…':'Event unavailable'} items={['Set up','Score','Results','Publish']} current={0} navigate={()=>{}} navigationDisabled onEvents={!busy ? ()=>revealSetupSection(document.body,'Other events') : undefined}>{!busy && <section className="hero-panel recovery-current"><div><h2>Open your event</h2><p role="alert">{error}</p><div className="shared-inline">{events.length>0 && <button className="primary-button" onClick={()=>revealSetupSection(document.body,'Other events')}>Choose a saved event</button>}<button className={events.length?'quiet-button':'primary-button'} onClick={()=>window.location.reload()}>Retry</button></div></div></section>}{intro}{recovery}</LiveShell>;
   return <LiveDesk key={binding.path} token={binding.path!.split('/').at(-1)!} setupIntro={intro} sampleHelp={sampleHelp} recoveryExtra={recovery}/>;
 }

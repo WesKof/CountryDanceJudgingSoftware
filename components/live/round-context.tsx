@@ -15,17 +15,22 @@ export function roundStatus(data: LiveView, roundId: string) {
   return 'Head review needed';
 }
 
+export function RoundOverview({data,selected,select}:{data:LiveView;selected:string;select:(id:string)=>void}) {
+  const reviewsNeeded = data.rounds.filter((r) => r.phase === 'discussion' && !r.standings?.approved).length;
+  const rounds = [...data.setup.rounds, ...data.rounds.filter((r) => !data.setup.rounds.some((s) => s.id === r.id)).map((r) => r.definition)];
+  return <details className="round-overview"><summary><span>All competitions & pending work</span>{reviewsNeeded > 0 && <small>{reviewsNeeded} round {reviewsNeeded === 1 ? 'review' : 'reviews'} needed</small>}</summary><div className="round-overview-list">{rounds.map((r) => { const c = data.setup.competitions.find((c) => c.id === r.competitionId), frozen = data.rounds.find((f) => f.id === r.id); return <button className="quiet-button" key={r.id} aria-pressed={r.id === selected} onClick={() => select(r.id)}><span>{c?.format ?? frozen?.definition.format} · {c?.division ?? frozen?.definition.division} · {r.kind === 'prelims' ? 'Prelims' : 'Finals'}</span><strong>{roundStatus(data, r.id)}</strong></button>; })}</div></details>;
+}
+
 // A view selector only. Its callbacks never issue a judging or setup command.
-export default function RoundContext({ data, selected, select, overview = false, children }: { data: LiveView; selected: string; select: (id: string) => void; overview?: boolean; children?: ReactNode }) {
+export default function RoundContext({ data, selected, select, overview = false, compact = false, children }: { data: LiveView; selected: string; select: (id: string) => void; overview?: boolean; compact?: boolean; children?: ReactNode }) {
   const frozen = data.rounds.find((r) => r.id === selected);
   const round = data.setup.rounds.find((r) => r.id === selected) ?? frozen?.definition;
   const competition = data.setup.competitions.find((c) => c.id === round?.competitionId);
-  const reviewsNeeded = data.rounds.filter((r) => r.phase === 'discussion' && !r.standings?.approved).length;
   const rounds = [...data.setup.rounds, ...data.rounds.filter((r) => !data.setup.rounds.some((s) => s.id === r.id)).map((r) => r.definition)];
   return <section className="round-context" aria-label="Competition and round context">
     <label><span>{overview ? 'Results to review' : 'Competition & round view'}</span><select aria-label="Competition and round view" value={selected} onChange={(e) => select(e.target.value)}><option value="" disabled>Choose a competition</option>{rounds.map((r) => { const c = data.setup.competitions.find((c) => c.id === r.competitionId), frozen = data.rounds.find((f) => f.id === r.id); return <option key={r.id} value={r.id}>{c?.format ?? frozen?.definition.format} · {c?.division ?? frozen?.definition.division} · {r.kind === 'prelims' ? 'Prelims' : 'Finals'}</option>; })}</select></label>
-    <div className="context-status"><p className="kicker">{competition ? `${competition.format} · ${competition.division}` : frozen ? `${frozen.definition.format} · ${frozen.definition.division} · Withdrawn competition` : 'Event program'}</p><strong>{round ? `${round.kind === 'prelims' ? 'Prelims' : 'Finals'} · ${roundStatus(data, round.id)}` : 'Add a competition in Set up'}</strong>{data.status === 'archived' && <span>Archived · read only</span>}</div>
+    {!compact && <div className="context-status"><p className="kicker">{competition ? `${competition.format} · ${competition.division}` : frozen ? `${frozen.definition.format} · ${frozen.definition.division} · Withdrawn competition` : 'Event program'}</p><strong>{round ? `${round.kind === 'prelims' ? 'Prelims' : 'Finals'} · ${roundStatus(data, round.id)}` : 'Add a competition in Set up'}</strong>{data.status === 'archived' && <span>Archived · read only</span>}</div>}
     {children}
-    {overview && <details className="round-overview"><summary><span>All competitions & pending work</span>{reviewsNeeded > 0 && <small>{reviewsNeeded} round {reviewsNeeded === 1 ? 'review' : 'reviews'} needed</small>}</summary><div className="round-overview-list">{rounds.map((r) => { const c = data.setup.competitions.find((c) => c.id === r.competitionId), frozen = data.rounds.find((f) => f.id === r.id); return <button className="quiet-button" key={r.id} aria-pressed={r.id === selected} onClick={() => select(r.id)}><span>{c?.format ?? frozen?.definition.format} · {c?.division ?? frozen?.definition.division} · {r.kind === 'prelims' ? 'Prelims' : 'Finals'}</span><strong>{roundStatus(data, r.id)}</strong></button>; })}</div></details>}
+    {overview && <RoundOverview data={data} selected={selected} select={select} />}
   </section>;
 }

@@ -1,3 +1,4 @@
+import { openResultsContext } from './setup-browser-helpers';
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { api, base, command, save } from './stage-helpers';
 import { createStage, limitedStage, exact } from './publication-helpers';
@@ -68,7 +69,7 @@ test('stage workspace: phone scoring, missing heat coverage, pending saves, one 
     await expect(history).not.toHaveAttribute('open'); await expect(headPage.getByRole('heading', { name: 'Head-approved results', exact: true }).first()).toBeHidden();
     await history.locator(':scope > summary').click(); await expect(history.getByRole('heading', { name: 'Head-approved results', exact: true })).toHaveCount(2);
     await desk.reload(); await desk.getByRole('button', { name: '03 Results', exact: true }).click();
-    await desk.locator('#results-scorecards > summary').click(); await expect(desk.locator('#results-scorecards').getByRole('heading', { name: 'Prelims · 2 heats', exact: true })).toBeVisible();
+    await openResultsContext(desk);await desk.locator('#results-scorecards > summary').click(); await expect(desk.locator('#results-scorecards').getByRole('heading', { name: 'Prelims · 2 heats', exact: true })).toBeVisible();
     await expect(desk.locator('#results-scorecards').getByRole('heading', { name: 'Prelims · 1 heats', exact: true })).toBeVisible();
     // Finals uses approved entrants and the same stage submission contract.
     v = await api<LiveView>(organizer); expect(v.rounds.filter((r) => r.definition.kind === 'finals')).toHaveLength(2);
@@ -76,7 +77,7 @@ test('stage workspace: phone scoring, missing heat coverage, pending saves, one 
     for (const token of tokens) for (const r of v.rounds.filter((r) => r.definition.kind === 'finals')) for (const heat of r.definition.heats) for (const [i, id] of heat.subjectIds.entries()) await save(token, r, heat.songs[0].id, id, i === 0 ? 'Yes' : 'A1');
     for (const token of tokens) { const own = await api<LiveView>(token); await api(token, { action: 'submit-stage', blockId: own.context.blockId, acknowledged: true, expectedVersion: own.version, requestId: crypto.randomUUID(), ballotVersions: Object.fromEntries(own.ballots.map((b) => [b.roundKey, b.version])), roundVersions: Object.fromEntries(own.rounds.map((r) => [r.key, r.version])) }); }
     for (const r of v.rounds.filter((r) => r.definition.kind === 'finals')) await exact(head, r.id, 'approve');
-    await desk.reload(); await desk.getByRole('button', { name: '03 Results', exact: true }).click(); await desk.locator('#results-scorecards > summary').click();
+    await desk.reload(); await desk.getByRole('button', { name: '03 Results', exact: true }).click(); await openResultsContext(desk);await desk.locator('#results-scorecards > summary').click();
     await expect(desk.locator('#results-scorecards details.setup-section')).toHaveCount(4);
     await desk.getByRole('button', { name: '02 Score', exact: true }).click();
     const gold = desk.getByRole('button', { name: 'Review event to publish', exact: true }); await gold.hover();

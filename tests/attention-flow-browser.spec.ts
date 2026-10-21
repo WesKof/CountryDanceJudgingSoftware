@@ -1,3 +1,4 @@
+import { openResultsContext } from './setup-browser-helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { api, base } from './stage-helpers';
 import type { LiveView } from '../lib/live/types';
@@ -98,11 +99,11 @@ test('fresh sample runs from setup through automatic stages and private publicat
     expect(view.rounds.every((r)=>r.standings?.approved)).toBe(true);
     expect(view.rounds.filter((r)=>r.definition.kind==='finals').map((r)=>r.standings!.rows.map((s)=>s.average))).toEqual([[10,4.5],[10]]);
     await desk.reload();await desk.getByRole('button',{name:'03 Results',exact:true}).click();
-    await desk.locator('#results-scorecards > summary').click();
+    await openResultsContext(desk);await desk.locator('#results-scorecards > summary').click();
     await expect(desk.locator('#results-scorecards details.setup-section')).toHaveCount(4);
     await desk.getByRole('button',{name:'04 Publish',exact:true}).click();
     expect(await desk.evaluate(()=>window.scrollY)).toBe(0);
-    await expect(desk.getByText('All Finals are approved. Prepare the results preview to check before sending.',{exact:true})).toBeVisible();
+    await expect(desk.getByText('All Finals are approved. Prepare a private preview before sending for website approval.',{exact:true})).toBeVisible();
     await desk.getByRole('button',{name:'Review results to publish',exact:true}).click();
     await expect(desk.getByRole('button',{name:'Send results for approval',exact:true})).toBeVisible();
     await expect(desk.locator('.publication-competition')).toHaveCount(2);

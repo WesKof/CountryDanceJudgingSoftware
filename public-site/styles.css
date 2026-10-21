@@ -30,3 +30,9 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
   .admin-request > form { padding: 10px; }
   .admin-request > form button { width: 100%; justify-content: center; padding: 12px 10px; }
 }
+
+.public-prelims, .public-scoring-context { padding:12px 0; margin-top:16px; border-top:1px solid var(--line); }
+.public-prelims > summary, .public-scoring-context > summary { font-weight:600; cursor:pointer; }
+.public-scoring-context { font-size:14px; }
+.admin-supporting > details.card { padding:14px 0; margin:12px 0; box-shadow:none; border-width:1px 0 0; border-radius:0; }
+.admin-supporting > summary { font-weight:600; cursor:pointer; }

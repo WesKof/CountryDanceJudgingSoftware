@@ -32,16 +32,27 @@ export async function openJudgeAccess(page: Page) {
 
 export async function openRecovery(page: Page) {
   await page.getByRole('button', {name:'04 Publish',exact:true}).click();
+  await openPublicationContext(page);
   const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:'Data & recovery',exact:true})});
   if (await section.getAttribute('open') === null) await section.locator(':scope > summary').click();
 }
 
 export async function openResultManagement(page: Page) {
   await page.getByRole('button', {name:'03 Results',exact:true}).click();
+  await openResultsContext(page);
   const section=page.locator('details.setup-section').filter({has:page.getByRole('heading',{name:'Corrections & withdrawals',exact:true})});
   if (await section.getAttribute('open') === null) await section.locator(':scope > summary').click();
 }
 
 export async function openSetupNavigation(page: Page) {
   if (!(await page.getByLabel('Go to section').isVisible())) await page.locator('.setup-navigation > summary').click();
+}
+
+export async function openResultsContext(page: Page) {
+ const drawer=page.locator('#results-supporting');
+ if(await drawer.count() && await drawer.getAttribute('open')===null) await drawer.locator(':scope > summary').click();
+}
+export async function openPublicationContext(page: Page) {
+ const drawer=page.locator('#publication-supporting');
+ if(await drawer.count() && await drawer.getAttribute('open')===null) await drawer.locator(':scope > summary').click();
 }

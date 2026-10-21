@@ -33,6 +33,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await expect(page.getByText('Event overview · legacy ballots', { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
     await page.screenshot({ path: page === local ? 'test-results/local-setup-collapsed-390.png' : 'test-results/shared-setup-collapsed-1440.png' });
+    await openSetupNavigation(page);
     const eventSection = page.locator('details.setup-section').filter({ has: page.getByRole('heading', { name: 'Details', exact: true }) });
     await eventSection.locator(':scope > summary').focus(); await page.keyboard.press('Enter');
     await expect(page.getByLabel('Event name', { exact: true })).toBeVisible();
@@ -40,7 +41,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Program & stages');
     await page.locator('.competition-card').first().click();
     await expect(page.getByLabel('Select round to configure')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
     await expandSetup(page);
     await expect(page.getByRole('heading', { name: 'Program', exact: true })).toBeVisible();
     await expect(page.getByLabel('Event name', { exact: true }).last()).toHaveValue(pageSetup.name);
@@ -60,7 +61,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await expect(page.locator('.shared-heat h3').last()).toHaveText(/Heat 1/);
     await page.getByLabel('Venue', { exact: true }).last().fill('Parity venue');
     await page.getByRole('button', { name: 'Save setup', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
     await page.reload();
     if (page === local) await local.locator('.rail-item').nth(0).click(); await expandSetup(page);
     await expect(page.getByLabel('Venue', { exact: true }).last()).toHaveValue('Parity venue');
@@ -69,7 +70,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     page.once('dialog', (d) => void d.dismiss()); await remove.click(); await expect(page.locator('.competition-card')).toHaveCount(4);
     page.once('dialog', (d) => void d.accept()); await remove.click(); await expect(page.locator('.competition-card')).toHaveCount(3);
     await expect(page.getByLabel('Select round to configure')).not.toHaveValue(pageSetup.rounds[0].id);
-    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
   }
   // Main-page setup now saves to D1. The legacy archive remains byte-for-byte intact.
   expect(await local.evaluate(() => JSON.parse(localStorage.getItem('country-dance-judging:v2')!))).toEqual(legacy);
@@ -97,7 +98,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
   for (const page of [local, shared]) {
     await page.getByRole('button',{name:'01 Set up',exact:true}).click();await expandSetup(page);
     for (const c of setup.competitions.slice(1)) { page.once('dialog', (d) => void d.accept()); await page.getByRole('button', { name: `Remove ${c.format} ${c.division} competition`, exact: true }).click(); }
-    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
     await page.reload(); if (page === local) await page.locator('.rail-item').nth(0).click(); await expandSetup(page);
     await expect(page.getByRole('button', { name: /^Remove .* competition$/ })).toHaveCount(0);
     await page.getByRole('button', { name: '+ J&J', exact: true }).click(); await page.getByRole('button', { name: 'Add competition', exact: true }).click(); await expandSetup(page);
@@ -109,7 +110,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await page.locator('textarea[name=csv]').fill('Number,Name,Role\n701,Synthetic Lead,Lead\n702,Synthetic Follow,Follow');
     page.once('dialog', (d) => void d.accept()); await page.getByRole('button', { name: 'Replace unopened roster', exact: true }).click();
     await expect(page.getByLabel('Heat for bib 702', { exact: true })).not.toHaveValue('');
-    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Save setup', exact: true }).click(); await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
   }
   expect(localPosts.filter((p) => JSON.parse(p).action === 'create')).toHaveLength(1);
   expect(await local.evaluate(() => document.documentElement.scrollWidth),JSON.stringify(await local.evaluate(()=>Array.from(document.querySelectorAll('main *')).filter((e)=>e.getBoundingClientRect().right>391).map((e)=>({tag:e.tagName,css:e.className,text:e.textContent?.slice(0,70),right:e.getBoundingClientRect().right}))))).toBeLessThanOrEqual(390);
@@ -141,10 +142,10 @@ test('main-page organizer reopens existing events and keeps judge links separate
   await page.goto(base);await expect(page.getByRole('heading',{level:1,name:setup.name})).toBeVisible();
   await expect(page.getByRole('button',{name:'Open organizer page',exact:true})).toHaveCount(0);
   await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);await expandSetup(page);
-  await openSetupNavigation(page);await page.locator('.setup-event-tools > summary').click(); await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
+  await openSetupNavigation(page);await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(base+'/?event='+token);
   await openJudgeAccess(page);const judgeOpen=page.waitForEvent('popup');await page.getByRole('link',{name:'Open judge page',exact:true}).first().click();
-  const judge=await judgeOpen;await expect(judge).toHaveURL(/\/judge\//);await expect(judge.locator('.rail-item')).toHaveCount(1);
+  const judge=await judgeOpen;await expect(judge).toHaveURL(/\/judge\//);await expect(judge.locator('.rail-item')).toHaveCount(0);
   await page.getByRole('button',{name:'02 Score',exact:true}).click();await page.getByRole('button',{name:'Start prelims stage',exact:true}).click();
   await judge.reload();await expect(judge.locator('.phone-row')).toHaveCount(2);
   const response=judge.waitForResponse((r)=>r.request().postDataJSON()?.action==='save-cell');

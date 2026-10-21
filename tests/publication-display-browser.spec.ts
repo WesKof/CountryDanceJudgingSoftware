@@ -1,3 +1,4 @@
+import { openPublicationContext } from './setup-browser-helpers';
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
 import { api, base, command, save, submitHeat } from './stage-helpers';
@@ -62,7 +63,7 @@ test('Publish clearly distinguishes review, send and released states while score
   await zero.locator(':scope > summary').click();
   await first.scrollIntoViewIfNeeded(); await layout(page, 'scorecard');
   await expect(preview).toHaveAttribute('open'); await expect(first).toHaveAttribute('open');
-  const history = page.locator('.publication-history').first(); await history.locator(':scope > summary').click();
+  await openPublicationContext(page);const history = page.locator('.publication-history').first(); await openPublicationContext(page);await history.locator(':scope > summary').click();
   await expect(history).toContainText('Ready to send for approval'); await expect(history).toContainText('Not published');
   expect((await api<LiveView>(organizer)).version).toBe(before.version);
   expect((await api<LiveView>(organizer)).publications![0].snapshot).toEqual(snapshot);
@@ -76,7 +77,7 @@ test('Publish clearly distinguishes review, send and released states while score
   await admin.locator(`[data-event-id="${snapshot.eventId}"]`).getByRole('button', { name: 'Approve & publish results', exact: true }).click();
   await expect(admin.getByText('Approved and published. The results are now on this website.', { exact: true })).toBeVisible();
   await expect(task.getByRole('button', { name: 'Results already published', exact: true })).toBeDisabled({ timeout: 15000 });
-  await expect(task.getByText(/No further publishing action is needed/)).toBeVisible();
+  await expect(task.getByText(/Published. The approved results are available/)).toBeVisible();
   await expect(task.getByRole('button', { name: 'Send results for approval', exact: true })).toHaveCount(0);
   await expect(history.locator('time')).toHaveCount(2);
   expect(await history.locator('time').first().getAttribute('datetime')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -95,7 +96,7 @@ test('Publish clearly distinguishes review, send and released states while score
     await expect(page.getByRole('button', { name: 'Send results for approval', exact: true })).toBeVisible();
   }
   const retained = await api<LiveView>(organizer);
-  await history.locator(':scope > summary').click();
+  await openPublicationContext(page);await history.locator(':scope > summary').click();
   const past = history.locator('.publication-past'); await expect(past).not.toHaveAttribute('open'); await past.locator(':scope > summary').click();
   const versions = past.locator('.publication-past-version'); await expect(versions).toHaveCount(2);
   await expect(versions.nth(0)).toContainText('Past version · not published'); await expect(versions.nth(1)).toContainText('Previously published');
@@ -148,7 +149,7 @@ test('Publish recovery keeps backup options, restore and archive explicit withou
   const original = await api<LiveView>(organizer), round = original.rounds[0], heat = round.definition.heats[0];
   await save(tokens[0], round, heat.songs[0].id, heat.subjectIds[0], 'Yes', 'RECOVERY_PRIVATE_NOTE');
   const context = await browser.newContext(), page = await context.newPage(); await page.goto(base + path); await publishTab(page);
-  const recovery = page.locator('details[data-section="Data & recovery"]');
+  await openPublicationContext(page);const recovery = page.locator('details[data-section="Data & recovery"]');
   await expect(recovery).not.toHaveAttribute('open'); await recovery.locator(':scope > summary').click();
   await expect(recovery.getByRole('button', { name: 'Download event backup', exact: true })).toBeVisible();
   const download = page.waitForEvent('download'); await recovery.getByRole('button', { name: 'Download event backup', exact: true }).click();

@@ -1,3 +1,4 @@
+import { openSetupNavigation } from './setup-browser-helpers';
 import {test,expect} from '@playwright/test';
 import {api,base} from './stage-helpers';
 import {expandSetup,openJudgeAccess,openRecovery} from './setup-browser-helpers';
@@ -16,7 +17,7 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  await page.goto(base);await expect(page.getByText('Synthetic lost setup response',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Retry',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();await expect(page).toHaveURL(base+'/');
- await expect(page.locator('.setup-hero .setup-sample-help > summary')).toHaveText('Sample help · fictional event'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
+ await expect(page.locator('.setup-hero .setup-sample-help')).toHaveCount(0);await openSetupNavigation(page);await expect(page.locator('.setup-sample-help > summary')).toHaveText('Sample walkthrough'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
  await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);expect(creates).toHaveLength(1);
  const binding=await page.evaluate(()=>JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!) as {path:string}),token=binding.path.split('/').at(-1)!;
  const initial=await api<LiveView>(token);expect(initial.setup.competitions.map((c)=>c.format)).toEqual(['Strictly','Jack & Jill']);
@@ -36,7 +37,7 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  await page.getByRole('button',{name:'01 Set up',exact:true}).click();await expandSetup(page);
  page.once('dialog',(d)=>void d.accept());await page.getByRole('button',{name:'Try a fresh sample',exact:true}).click();
  await expect.poll(()=>page.evaluate((old)=>{const next=JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!);return Boolean(next.configured&&next.path&&next.path!==old);},binding.path)).toBe(true);
- await expect(page.getByRole('button',{name:'Save setup',exact:true})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Save setup',exact:true})).toHaveCount(0);
  const next=await page.evaluate(()=>JSON.parse(localStorage.getItem('country-dance-judging:rehearsal')!) as {path:string});
  const fresh=await api<LiveView>(next.path.split('/').at(-1)!);expect(fresh.setup.rounds.map((r)=>r.id).some((id)=>initial.setup.rounds.some((r)=>r.id===id))).toBe(false);
  expect((await api<LiveView>(judgeToken)).ballots).toEqual(observed.ballots);expect(fresh.rounds).toHaveLength(2);expect(fresh.rounds.every((r)=>r.phase==='dancing')).toBe(true);expect(fresh.ballots).toEqual([]);
@@ -58,6 +59,6 @@ test('main-page private organizer link checks the role before changing saved acc
  await expect(page.getByRole('button',{name:'Save setup',exact:true})).toHaveCount(0);
  expect(await page.evaluate(()=>localStorage.getItem('country-dance-judging:rehearsal'))).toBe(raw);
  await page.goto(base+'/?event='+binding.path.split('/').at(-1)!);await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
- await expect(page.locator('.setup-hero .setup-sample-help > summary')).toHaveText('Sample help · fictional event'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
+ await expect(page.locator('.setup-hero .setup-sample-help')).toHaveCount(0);await openSetupNavigation(page);await expect(page.locator('.setup-sample-help > summary')).toHaveText('Sample walkthrough'); await page.locator('.setup-sample-help > summary').click(); await expect(page.getByText('Sample event · fictional people',{exact:true})).toBeVisible();
  expect((await api<LiveView>(binding.path.split('/').at(-1)!)).eventId).toBe(view.eventId);await context.close();
 });

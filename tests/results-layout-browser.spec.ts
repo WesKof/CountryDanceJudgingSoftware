@@ -1,3 +1,4 @@
+import { openResultsContext } from './setup-browser-helpers';
 import { test, expect } from '@playwright/test';
 import { createStage, limitedStage, exact } from './publication-helpers';
 import { api, base, command, save, submitHeat } from './stage-helpers';
@@ -32,7 +33,7 @@ test('Results keeps submitted standings accurate, expands exact scorecards, pres
   for (const id of ['results-scorecards', 'results-decisions', 'results-management', 'results-audit']) await expect(page.locator('#' + id)).not.toHaveAttribute('open');
   const top = await page.locator('.results-current').boundingBox(), selector = await page.locator('.round-context').boundingBox(), standings = await sheet.boundingBox();
   expect(top!.y).toBeLessThan(selector!.y); expect(selector!.y).toBeLessThan(standings!.y);
-  await page.locator('#results-decisions > summary').click();
+  await openResultsContext(page);await page.locator('#results-decisions > summary').click();
   await expect(page.locator('#results-decisions')).toContainText('3 / 3 heat submissions acknowledged');
   await sheet.getByRole('button', { name: 'View scorecard for #101', exact: true }).click();
   const first = page.locator('.publication-scorecard').first();
@@ -47,7 +48,7 @@ test('Results keeps submitted standings accurate, expands exact scorecards, pres
   await expect(first).toHaveAttribute('open');
   await expect(page.getByRole('button', { name: /Approve.*results|Submit heat|Clear ballot/ })).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText('RESULTS_PRIVATE_NOTE');
-  await page.locator('#results-management > summary').click();
+  await openResultsContext(page);await page.locator('#results-management > summary').click();
   await page.getByText('Request a score correction', { exact: true }).click();
   const source = (await api<LiveView>(organizer)).heatSubmissions!.find((s) => s.judgeId === setup.judges[0].id)!;
   await page.getByLabel('Submitted heat / judge', { exact: true }).selectOption(source.id);
@@ -78,7 +79,7 @@ test('Results keeps submitted standings accurate, expands exact scorecards, pres
   await command(organizer, { action: 'approve-request', reviewRequestId: withdrawal.reviewRequestId, requestVersion: 1 });
   await command(head, { action: 'approve-request', reviewRequestId: withdrawal.reviewRequestId, requestVersion: 1 });
   await page.reload(); await page.getByRole('button', { name: '03 Results', exact: true }).click();
-  await page.locator('#results-audit > summary').click();
+  await openResultsContext(page);await page.locator('#results-audit > summary').click();
   await expect(page.getByLabel('History view')).toHaveValue('all');
   const approval = page.locator('.result-audit-entry').filter({ has: page.getByText('Results approved', { exact: true }) });
   await approval.locator('summary').click(); await expect(approval.getByText('4.8333', { exact: true })).toBeVisible();
@@ -94,7 +95,7 @@ test('J&J withdrawal uses actual named remaining pairings and preserves the visi
   const before = await api<LiveView>(organizer), round = before.rounds[0], heat = round.definition.heats[0];
   const leads = round.definition.subjects.filter((s) => s.role === 'Lead').slice(1), follows = round.definition.subjects.filter((s) => s.role === 'Follow');
   await page.goto(base + path); await page.getByRole('button', { name: '03 Results', exact: true }).click();
-  await page.locator('#results-management > summary').click(); await page.locator('#results-entrant-withdrawal > summary').click();
+  await openResultsContext(page);await page.locator('#results-management > summary').click(); await page.locator('#results-entrant-withdrawal > summary').click();
   const form = page.locator('#results-entrant-withdrawal');
   await form.getByLabel('Withdrawal reason', { exact: true }).fill('Named pairing review');
   await form.getByText('Review remaining pairings · 2 undanced songs', { exact: true }).click();
@@ -143,7 +144,7 @@ test('Results highlights include cutoff ties, keep display choices local and sor
   await expect(highlights.locator('tbody tr').first()).toContainText('Entrant 0-0 3');
   await highlights.getByLabel('Show results').selectOption('5'); await expect(highlights.locator('tbody tr')).toHaveCount(5);
   await highlights.getByLabel('Show results').selectOption('all'); await expect(highlights.locator('tbody tr')).toHaveCount(6);
-  await page.locator('#results-scorecards > summary').click();
+  await openResultsContext(page);await page.locator('#results-scorecards > summary').click();
   await expect(page.locator('.publication-scorecard').first()).toContainText('#103');
   await highlights.getByRole('button', { name: 'View scorecards', exact: true }).click();
   const cards = page.locator('#results-scorecards');

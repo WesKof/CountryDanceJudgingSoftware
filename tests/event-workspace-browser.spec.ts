@@ -60,6 +60,7 @@ test('event workspace archives old events, searches retained records, and return
 test('blank setup guides the organizer through real fields, preserves drafts, and opens scoring on one complete save',async({browser})=>{
  const created=await api<{path:string}>('',{action:'create',name:'Guided setup rehearsal',venue:'',date:'',requestId:nonce()});
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+ let releaseSave:(()=>void)|undefined;
  const errors:string[]=[];page.on('pageerror',(e)=>errors.push(e.message));
  try{
   await page.goto(base+created.path);
@@ -85,7 +86,12 @@ test('blank setup guides the organizer through real fields, preserves drafts, an
   await expect(page.getByText(/Saving complete preparation opens scoring automatically/)).toBeVisible();
   await page.setViewportSize({width:1440,height:900});await page.setViewportSize({width:390,height:844});
   await expect(page.getByLabel('Number of finalist couples',{exact:true})).toHaveValue('1');
-  await page.getByRole('button',{name:'Save setup',exact:true}).click();
+  const holdSave=new Promise<void>((resolve)=>{releaseSave=resolve;});
+  await page.route('**/api/live',async(route)=>{if(route.request().method()==='POST'&&route.request().postDataJSON()?.action==='setup')await holdSave;await route.continue();});
+  const saving=page.waitForRequest((request)=>request.method()==='POST'&&request.postDataJSON()?.action==='setup');
+  await page.getByRole('button',{name:'Save setup',exact:true}).click();await saving;
+  await expect(page.getByLabel('Event name',{exact:true})).toBeDisabled();
+  releaseSave!();
   await expect(page.getByRole('heading',{name:'Prelims is ready for judges',exact:true})).toBeVisible();
   await expect(page.locator('#setup-saved-details')).not.toHaveAttribute('open');
   const view=await api<LiveView>(created.path.split('/').at(-1)!);expect(view.rounds[0].phase).toBe('dancing');expect(view.setup.rounds[0].subjects).toHaveLength(2);expect(view.setup.separationAttested).toBe(true);
@@ -94,7 +100,7 @@ test('blank setup guides the organizer through real fields, preserves drafts, an
   await expect(page.getByRole('link',{name:'Head Judge — Trial Head ↗',exact:true})).toBeVisible();
   expect(errors).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({path:'test-results/setup-guided-saved-390.png'});
- }finally{await context.close();}
+ }finally{releaseSave?.();await context.close();}
 });
 
 

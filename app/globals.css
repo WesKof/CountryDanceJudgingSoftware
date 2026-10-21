@@ -1093,3 +1093,27 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 }
 
 .organizer-shell .setup-page .setup-toolbar.has-draft { position:sticky; top:8px; }
+
+/* Necessity-first context: one quiet entry point, never competing with the task. */
+.shared-shell .supporting-drawer { min-width:0; padding:12px 16px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+.shared-shell .supporting-drawer > summary { min-height:44px; align-content:center; color:var(--forest); font-size:16px; font-weight:700; }
+.supporting-drawer > summary small { display:inline-block; margin-left:10px; color:var(--muted); font-size:12px; font-weight:400; }
+.supporting-content { min-width:0; padding-top:16px; }
+.supporting-content > .form-panel { box-shadow:none; }
+.shared-shell .setup-navigation .setup-checklist { margin:0 0 16px; border-color:var(--line); color:var(--ink); background:#f5f2e9; }
+.shared-shell .setup-navigation .setup-checklist > summary { color:var(--forest); }
+.setup-navigation .setup-checklist small { color:var(--muted); }
+.setup-navigation .setup-checklist li { border-top-color:var(--line); }
+.setup-navigation .setup-checklist li > span { color:var(--forest); background:#f4dca5; }
+.setup-navigation .setup-checklist li.is-complete > span { background:#d7eddf; }
+.shared-shell .setup-navigation .setup-sample-help { padding:12px 14px; border-color:var(--line); color:var(--ink); background:#f5f2e9; }
+.shared-shell .setup-navigation .setup-sample-help summary { color:var(--forest); font-size:14px; }
+.shared-shell .setup-navigation .setup-sample-help p, .setup-navigation .setup-sample-help li { font-size:14px; color:var(--muted); line-height:1.6; }
+.setup-navigation-controls .setup-tool-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.organizer-results > .round-context { grid-template-columns:1fr; }
+.stage-transition-hint { font-size:13px!important; color:#dbe8df!important; }
+@media(max-width:720px) {
+ .supporting-drawer > summary small { display:block; margin:5px 0 0; }
+ .shared-shell .supporting-drawer { padding:10px 12px; }
+ .setup-navigation-controls > * { width:100%; }
+}

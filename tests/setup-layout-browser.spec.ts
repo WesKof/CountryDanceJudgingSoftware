@@ -11,7 +11,7 @@ test('Set up section navigation and responsive resizing preserve drafts, selecti
   await page.goto(base + path);
   await expect(page.locator('.setup-main-card[open]')).toHaveCount(0);
   await expect(page.locator('.setup-main-card .setup-section[open]')).toHaveCount(0);
-  const toolbar = page.locator('.setup-toolbar'), banner = page.locator('.setup-hero');
+  const toolbar = page.locator('#setup-saved-details'), banner = page.locator('.setup-hero');
   expect((await banner.boundingBox())!.y + (await banner.boundingBox())!.height).toBeLessThan((await toolbar.boundingBox())!.y);
   const before = await api<LiveView>(organizer), posts: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/api/live')) posts.push(request.postDataJSON().action); });
@@ -38,8 +38,7 @@ test('Set up section navigation and responsive resizing preserve drafts, selecti
   await expect(page.getByLabel('Venue', { exact: true })).toHaveValue('Synthetic responsive venue');
   await expect(page.locator('details[data-section="Judges"]')).toHaveAttribute('open');
   await expect(page.locator('details[data-section="Round setup"]')).not.toHaveAttribute('open');
-  await openSetupNavigation(page);await page.locator('.setup-event-tools > summary').click();
-  await page.getByRole('button', { name: 'Other events', exact: true }).click();
+  await openSetupNavigation(page);await page.getByRole('button', { name: 'Other events', exact: true }).click();
   await expect(page.locator('details[data-section="Other events"]')).toHaveAttribute('open');
   await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeEnabled();
   expect(posts).toEqual([]);
@@ -47,7 +46,7 @@ test('Set up section navigation and responsive resizing preserve drafts, selecti
   const response = page.waitForResponse((r) => r.request().postDataJSON()?.action === 'setup');
   await page.getByRole('button', { name: 'Save setup', exact: true }).click();
   expect((await response).status()).toBe(200);
-  await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toHaveCount(0);
   const saved = await api<LiveView>(organizer);
   expect(saved.setup).toEqual({ ...before.setup, venue: 'Synthetic responsive venue' });
   expect(saved.context).toEqual(before.context);

@@ -1,4 +1,4 @@
-import {openResultManagement} from './setup-browser-helpers';
+import {openResultManagement,openResultsContext} from './setup-browser-helpers';
 import {test,expect,type Page,type Locator} from '@playwright/test';
 import {createStage,limitedStage} from './publication-helpers';
 import {api,base,command,save} from './stage-helpers';
@@ -8,7 +8,7 @@ test('actual entrant withdrawal controls cancel, revise, renew dual approval and
  const setup=limitedStage(1,1);setup.rounds[1].finalistCount=1;const {organizer,tokens,head,path}=await createStage(setup);await command(organizer,{action:'open-stage',kind:'prelims'});const v=await api<LiveView>(organizer),r=v.rounds[0];await save(tokens[0],r,r.definition.heats[0].songs[0].id,r.definition.subjects[0].id,'Yes','PRIVATE_WITHDRAWAL_BROWSER_NOTE');
  const orgContext=await browser.newContext(),headContext=await browser.newContext({viewport:{width:390,height:844}}),judgeContext=await browser.newContext({viewport:{width:360,height:800}}),desk=await orgContext.newPage(),headPage=await headContext.newPage(),judge=await judgeContext.newPage();
  await desk.goto(base+path);await headPage.goto(base+v.judgeLinks!.find((j)=>j.path.endsWith(head))!.path);await judge.goto(base+v.judgeLinks![0].path);
- await desk.getByRole('button',{name:'03 Results',exact:true}).click();
+ await desk.getByRole('button',{name:'03 Results',exact:true}).click();await expect(desk.locator('#results-supporting')).not.toHaveAttribute('open');await openResultsContext(desk);
  const management=desk.locator('details.setup-section').filter({has:desk.getByRole('heading',{name:'Corrections & withdrawals',exact:true})});await expect(management).not.toHaveAttribute('open');await expect(desk.getByRole('button',{name:'Request entrant withdrawal',exact:true})).toBeHidden();await openResultManagement(desk);
  const withdrawal=desk.locator('details.setup-section').filter({has:desk.getByRole('heading',{name:'Withdraw a started entrant/couple',exact:true})}).last();await withdrawal.locator(':scope > summary').click();await withdrawal.getByLabel('Withdrawal reason',{exact:true}).fill('Browser cancellation');await click(desk,withdrawal.getByRole('button',{name:'Request entrant withdrawal',exact:true}),'request-withdrawal');await click(desk,desk.getByRole('button',{name:'Cancel request',exact:true}),'cancel-request');await desk.getByRole('button',{name:'View completed requests in Audit trail',exact:true}).click();await expect(desk.locator('#results-audit').getByText('Cancelled; records retained',{exact:true})).toBeVisible();
  await withdrawal.getByLabel('Withdrawal reason',{exact:true}).fill('Browser request version one');await click(desk,withdrawal.getByRole('button',{name:'Request entrant withdrawal',exact:true}),'request-withdrawal');await headPage.reload();headPage.once('dialog',(d)=>void d.accept());await click(headPage,headPage.getByRole('button',{name:'Approve request as head',exact:true}),'approve-request');
