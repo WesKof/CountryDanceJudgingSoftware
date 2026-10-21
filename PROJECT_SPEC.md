@@ -4,6 +4,17 @@
 
 The owner explicitly directed applying the setup principles to the entire application without stopping for routine feedback. Every element must justify its necessity, audience, phase/frequency, actionability, prominence, duplication and interaction cost. Information being useful does not mean it belongs in the routine view. Preserve captured data, exact rules and useful help; remove redundant prose and controls. The previous automatic-stage/archive/setup delivery is integrated and pushed on main at 301fb3a, with checkpoint/local-event-archive-setup-2026-10-21 and both preceding checkpoints pushed. Its merged development branch was verified and removed. This pass starts from that checkpoint on codex/full-app-usability; Git integration is independent of Sites deployment.
 
+The completed implementation is 4eb4bd246e0ffd713d588c9ab29e9c783a0f0b84, fast-forwarded and pushed to main. Remote main and the peeled annotated checkpoint were verified at that exact commit before deleting codex/full-app-usability locally/remotely. A documentation-only closeout follows this runtime commit. Current delivery statements here supersede earlier pending integration/branch statements; dated history remains available below and in Git.
+
+| Preserved source milestone | Commit | Pushed annotated checkpoint |
+| --- | --- | --- |
+| Automatic-stage baseline | fc682ec | checkpoint/local-before-finals-usability-2026-10-21 |
+| Focused judge/Finals usability | d64cfdc | checkpoint/local-before-event-workspace-2026-10-21 |
+| Archive and guided setup | 301fb3a | checkpoint/local-event-archive-setup-2026-10-21 |
+| Comprehensive usability | 4eb4bd2 | checkpoint/local-full-app-usability-2026-10-21 |
+
+All prior commits remain ancestors; normal source reverts or an isolated checkout of a checkpoint support investigation/rollback without rewriting shared history. None of these tags restores database records. Details, verification limits and clean/mirror/runtime evidence are in LOCAL_TEST_REPORT.md.
+
 | Area | Routine view and next task | Supporting context and decision |
 | --- | --- | --- |
 | Set up | One required preparation task or the saved/current-stage handoff. Save/Discard appears only for an actual draft. The first complete save still warns about automatic opening/freezing. | One Setup details & tools drawer consolidates the checklist, section navigation, full editor, saved events and help. Direct task/Events routes expand/focus their destination. A successful save closes the drawer and returns to current status. Fields are disabled during the save so its response cannot discard newer edits. A disabled Save row repeated an already-known saved status and did not earn routine space. |
