@@ -1,3 +1,4 @@
+import { openSetupNavigation } from './setup-browser-helpers';
 import { selectSetupRound } from './setup-browser-helpers';
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { api, base, command, nonce, save } from './stage-helpers';
@@ -49,7 +50,7 @@ test('blank setup has an actionable section route, descriptive keyboard navigati
   await expect(program.locator(':scope > summary')).toBeFocused();
   await program.locator(':scope > summary').press('Enter'); await expect(program).not.toHaveAttribute('open');
   await layouts(page, 'blank-setup');
-  await expect(page.getByRole('heading', { name: 'Set up the desk once', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add competitions', exact: true })).toBeVisible();
   const eventCard = page.locator('[data-section="Event details"]');
   const programCard = page.locator('[data-section="Program & stages"]');
   const eventBox = (await eventCard.boundingBox())!, programBox = (await programCard.boundingBox())!;
@@ -113,11 +114,11 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   await tab(page, '01 Set up');
   const roundSection = page.locator('details[data-section="Round setup"]');
   await expect(roundSection).not.toHaveAttribute('open');
-  await page.getByLabel('Go to section').selectOption('Program & stages');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Program & stages');
   await expect(page.getByLabel('Select round to configure', { exact: true })).toHaveValue(other.id);
   await selectSetupRound(page, setup, setup.rounds[2].id);
   const eventSection = page.locator('details[data-section="Event details"]');
-  await page.getByLabel('Go to section').selectOption('Event details');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Event details');
   await expect(eventSection).toHaveAttribute('open');
   await page.getByLabel('Event name', { exact: true }).fill('Unsaved synthetic event name');
   await tab(page, '02 Score');
@@ -126,7 +127,7 @@ test('Run progress uses the assigned panel and view selection preserves the actu
   await expect(page.getByRole('button', { name: 'Next heat / division', exact: true })).toHaveCount(0);
   await page.screenshot({path:'test-results/score-unsaved-setup.png',fullPage:false});
   await tab(page, '03 Results'); await tab(page, '01 Set up');
-  await page.getByLabel('Go to section').selectOption('Event details');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Event details');
   await expect(eventSection).toHaveAttribute('open');
   await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Unsaved synthetic event name');
   page.once('dialog', (d) => void d.accept()); await page.getByRole('button', { name: 'Discard edits', exact: true }).click();
@@ -187,7 +188,7 @@ test('unfinished competition routes to exact Finals; complete-event preview prec
   await click(headPage, headResult.getByRole('button', { name: 'Approve these exact submissions', exact: true }), 'approve');
   await page.reload(); await tab(page, '04 Publish'); await click(page, page.getByRole('button', { name: 'Review results to publish', exact: true }), 'prepare-event-publication');
   const previews = page.locator('[data-publication-id]'); await expect(previews).toHaveCount(2);
-  for (const preview of await previews.all()) { await expect(preview).not.toHaveAttribute('open'); await preview.locator(':scope > summary').click(); }
+  for (const preview of await previews.all()) await expect(preview).toHaveAttribute('open');
   await expect(previews.nth(0)).toHaveAttribute('open'); await expect(previews.nth(1)).toHaveAttribute('open');
   expect(await page.locator('details[data-section="Data & recovery"]').evaluate((recovery) => [...document.querySelectorAll('[data-publication-id]')].every((preview) => Boolean(preview.compareDocumentPosition(recovery) & Node.DOCUMENT_POSITION_FOLLOWING)))).toBe(true);
   await layouts(page, 'publication-preview');

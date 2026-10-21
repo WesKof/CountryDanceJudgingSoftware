@@ -1017,3 +1017,79 @@ button:disabled { cursor: not-allowed; opacity: .48; }
  .organizer-shell .save-state small, .organizer-shell .save-check { display:none; }
  .organizer-shell .primary-button, .organizer-shell .quiet-button { min-height:44px; font-size:13px; }
 }
+
+/* Event organization and setup: one current task, then optional context. */
+.shell-tools { display:flex; align-items:center; gap:14px; min-width:0; flex-wrap:wrap; }
+.organizer-shell .setup-action-first { min-height:0; padding:20px 24px; }
+.organizer-shell .setup-action-first > div { width:100%; }
+.organizer-shell .setup-action-first h2 { margin:6px 0; font-size:29px; }
+.organizer-shell .setup-action-first p:not(.kicker) { margin:8px 0; font-size:14px; }
+.organizer-shell .setup-action-first .setup-freeze-note { max-width:700px; color:#f6dfad; font-size:13px; }
+.shared-shell .setup-checklist { margin-top:16px; background:transparent; border-color:#ffffff60; color:#fff8e9; }
+.shared-shell .setup-checklist > summary { color:#f5dba5; min-height:24px; }
+.setup-checklist ol { list-style:none; padding:0; margin:10px 0 0; }
+.setup-checklist li { display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid #ffffff40; }
+.setup-checklist li > span { display:grid; place-items:center; width:24px; height:24px; flex:0 0 24px; color:#183429; background:#f5dba5; border-radius:5px; font-weight:800; }
+.setup-checklist li.is-complete > span { border-radius:50%; background:#d7eddf; }
+.setup-checklist li > div { flex:1; min-width:0; }
+.setup-checklist small { display:block; font-size:13px; line-height:1.5; color:#e4ece6; }
+.shared-shell .setup-checklist button { margin-top:0; }
+.organizer-shell .setup-page .setup-toolbar { position:relative; top:0; z-index:5; box-shadow:0 5px 20px #302a2010; align-items:center; }
+.shared-shell .setup-saved-details { padding:0; background:var(--panel); }
+.shared-shell .setup-saved-details > summary { padding:16px 18px; min-height:52px; color:var(--forest); }
+.setup-saved-details > summary small { display:inline-block; margin-left:12px; color:var(--muted); font-weight:400; font-size:13px; }
+.setup-saved-details > fieldset { padding:14px; }
+.shared-shell .setup-page .setup-main-card > summary { padding:14px 16px; min-height:76px; }
+.shared-shell .setup-page .setup-main-card > summary h2 { font-size:22px; }
+.shared-shell .setup-page .setup-main-card > summary .kicker { font-size:10px; margin-bottom:4px; }
+.shared-shell .setup-page .setup-main-card > summary .section-summary { margin:5px 0 0; font-size:13px; }
+.event-workspace-start { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.event-workspace-start h3 { margin:0; }
+.event-workspace-start p { margin:6px 0; color:var(--muted); }
+.event-card { display:flex; align-items:center; gap:16px; justify-content:space-between; padding:16px; margin:10px 0; border:1px solid var(--line); border-radius:12px; background:var(--panel); min-width:0; }
+.event-card > div:first-child { flex:1; min-width:0; }
+.event-card-title { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.event-card-title strong { font-size:16px; overflow-wrap:anywhere; }
+.event-card p { margin:6px 0 0; font-size:13px; color:var(--muted); }
+.event-badge { padding:3px 7px; font-size:11px; border-radius:20px; background:var(--sage); color:var(--forest); white-space:nowrap; }
+.event-badge.archived { background:#e3eaf3; color:#243c52; }
+.event-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.event-archive > summary { color:var(--forest); }
+@media(max-width:720px) {
+ .shell-tools { width:100%; justify-content:space-between; gap:10px; }
+ .judge-focused-shell .shell-tools { grid-column:2; }
+ .organizer-shell .setup-action-first { padding:18px; }
+ .organizer-shell .setup-action-first h2 { font-size:25px; }
+ .setup-checklist li { flex-wrap:wrap; }
+ .setup-checklist li > div { flex-basis:65%; }
+ .setup-checklist li button { margin-left:34px; }
+ .event-card { align-items:stretch; flex-direction:column; gap:10px; }
+ .event-card-actions > * { flex:1; }
+ .setup-saved-details > summary small { display:block; margin:6px 0 0; }
+}
+
+.pending-finals-draw { min-width:0; }
+.shared-shell .pending-finals-draw > details { border:2px solid #c49b43; box-shadow:0 10px 30px #302a2010; }
+.shared-shell .pending-finals-draw > details > summary { padding:10px; color:var(--forest); }
+.organizer-shell .organizer-results .round-context > label, .organizer-shell .organizer-results .context-status { padding:10px 14px; }
+.organizer-shell .organizer-results .context-status .kicker { display:none; }
+.organizer-shell .organizer-results .round-overview { padding:8px 14px; }
+.organizer-shell .publication-task .form-body { padding:18px 22px; }
+.organizer-shell .publication-task h2 { margin:0; font-size:27px; }
+.organizer-shell .publication-task-status { display:inline-block; margin:10px 0 0; padding:5px 10px; border-radius:8px; background:var(--sage); color:var(--forest); font:700 15px Arial,sans-serif; }
+
+/* Save stays within reach; optional navigation never occupies the scoring space. */
+.organizer-shell .setup-page .setup-toolbar { padding:10px 12px; }
+.organizer-shell .setup-save-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; width:100%; }
+.organizer-shell .setup-save-controls > span { flex:1; font-size:12px; line-height:1.4; }
+.shared-shell .setup-navigation { padding:10px 14px; background:transparent; }
+.shared-shell .setup-navigation > summary { color:var(--forest); font-size:14px; min-height:24px; }
+.setup-navigation-controls { display:flex; flex-wrap:wrap; align-items:end; gap:16px; margin-top:12px; }
+.organizer-shell .setup-page details[data-section] > summary { scroll-margin-top:112px; }
+@media(max-width:720px) {
+ .organizer-shell .setup-save-controls > span { flex-basis:46%; }
+ .organizer-shell .setup-save-controls > button { min-height:42px; padding:10px 14px; }
+ .organizer-shell .setup-page details[data-section] > summary { scroll-margin-top:134px; }
+}
+
+.organizer-shell .setup-page .setup-toolbar.has-draft { position:sticky; top:8px; }

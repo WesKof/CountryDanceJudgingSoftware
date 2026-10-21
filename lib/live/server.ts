@@ -1,5 +1,5 @@
 import { resultAudit } from './result-audit.ts';
-import { cellKey, roundKey, type Cells, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
+import { cellKey, roundKey, type Cells, type EventSummary, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
 import { deriveStandings, missingCells, requiredCells, LIVE_MARKS } from './scoring.ts';
 import { finalistLimitIssues, finalistCountIssues, freezeRound, id, integer, LiveError, record, requireRule, text, validateSetup } from './validation.ts';
 import { populateFinalists } from './finalists.ts';
@@ -518,6 +518,13 @@ async function advanceReadyStage(db: D1Database, codeHash: string) {
   }
 }
 
+// Organizer catalog reads need no ballots, private notes or result computation.
+export async function readEventSummary(db: D1Database, code: string): Promise<EventSummary> {
+  const event = await stmt(db, 'SELECT e.id, e.version, e.status, e.setup, l.role FROM live_events e JOIN live_links l ON l.event_id = e.id WHERE l.code_hash = ? AND l.revoked = 0', await hash(code)).first<Pick<EventRow, 'id' | 'version' | 'status' | 'setup' | 'role'>>();
+  if (!event || event.role !== 'organizer') throw new LiveError(403, 'An active organizer link is required to open this event.');
+  const setup = parse<LiveSetup>(event.setup);
+  return { eventId: event.id, version: event.version, status: event.status, name: setup.name, venue: setup.venue, date: setup.date, competitionCount: setup.competitions.length };
+}
 export async function readLive(db: D1Database, code: string) { return view(db, await load(db, await hash(code))); }
 
 export async function mutateLive(db: D1Database, code: string, unknownInput: unknown) {
@@ -546,6 +553,19 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
     organizer(s); requireRule(s.event.status === 'archived', 'Archive the event before deleting it.');
     const statements = guard(db, stmt(db, 'DELETE FROM live_events WHERE id = ? AND version = ? AND status = ? AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND revoked = 0)', s.event.id, integer(input.expectedVersion), 'archived', codeHash));
     await batch(db, statements); return { deleted: true };
+  }
+  if (input.action === 'reactivate') {
+    organizer(s); requireRule(s.event.status === 'archived', 'This event is already active.');
+    if (input.expectedVersion !== s.event.version) throw new LiveError(409, 'The event changed. Refresh before returning it to active events.');
+    const response = { ok: true };
+    const statements = guard(db, stmt(db, "UPDATE live_events SET status = 'active', version = version + 1 WHERE id = ? AND version = ? AND status = 'archived' AND EXISTS (SELECT 1 FROM live_links WHERE code_hash = ? AND role = 'organizer' AND revoked = 0)", s.event.id, s.event.version, codeHash));
+    statements.push(stmt(db, 'INSERT INTO live_receipts (id, event_id, input_hash, response) VALUES (?, ?, ?, ?)', receiptId, s.event.id, inputHash, json(response)));
+    try { await batch(db, statements); }
+    catch (error) {
+      const retry = await stmt(db, 'SELECT response FROM live_receipts WHERE id = ? AND input_hash = ?', receiptId, inputHash).first<{ response: string }>();
+      if (retry) return parse(retry.response); throw error;
+    }
+    return response;
   }
   active(s);
   let statements: D1PreparedStatement[] = [];

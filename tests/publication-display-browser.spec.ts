@@ -40,8 +40,8 @@ test('Publish clearly distinguishes review, send and released states while score
   await expect(task.getByRole('button', { name: 'Send results for approval', exact: true })).toBeVisible();
   const before = await api<LiveView>(organizer), snapshot = before.publications![0].snapshot;
   const preview = page.locator('[data-publication-id]').first();
-  await expect(preview).not.toHaveAttribute('open');
-  await preview.locator(':scope > summary').focus(); await preview.locator(':scope > summary').press('Enter');
+  await expect(preview).toHaveAttribute('open');
+  await preview.locator(':scope > summary').focus();
   await expect(preview.locator('.result-group')).toContainText('6.5000');
   await preview.getByText('Prelims, scorecards & scoring details', { exact: true }).click();
   const finalCards = preview.locator('.snapshot-stage').filter({ has: page.getByRole('heading', { name: 'Finals', exact: true }) });
@@ -125,7 +125,7 @@ test('J&J publication groups Prelims by role and Finals by the actual couple wit
   await command(organizer, { action: 'conclude-stage' }); await exact(head, finals.id, 'approve');
   await command(organizer, { action: 'prepare-event-publication' }); const before = await api<LiveView>(organizer), snapshot = before.publications![0].snapshot;
   const context = await browser.newContext(), page = await context.newPage(); await page.goto(base + path); await publishTab(page);
-  const competitionCard = page.locator('[data-publication-id]'); await competitionCard.locator(':scope > summary').click();
+  const competitionCard = page.locator('[data-publication-id]'); await expect(competitionCard).toHaveAttribute('open');
   const preview = page.locator('.publication-preview'); await preview.getByText('Prelims, scorecards & scoring details', { exact: true }).click();
   const pre = preview.locator('.snapshot-stage').filter({ has: page.getByRole('heading', { name: 'Prelims', exact: true }) });
   await expect(pre.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible(); await expect(pre.getByRole('heading', { name: 'Follows', exact: true })).toBeVisible();

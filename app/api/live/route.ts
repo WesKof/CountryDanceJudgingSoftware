@@ -1,5 +1,5 @@
 import { getDb } from '@/db';
-import { mutateLive, readLive } from '@/lib/live/server';
+import { mutateLive, readEventSummary, readLive } from '@/lib/live/server';
 import { LiveError } from '@/lib/live/validation';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,7 @@ function failure(error: unknown) {
   return Response.json({ error: 'Shared storage is temporarily unavailable. Keep this page open; pending edits can be retried.' }, { status: 503, headers });
 }
 export async function GET(request: Request) {
-  try { return Response.json(await readLive(getDb(), code(request)), { headers }); } catch (error) { return failure(error); }
+  try { return Response.json(await (new URL(request.url).searchParams.get('summary') === '1' ? readEventSummary(getDb(), code(request)) : readLive(getDb(), code(request))), { headers }); } catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
   try {

@@ -34,6 +34,7 @@ export type ResultAuditEntry = {
   rows?: { number: number; primary: string; secondary: string; place: number; average: number; advancing?: boolean }[];
   marks?: { entrant: string; song: string; mark: LiveMark }[];
 };
+export type EventSummary = { eventId: string; version: number; status: 'active' | 'archived'; name: string; venue: string; date: string; competitionCount: number };
 export type LiveView = {
   eventId: string; version: number; status: 'active' | 'archived'; setup: LiveSetup; context: LiveContext;
   role: 'organizer' | 'judge' | 'head'; judgeId: string | null; rounds: RoundView[]; ballots: LiveBallot[];

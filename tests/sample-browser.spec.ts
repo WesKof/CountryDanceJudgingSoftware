@@ -43,7 +43,7 @@ test('new visitors get a ready sample on the main page; fresh samples and blank 
  await expandSetup(page);page.once('dialog',(d)=>void d.accept());await page.getByRole('button',{name:'Start a blank event',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'New country dance event'})).toBeVisible();await expect(page.getByText('Sample event · fictional people',{exact:true})).toHaveCount(0);
  await expandSetup(page);await expect(page.getByRole('link',{name:'Open judge page',exact:true})).toHaveCount(0);
- await page.getByLabel('Saved event',{exact:true}).selectOption(binding.path);await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
+ await page.locator('[data-event-path="'+binding.path+'"]').getByRole('link',{name:/^Open event/}).click();await expect(page.getByRole('heading',{level:1,name:'Sample Country Dance Social'})).toBeVisible();
  expect((await api<LiveView>(judgeToken)).ballots).toEqual(observed.ballots);expect(failures).toEqual([]);await context.close();
 });
 

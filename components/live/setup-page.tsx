@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { SetupTask } from '@/lib/live/setup-guidance';
 import SetupSection, { revealSetupSection } from './setup-section';
 
-export default function SetupPage({ automaticStages = false, scoringStage, openScoring, token, competitionCount, toolbar, sampleHelp, otherEvents, children, hasRounds, hasDraft }: {
-  automaticStages?: boolean; scoringStage?: string; openScoring?: () => void; token: string; competitionCount: number; toolbar: ReactNode; sampleHelp?: ReactNode; otherEvents?: ReactNode; children: ReactNode; hasRounds: boolean; hasDraft: boolean;
+export default function SetupPage({ automaticStages = false, tasks = [], openTask, archived = false, supporting = false, scoringStage, openScoring, token, toolbar, sampleHelp, otherEvents, children, hasRounds, hasDraft }: {
+  automaticStages?: boolean; tasks?: SetupTask[]; openTask?: (task: SetupTask) => void; archived?: boolean; supporting?: boolean; scoringStage?: string; openScoring?: () => void; token: string; competitionCount: number; toolbar: ReactNode; sampleHelp?: ReactNode; otherEvents?: ReactNode; children: ReactNode; hasRounds: boolean; hasDraft: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const tools = useRef<HTMLDetailsElement>(null);
@@ -17,10 +18,19 @@ export default function SetupPage({ automaticStages = false, scoringStage, openS
     try { await navigator.clipboard.writeText(new URL(`/?event=${token}`, window.location.origin).href); setNotice('Organizer link copied. Keep it private.'); }
     catch { setNotice('Copy the organizer link from the address bar.'); }
   }
+  const nextTask=tasks.find((t)=>!t.complete), readyCount=tasks.filter((t)=>t.complete).length;
   return <div ref={root} className="page-stack setup-page">
-    <section className="hero-panel setup-hero"><div><p className="kicker">{scoringStage && !hasDraft ? 'Setup saved · scoring is open' : 'Event foundation'}</p><h2>{scoringStage && !hasDraft ? `${scoringStage === 'prelims' ? 'Prelims' : 'Finals'} is ready for judges` : 'Set up the desk once'}</h2>{scoringStage && !hasDraft ? <><p>Judges can score now. Open the judging desk for their links and progress.</p><button className="primary-button" onClick={openScoring}>Open judging desk</button></> : <p>Prepare event details, competitions, judges and entries. {automaticStages ? 'Saving a complete stage setup opens scoring automatically and freezes its entries, heats, songs and judge assignments. Results review follows judge submissions.' : 'Save setup before starting the stage.'}</p>}{sampleHelp}</div><span className="format-stamp">{competitionCount} competitions</span></section>
-    <div className="setup-toolbar">
+    <section className="hero-panel setup-hero setup-action-first"><div><p className="kicker">{archived ? 'Saved record' : scoringStage && !hasDraft && !nextTask ? 'Setup saved · scoring is open' : nextTask ? 'Your next setup step' : hasDraft ? 'Ready to save' : 'Event foundation'}</p>
+      <h2>{archived ? 'Archived event · read only' : nextTask ? nextTask.label : scoringStage && !hasDraft ? `${scoringStage === 'prelims' ? 'Prelims' : 'Finals'} is ready for judges` : hasDraft ? 'Review and save your setup' : 'Setup is saved'}</h2>
+      <p>{archived ? 'Scores, results and history stay available. Use Events to return this event to active.' : nextTask ? nextTask.detail : scoringStage && !hasDraft ? 'Judges can score now. Open the judging desk for their links and progress.' : hasDraft ? 'Save when the preparation is ready.' : 'Open the judging desk for current progress and next steps.'}</p>
+      {!archived && (nextTask ? <button className="primary-button" onClick={()=>openTask?.(nextTask)}>Open this step</button> : !hasDraft && <button className="primary-button" onClick={openScoring}>Open judging desk</button>)}
+      {automaticStages && !archived && (!supporting || hasDraft) && <p className="setup-freeze-note">Saving complete preparation opens scoring automatically and freezes entries, heats, songs and judge assignments.</p>}
+      {tasks.length>0 && !archived && <details className="setup-checklist"><summary>Preparation checklist · {readyCount} / {tasks.length} ready</summary><ol>{tasks.map((task)=><li key={task.id} className={task.complete?'is-complete':'needs-action'}><span aria-hidden="true">{task.complete?'✓':'!'}</span><div><strong>{task.label}</strong><small>{task.detail}</small></div><button className="quiet-button" onClick={()=>openTask?.(task)}>{task.complete?'Review':'Open'}<span className="sr-only"> · {task.label}</span></button></li>)}</ol></details>}
+      {sampleHelp}</div></section>
+    <div className={`setup-toolbar${hasDraft ? ' has-draft' : ''}`}>
       <div className="setup-save-controls">{toolbar}</div>
+    </div>
+    <details className="setup-navigation"><summary>Setup navigation &amp; tools</summary><div className="setup-navigation-controls">
       <label className="setup-section-picker"><span>Go to section</span><select aria-label="Go to section" defaultValue="" onChange={(event) => {
         if (root.current && event.target.value) revealSetupSection(root.current, event.target.value);
         event.target.value = '';
@@ -30,8 +40,8 @@ export default function SetupPage({ automaticStages = false, scoringStage, openS
         if (root.current) revealSetupSection(root.current, 'Other events');
       }}>Other events</button></div></details>
       {notice && <p className="setup-tool-notice" role="status">{notice}</p>}
-    </div>
-    {children}
+    </div></details>
+    {supporting ? <details id="setup-saved-details" className="setup-saved-details"><summary>Saved setup details <small>Event, program, panel &amp; entries</small></summary>{children}</details> : children}
     {otherEvents ?? <SetupSection title="Other events" caption="Workspace"><div className="form-body"><p>Open your saved events or start another event from the organizer home. This event and its judging history stay saved.</p><a className="quiet-button" href={`/?event=${token}#other-events`} onClick={(event) => {
       if (hasDraft && !window.confirm('Open Other events at the organizer home? Unsaved setup edits will be discarded. Saved setup and judging history stay intact.')) event.preventDefault();
     }}>Open event workspace</a></div></SetupSection>}

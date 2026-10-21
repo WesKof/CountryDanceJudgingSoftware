@@ -12,7 +12,7 @@ const newId = () => crypto.randomUUID();
 const song = (number: number): Performance => ({ id: newId(), title: `Song ${number}`, artist: '', tempo: '', notes: '', partners: [] });
 const heat = (number: number) => ({ id: newId(), name: `Heat ${number}`, subjectIds: [] as string[], songs: [song(1), song(2)] });
 
-export default function SetupEditor({ setup, update, frozenIds, correction, initialRoundId, initialSection, viewRoundId, onSelectRound, approvedPrelimIds, withdrawnIdsByRound = {} }: { approvedPrelimIds?: string[]; withdrawnIdsByRound?: Record<string, string[]>; initialRoundId?: string; initialSection?: string; viewRoundId?: string; onSelectRound?: (id: string) => void; setup: LiveSetup; update: (s: LiveSetup) => void; frozenIds: string[]; correction: boolean }) {
+export default function SetupEditor({ setup, update, frozenIds, correction, initialRoundId, initialSection, initialRequest, viewRoundId, onSelectRound, approvedPrelimIds, withdrawnIdsByRound = {} }: { approvedPrelimIds?: string[]; withdrawnIdsByRound?: Record<string, string[]>; initialRoundId?: string; initialSection?: string; initialRequest?: number; viewRoundId?: string; onSelectRound?: (id: string) => void; setup: LiveSetup; update: (s: LiveSetup) => void; frozenIds: string[]; correction: boolean }) {
   const editor = useRef<HTMLDivElement>(null);
   const roundSection = useRef<HTMLDetailsElement>(null);
   const finalistsSection = useRef<HTMLDetailsElement>(null);
@@ -30,10 +30,11 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
     if (!initialSection || (initialRoundId && round?.id !== initialRoundId)) return;
     const target = [...(editor.current?.querySelectorAll<HTMLDetailsElement>('details[data-section]') ?? [])].find((d) => d.dataset.section === initialSection);
     if (!target) return;
-    for (let parent: HTMLElement | null = target; parent && parent !== editor.current; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
-    target.scrollIntoView({ block: 'center' });
-    target.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), summary')?.focus({ preventScroll: true });
-  }, [initialSection, initialRoundId, round?.id]);
+    for (let parent: HTMLElement | null = target; parent; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
+    const summary = target.querySelector<HTMLElement>(':scope > summary');
+    (summary ?? target).scrollIntoView({ block: 'start' });
+    summary?.focus({ preventScroll: true });
+  }, [initialSection, initialRoundId, initialRequest, round?.id]);
   const competition = setup.competitions.find((c) => c.id === round?.competitionId);
   const locked = Boolean(round && frozenIds.includes(round.id) && !correction);
   const finalRound = round?.kind === 'finals' ? round : setup.rounds.find((r) => r.prelimRoundId === round?.id);

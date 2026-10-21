@@ -7,7 +7,7 @@ import { sampleSetup, blankSetup, isolateSetup } from '@/lib/sample-setup';
 import { validateSetup } from '@/lib/live/validation';
 import type { LiveView, LiveSetup } from '@/lib/live/types';
 import LiveDesk from './desk';
-import SetupSection from './setup-section';
+import EventWorkspace, { type SavedEvent } from './event-workspace';
 import { LiveShell } from './shell';
 import { creationNonce, download, liveApi } from './client';
 
@@ -15,7 +15,6 @@ const BINDING_KEY = 'country-dance-judging:rehearsal';
 const HISTORY_KEY = 'country-dance-judging:organizer-history';
 const LEGACY_KEY = 'country-dance-judging:v2';
 type Binding = { nonce: string; path?: string; configured?: boolean; sample?: boolean; source?: 'sample' | 'blank' | 'legacy' };
-type SavedEvent = { path: string; name: string; sample?: boolean };
 const validPath = (path: unknown): path is string => typeof path === 'string' && /^\/live\/[a-zA-Z0-9_-]+$/.test(path);
 const inFlight = new Map<string, Promise<Binding>>();
 
@@ -27,8 +26,8 @@ function history(): SavedEvent[] {
 function remember(binding: Binding, view: LiveView) {
   const events = history();
   const existing=events.find((e)=>e.path===binding.path);
-  if(existing) {existing.name=view.setup.name; existing.sample=binding.sample;}
-  else events.push({ path: binding.path!, name: view.setup.name, sample: binding.sample });
+  if(existing) {existing.name=view.setup.name; existing.sample=binding.sample; existing.status=view.status; existing.date=view.setup.date; existing.venue=view.setup.venue;}
+  else events.push({ path: binding.path!, name: view.setup.name, sample: binding.sample, status:view.status, date:view.setup.date, venue:view.setup.venue });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(events));
   localStorage.setItem(BINDING_KEY, JSON.stringify(binding));
 }
@@ -58,6 +57,7 @@ export default function OrganizerHome() {
   const [binding,setBinding] = useState<Binding|null>(null), [error,setError] = useState(''), [busy,setBusy] = useState(true);
   const [legacy,setLegacy] = useState<AppState|null>(null), [legacyError,setLegacyError] = useState('');
   const [events,setEvents] = useState<SavedEvent[]>([]);
+  const [historyReady,setHistoryReady] = useState(false);
   const started = useRef<Promise<Binding>|null>(null);
   function loadLegacy() {
     const raw=localStorage.getItem(LEGACY_KEY); if (!raw) return null;
@@ -66,7 +66,8 @@ export default function OrganizerHome() {
     setLegacy(parsed); return parsed;
   }
   async function initialize() {
-    history(); // Validate retained links before any new event or storage writes.
+    const retained = history(); // Validate and reveal retained links before reading the current event.
+    setEvents(retained); setHistoryReady(true);
     let savedLegacy: AppState|null=null;
     try { savedLegacy=loadLegacy(); } catch (e) { setLegacyError((e as Error).message); }
     const supplied = new URLSearchParams(window.location.search).get('event');
@@ -101,7 +102,7 @@ export default function OrganizerHome() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   async function create(source:'sample'|'blank') {
-    if (busy || !window.confirm(source==='sample' ? 'Open a fresh sample event? Your current event, scores and links will remain saved. Unsaved setup edits will be discarded.' : 'Open a new event? Your current event, scores and links will remain saved. Unsaved setup edits will be discarded.')) return;
+    if (busy || !historyReady || !window.confirm(source==='sample' ? 'Open a fresh sample event? Your current event, scores and links will remain saved. Unsaved setup edits will be discarded.' : 'Open a new event? Your current event, scores and links will remain saved. Unsaved setup edits will be discarded.')) return;
     setBusy(true);setError('');setBinding(null);
     try {
       const current:Binding={nonce:creationNonce(),source,sample:source==='sample'};
@@ -112,7 +113,7 @@ export default function OrganizerHome() {
   }
   async function restoreLegacy(e:ChangeEvent<HTMLInputElement>) {
     const file=e.target.files?.[0];e.target.value='';
-    if(!file || !window.confirm('Restore legacy device data and open its setup as a fresh event? Current stage events remain saved. Keep a backup of the device history first.')) return;
+    if(!file || busy || !historyReady || !window.confirm('Restore legacy device data and open its setup as a fresh event? Current stage events remain saved. Keep a backup of the device history first.')) return;
     setBusy(true);setError('');
     try {
       if(file.size>1500000) throw new Error('Backup is too large.');
@@ -126,9 +127,17 @@ export default function OrganizerHome() {
       setBinding(await configure(current,setup));setEvents(history());
     }catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
-  const recovery=<details className="legacy-recovery"><summary>Legacy device backup &amp; history</summary>{legacyError&&<p role="alert">{legacyError}</p>}{legacy&&<><p>{legacy.event.name} · original v2 scores, sums and revisions retained separately from stage judging.</p><button className="quiet-button" onClick={()=>download('device-operational-backup.json',JSON.stringify({format:'country-dance-judging-backup',backupVersion:1,exportedAt:new Date().toISOString(),event:{...legacy,publisherUrl:''}},null,2))}>Download JSON</button><details><summary>Original scores and revision history</summary><pre className="shared-json">{JSON.stringify({competitions:legacy.competitions,removedCompetitions:legacy.removedCompetitions},null,2)}</pre></details></>}<label className="file-button secondary">Restore JSON<input type="file" accept="application/json,.json" disabled={busy} onChange={(e)=>void restoreLegacy(e)}/></label></details>;
+  const recovery=<details className="legacy-recovery"><summary>Legacy device backup &amp; history</summary>{legacyError&&<p role="alert">{legacyError}</p>}{legacy&&<><p>{legacy.event.name} · original v2 scores, sums and revisions retained separately from stage judging.</p><button className="quiet-button" onClick={()=>download('device-operational-backup.json',JSON.stringify({format:'country-dance-judging-backup',backupVersion:1,exportedAt:new Date().toISOString(),event:{...legacy,publisherUrl:''}},null,2))}>Download JSON</button><details><summary>Original scores and revision history</summary><pre className="shared-json">{JSON.stringify({competitions:legacy.competitions,removedCompetitions:legacy.removedCompetitions},null,2)}</pre></details></>}<label className="file-button secondary">Restore JSON<input type="file" accept="application/json,.json" disabled={busy || !historyReady} onChange={(e)=>void restoreLegacy(e)}/></label></details>;
   const sampleHelp=binding?.sample ? <details className="setup-sample-help"><summary>Sample help · fictional event</summary><p className="kicker">Sample event · fictional people</p><h2>Try the competition flow</h2><p>Prelims scoring opens automatically when the sample is ready. Open Score, then each judge link to score, review and submit. Use Results for approved advancement; Finals entrants populate automatically. For J&J, enter the actual Finals pairing draw, then Save setup.</p><p>For a real competition, start a blank event and enter the actual organizer, judges and program before saving the complete setup.</p></details> : undefined;
-  const intro=<div className="page-stack organizer-home-intro">{error&&<p role="alert" className="notice">{error}</p>}<SetupSection title="Other events" caption="Workspace"><div className="form-body"><p>Each event keeps its own setup, scores and private judge links.</p><div className="shared-inline"><button className="quiet-button" disabled={busy} onClick={()=>void create('sample')}>Try a fresh sample</button><button className="quiet-button" disabled={busy} onClick={()=>void create('blank')}>Start a blank event</button></div>{events.length>0&&<label><span>Saved event</span><select aria-label="Saved event" value={binding?.path ?? ''} disabled={busy} onChange={(e)=>{window.location.assign('/?event='+encodeURIComponent(e.target.value.split('/').at(-1)!));}}><option value="" disabled>Choose an event</option>{events.map((e,index)=><option key={e.path} value={e.path}>{index+1}. {e.name}{e.sample?' · Sample':''}</option>)}</select></label>}</div></SetupSection></div>;
+  const intro=<div className="page-stack organizer-home-intro">{error&&<p role="alert" className="notice">{error}</p>}<EventWorkspace key={binding?.path ?? 'opening'} events={events} current={binding?.path} busy={busy} ready={historyReady} create={(source)=>void create(source)} remember={(next)=>{
+    if (!historyReady) return;
+    // A summary refresh can finish after a new event is added in another view/tab.
+    // Merge only its known paths so a late read cannot remove saved organizer access.
+    const updates = new Map(next.map((entry)=>[entry.path,entry]));
+    const merged = history().map((entry)=>updates.get(entry.path) ?? entry);
+    for (const entry of next) if (!merged.some((saved)=>saved.path===entry.path)) merged.push(entry);
+    localStorage.setItem(HISTORY_KEY,JSON.stringify(merged));setEvents(merged);
+  }} /></div>;
   if(!binding || busy) return <LiveShell title="Country Dance Judging" identity="Organizer" status={busy?'Opening your event…':'Event unavailable'} items={['Set up','Score','Results','Publish']} current={0} navigate={()=>{}} navigationDisabled>{intro}{!busy&&<button className="quiet-button" onClick={()=>window.location.reload()}>Retry</button>}{recovery}</LiveShell>;
   return <LiveDesk key={binding.path} token={binding.path!.split('/').at(-1)!} setupIntro={intro} sampleHelp={sampleHelp} recoveryExtra={recovery}/>;
 }

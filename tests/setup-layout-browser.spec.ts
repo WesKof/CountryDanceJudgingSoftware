@@ -1,3 +1,4 @@
+import { openSetupNavigation } from './setup-browser-helpers';
 import { test, expect } from '@playwright/test';
 import { createStage, limitedStage } from './publication-helpers';
 import { api, base } from './stage-helpers';
@@ -14,16 +15,16 @@ test('Set up section navigation and responsive resizing preserve drafts, selecti
   expect((await banner.boundingBox())!.y + (await banner.boundingBox())!.height).toBeLessThan((await toolbar.boundingBox())!.y);
   const before = await api<LiveView>(organizer), posts: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/api/live')) posts.push(request.postDataJSON().action); });
-  await page.getByLabel('Go to section').selectOption('Event details');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Event details');
   await page.getByLabel('Venue', { exact: true }).fill('Synthetic responsive venue');
   const details = page.locator('details[data-section="Event details"]');
   await details.locator(':scope > summary').focus(); await page.keyboard.press('Enter');
   await expect(details).not.toHaveAttribute('open');
   await expect(details.locator(':scope > summary')).toContainText('Synthetic responsive venue');
-  await page.getByLabel('Go to section').selectOption('Program & stages');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Program & stages');
   await page.locator('.competition-card').nth(1).click();
   await page.getByLabel('Select round to configure', { exact: true }).selectOption(setup.rounds[3].id);
-  await page.getByLabel('Go to section').selectOption('Judges');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Judges');
   for (const width of [390, 360, 768, 1100, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(details).not.toHaveAttribute('open');
@@ -31,13 +32,13 @@ test('Set up section navigation and responsive resizing preserve drafts, selecti
     await expect(page.getByLabel('Select round to configure')).toHaveValue(setup.rounds[3].id);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
-  await page.getByLabel('Go to section', { exact: true }).selectOption('Event details');
+  await openSetupNavigation(page);await page.getByLabel('Go to section', { exact: true }).selectOption('Event details');
   await expect(details).toHaveAttribute('open');
   await expect(details.locator(':scope > summary')).toBeFocused();
   await expect(page.getByLabel('Venue', { exact: true })).toHaveValue('Synthetic responsive venue');
   await expect(page.locator('details[data-section="Judges"]')).toHaveAttribute('open');
   await expect(page.locator('details[data-section="Round setup"]')).not.toHaveAttribute('open');
-  await page.locator('.setup-event-tools > summary').click();
+  await openSetupNavigation(page);await page.locator('.setup-event-tools > summary').click();
   await page.getByRole('button', { name: 'Other events', exact: true }).click();
   await expect(page.locator('details[data-section="Other events"]')).toHaveAttribute('open');
   await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeEnabled();

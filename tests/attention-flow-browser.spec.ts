@@ -73,7 +73,6 @@ test('fresh sample runs from setup through automatic stages and private publicat
     for (let i=0;i<2;i++) { await head.getByRole('button', {name:'Approve these exact submissions',exact:true}).first().click(); await expect(head.getByRole('button', {name:'Approve these exact submissions',exact:true})).toHaveCount(1-i); }
     await expect(head.getByRole('heading',{name:'Prelims results approved',exact:true})).toBeVisible();
     await desk.reload(); await desk.getByRole('button',{name:'02 Score',exact:true}).click();
-    await desk.getByRole('button',{name:'Set Finals pairings',exact:true}).click();
     await desk.getByLabel('#201 Jordan Lee pairs with',{exact:true}).selectOption({label:'#301 Morgan Davis'});
     await desk.getByRole('button',{name:'Save Finals pairings',exact:true}).click();
     await expect(desk.getByRole('heading',{name:'Judging in progress',exact:true})).toBeVisible();
@@ -108,8 +107,7 @@ test('fresh sample runs from setup through automatic stages and private publicat
     await expect(desk.getByRole('button',{name:'Send results for approval',exact:true})).toBeVisible();
     await expect(desk.locator('.publication-competition')).toHaveCount(2);
     for(const card of await desk.locator('.publication-competition').all()) {
-      await expect(card).not.toHaveAttribute('open');
-      await card.locator(':scope > summary').click();
+      await expect(card).toHaveAttribute('open');
       await expect(card.getByRole('heading',{name:'Final places',exact:true})).toBeVisible();
     }
     const prepared=await api<LiveView>(organizer);

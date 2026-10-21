@@ -4,7 +4,7 @@ import { createStage, exact } from './publication-helpers';
 import { sampleSetup } from '../lib/sample-setup';
 import type { LiveView } from '../lib/live/types';
 
-test('automatic desk keeps actions visible, hides context, and opens the exact Finals task in one click', async ({ browser }) => {
+test('automatic desk keeps actions visible, hides context, and exposes the actual Finals draw directly', async ({ browser }) => {
   const { organizer, tokens, head, path } = await createStage(sampleSetup());
   await command(organizer, { action: 'enable-auto-stages' });
   const deskContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -68,11 +68,10 @@ test('automatic desk keeps actions visible, hides context, and opens the exact F
     await expect(supporting).not.toHaveAttribute('open');
     await desk.screenshot({ path: 'test-results/action-first-finals-next-390.png', fullPage: true });
     const before = await api<LiveView>(organizer);
-    await desk.getByRole('button', { name: 'Set Finals pairings', exact: true }).click();
-    await expect(supporting).toHaveAttribute('open');
-    await expect(desk.locator('#run-finals')).toHaveAttribute('open');
     await expect(desk.getByLabel('#201 Jordan Lee pairs with', { exact: true })).toBeVisible();
-    await expect(desk.locator('#run-finals > summary')).toBeFocused();
+    await expect(supporting).not.toHaveAttribute('open');
+    await desk.getByLabel('#201 Jordan Lee pairs with', { exact: true }).focus();
+    await expect(desk.getByLabel('#201 Jordan Lee pairs with', { exact: true })).toBeFocused();
     expect((await api<LiveView>(organizer)).version).toBe(before.version);
     expect(await desk.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   } finally { await deskContext.close(); await judgeContext.close(); }

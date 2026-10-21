@@ -1,3 +1,4 @@
+import { openSetupNavigation } from './setup-browser-helpers';
 import { test, expect } from '@playwright/test';
 import { liveFixture } from './live-fixture';
 import { createStage } from './publication-helpers';
@@ -15,7 +16,7 @@ test('legacy setup distinguishes manually selected finalists from head-approved 
   expect(before.rounds).toHaveLength(0);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } }), page = await context.newPage();
   await page.goto(base + path);
-  await page.getByLabel('Go to section').selectOption('Round setup');
+  await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Round setup');
   const summary = page.locator('details[data-section="Finalists & pairings"] > summary');
   await expect(summary).toContainText('Finalists selected manually');
   await expect(summary).not.toContainText('Advancement approved');

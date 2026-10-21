@@ -8,8 +8,9 @@ export function revealSetupSection(root: HTMLElement, name: string) {
   for (let parent: HTMLElement | null = target; parent; parent = parent.parentElement) {
     if (parent instanceof HTMLDetailsElement) parent.open = true;
   }
-  target.scrollIntoView({ block: 'center' });
-  target.querySelector<HTMLElement>(':scope > summary')?.focus({ preventScroll: true });
+  const summary = target.querySelector<HTMLElement>(':scope > summary');
+  (summary ?? target).scrollIntoView({ block: 'start' });
+  summary?.focus({ preventScroll: true });
   return true;
 }
 

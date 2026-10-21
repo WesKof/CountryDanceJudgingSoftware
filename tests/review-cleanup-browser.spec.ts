@@ -75,6 +75,8 @@ test('archived review keeps votes and correction management read only while pres
   await judge.goto(base + view.judgeLinks![0].path);
   const votes = judge.getByRole('group', { name: 'Beginner / Intermediate · Couples advancement tie', exact: true });
   await expect(judge.getByText('Archived · read only', { exact: true })).toBeVisible();
+  const retained=judge.locator('[data-section="Completed judging & history"]');
+  await expect(retained).not.toHaveAttribute('open');await retained.locator(':scope > summary').click();
   await expect(votes).toBeVisible();
   for (const checkbox of await votes.getByRole('checkbox').all()) await expect(checkbox).toBeDisabled();
   await expect(votes.getByRole('button', { name: 'Submit advancement vote', exact: true })).toBeDisabled();

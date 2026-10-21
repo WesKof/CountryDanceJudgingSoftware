@@ -1,3 +1,4 @@
+import { openSetupNavigation } from './setup-browser-helpers';
 import { test, expect } from '@playwright/test';
 import { selectSetupRound, expandSetup, openJudgeAccess, openRecovery } from './setup-browser-helpers';
 import { readFile } from 'node:fs/promises';
@@ -36,7 +37,7 @@ test('equivalent local/shared setup buttons, confirmations, persistence, empty p
     await eventSection.locator(':scope > summary').focus(); await page.keyboard.press('Enter');
     await expect(page.getByLabel('Event name', { exact: true })).toBeVisible();
     await eventSection.locator(':scope > summary').click(); await expect(page.getByLabel('Event name', { exact: true })).toBeHidden();
-    await page.getByLabel('Go to section').selectOption('Program & stages');
+    await openSetupNavigation(page);await page.getByLabel('Go to section').selectOption('Program & stages');
     await page.locator('.competition-card').first().click();
     await expect(page.getByLabel('Select round to configure')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save setup', exact: true })).toBeDisabled();
@@ -140,7 +141,7 @@ test('main-page organizer reopens existing events and keeps judge links separate
   await page.goto(base);await expect(page.getByRole('heading',{level:1,name:setup.name})).toBeVisible();
   await expect(page.getByRole('button',{name:'Open organizer page',exact:true})).toHaveCount(0);
   await expect(page.locator('details.setup-main-card[open]')).toHaveCount(0);await expandSetup(page);
-  await page.locator('.setup-event-tools > summary').click(); await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
+  await openSetupNavigation(page);await page.locator('.setup-event-tools > summary').click(); await page.getByRole('button',{name:'Copy organizer link',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(base+'/?event='+token);
   await openJudgeAccess(page);const judgeOpen=page.waitForEvent('popup');await page.getByRole('link',{name:'Open judge page',exact:true}).first().click();
   const judge=await judgeOpen;await expect(judge).toHaveURL(/\/judge\//);await expect(judge.locator('.rail-item')).toHaveCount(1);

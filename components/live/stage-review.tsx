@@ -34,7 +34,7 @@ export function StageReview({ data, action, selectedRoundId, showRound, setupRou
   }
   const organizer = data.role === 'organizer';
   if (organizer) return <OrganizerResults data={data} action={action} selected={selectedRoundId ?? ''} select={(id) => showRound?.(id, 2)} setupRoute={setupRoute} navigate={navigate} openHeadAccess={openHeadAccess} />;
-  const actionable = reviewed.filter((r) => !r.standings?.approved && (data.role === 'head' || r.standings?.advancementTies?.some((t) => !t.complete && r.definition.judgeIds.includes(data.judgeId!) && !t.votes.some((v) => v.judgeId === data.judgeId))));
+  const actionable = data.status === 'active' ? reviewed.filter((r) => !r.standings?.approved && (data.role === 'head' || r.standings?.advancementTies?.some((t) => !t.complete && r.definition.judgeIds.includes(data.judgeId!) && !t.votes.some((v) => v.judgeId === data.judgeId)))) : [];
   const contextResults = reviewed.filter((r) => !actionable.includes(r));
   const completed = reviewed.filter((r) => r.standings?.approved);
   if (part === 'pending' && !pending.length && !actionable.length) return null;
@@ -47,8 +47,8 @@ export function StageReview({ data, action, selectedRoundId, showRound, setupRou
     {part !== 'history' && pending.length > 0 && <ReviewRequests data={data} action={action} pendingOnly />}
     {part !== 'pending' && <SetupSection title="Completed judging & history" caption="Retained records" summaryText={`${completed.length} approved rounds · scores, notes and request history`}>
       <div className="form-body page-stack"><LiveResults data={{ ...data, rounds: contextResults }} action={action} head={false} roundControls={controls} />{reviewed.map((round) => <SubmittedReview key={round.key} data={data} round={round} action={action} />)}
-        <ReviewRequests data={{ ...data, reviewRequests: data.reviewRequests?.filter((q) => data.role !== 'head' || q.appliedAt || q.cancelledAt) }} action={action} />
-        {!reviewed.length && data.ballots.map((b) => { const round = data.rounds.find((r) => r.key === b.roundKey); return round && <details key={b.roundKey}><summary>{round.definition.format} · {round.definition.division} · {round.definition.kind} · My saved records</summary>{round.definition.heats.map((h) => <details key={h.id}><summary>{h.name}</summary>{h.songs.map((p) => <div key={p.id}><h4>{p.title}</h4>{round.definition.subjects.filter((s) => h.subjectIds.includes(s.id)).map((s) => {const c = b.cells[`${p.id}:${s.id}`];return <p key={s.id}>#{s.number} {s.primary}: {c?.mark || 'Blank'}{c?.note && ` · ${c.note}`}</p>;})}</div>)}</details>)}</details>;})}
+        <ReviewRequests data={{ ...data, reviewRequests: data.reviewRequests?.filter((q) => data.status !== 'active' || data.role !== 'head' || q.appliedAt || q.cancelledAt) }} action={action} />
+        {data.ballots.filter((b) => !reviewed.some((r) => r.key === b.roundKey)).map((b) => { const round = data.rounds.find((r) => r.key === b.roundKey); return round && <details key={b.roundKey}><summary>{round.definition.format} · {round.definition.division} · {round.definition.kind} · My saved records</summary>{round.definition.heats.map((h) => <details key={h.id}><summary>{h.name}</summary>{h.songs.map((p) => <div key={p.id}><h4>{p.title}</h4>{round.definition.subjects.filter((s) => h.subjectIds.includes(s.id)).map((s) => {const c = b.cells[`${p.id}:${s.id}`];return <p key={s.id}>#{s.number} {s.primary}: {c?.mark || 'Blank'}{c?.note && ` · ${c.note}`}</p>;})}</div>)}</details>)}</details>;})}
       </div>
     </SetupSection>}
 
