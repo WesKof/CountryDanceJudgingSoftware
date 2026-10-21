@@ -521,6 +521,9 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .context-change { position: sticky; top: 4px; z-index: 4; flex-wrap: wrap; }
 .shared-shell .context-change button { width: auto; height: auto; border-radius: 8px; padding: 8px 12px; color: white; background: var(--forest); }
 .shared-shell .pending-panel { margin-top: 16px; border-color: var(--copper); }
+.pending-panel .pending-edit { padding:12px 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+.pending-panel .pending-edit p { margin:8px 0; }
+.pending-panel .pending-edit-context { color:var(--muted); font-size:13px; }
 .phone-ballot .panel-heading { align-items: start; }
 .phone-ballot .panel-heading p { margin: 6px 0 0; font-size: 14px; }
 .phone-filters { display: flex; gap: 8px; padding: 12px; flex-wrap: wrap; }

@@ -10,9 +10,16 @@ export class ApiError extends Error {
   constructor(status: number, message: string, details?: { cell?: import('@/lib/live/types').Cell }) { super(message); this.status = status; this.details = details; }
 }
 export async function liveApi<T>(token: string, input?: Record<string, unknown>): Promise<T> {
-  const response = await fetch('/api/live', { method: input ? 'POST' : 'GET', cache: 'no-store', headers: { Authorization: `Bearer ${token}`, ...(input ? { 'Content-Type': 'application/json' } : {}) }, body: input ? JSON.stringify(input) : undefined });
-  const result = await response.json() as { error?: string; details?: { cell?: import('@/lib/live/types').Cell } };
-  if (!response.ok) throw new ApiError(response.status, result.error ?? 'The event could not be loaded.', result.details);
+  let response: Response;
+  try { response = await fetch('/api/live', { method: input ? 'POST' : 'GET', cache: 'no-store', headers: { Authorization: `Bearer ${token}`, ...(input ? { 'Content-Type': 'application/json' } : {}) }, body: input ? JSON.stringify(input) : undefined }); }
+  catch { throw new ApiError(0, 'Connection interrupted. Check your connection and retry.'); }
+  let result: { error?: string; details?: { cell?: import('@/lib/live/types').Cell } };
+  try {
+    const parsed: unknown = await response.json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Unreadable response');
+    result = parsed as typeof result;
+  } catch { throw new ApiError(response.ok ? 502 : response.status, 'The shared event is temporarily unavailable. Retry the connection.'); }
+  if (!response.ok) throw new ApiError(response.status, typeof result.error === 'string' ? result.error : 'The event could not be loaded.', result.details);
   return result as T;
 }
 export function useLive(token: string) {
