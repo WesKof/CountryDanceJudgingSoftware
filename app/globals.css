@@ -1046,6 +1046,8 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .event-workspace-start { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 .event-workspace-start h3 { margin:0; }
 .event-workspace-start p { margin:6px 0; color:var(--muted); }
+.event-workspace-filter { display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px; }
+.event-workspace-filter > label { flex:1 1 220px; }
 .event-card { display:flex; align-items:center; gap:16px; justify-content:space-between; padding:16px; margin:10px 0; border:1px solid var(--line); border-radius:12px; background:var(--panel); min-width:0; }
 .event-card > div:first-child { flex:1; min-width:0; }
 .event-card-title { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
