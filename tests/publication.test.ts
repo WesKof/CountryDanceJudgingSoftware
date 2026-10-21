@@ -1,4 +1,6 @@
 import {publicationPreparationIssues} from '../lib/live/publication-readiness.ts';
+import {renderResults} from '../public-site/render.ts';
+import type {PublicationRecord} from '../lib/live/publication.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildPublicSnapshot,validatePublicSnapshot,snapshotFingerprint} from '../lib/live/publication.ts';
@@ -38,4 +40,21 @@ test('publication guidance distinguishes unfinished stages, missing head approva
  const changed=structuredClone(view);changed.rounds[0].standings!.advancingIds=[];
  assert.match(publicationPreparationIssues(changed,competitionId)[0].message,/deferred replacement\/redance/);
  await assert.rejects(buildPublicSnapshot(changed,competitionId,1,null,'now','blocked'));
+});
+
+
+test('unreleased admin previews keep scorecards without broken public links or superseded labels',async()=>{
+ const {view,competitionId}=await fixture(),snapshot=await buildPublicSnapshot(view,competitionId,1,null,'now','preview');
+ const requested:PublicationRecord={id:snapshot.id,competitionId:snapshot.competitionId,revision:1,sourceFingerprint:snapshot.sourceFingerprint,snapshot,status:'requested'};
+ const preview=renderResults(requested,{records:{},current:{}});
+ assert.match(preview,/Private preview · Not published/);assert.doesNotMatch(preview,/Superseded|href="\/results\//);
+ assert.match(preview,/6.6667/);assert.match(preview,/Blank · Not observed/);
+ const released:PublicationRecord={...requested,status:'released',releasedAt:'2026-10-21T21:00:00Z'},scope=snapshot.eventId+'/'+snapshot.competitionId;
+ const store={records:{[released.id]:released},current:{[scope]:released.id}},published=renderResults(released,store);
+ assert.match(published,/Revision 1 · Released/);assert.ok(published.includes('/results/preview/entrant/'));assert.ok(published.includes('/results/preview/judge/'));
+ const revised:PublicationRecord={...requested,id:'preview-next',revision:2,snapshot:{...snapshot,id:'preview-next',revision:2,supersedes:requested.id}};
+ const revisedPreview=renderResults(revised,store);assert.match(revisedPreview,/Revision 2 · Private preview · Not published/);assert.doesNotMatch(revisedPreview,/Superseded|href="\/results\//);
+ assert.match(renderResults({...revised,status:'queued',ownerApprovedAt:'now'},store),/Approved · Sending pending/);
+ const next:PublicationRecord={...revised,status:'released',releasedAt:'2026-10-21T21:01:00Z'};
+ assert.match(renderResults(released,{records:{...store.records,[next.id]:next},current:{[scope]:next.id}}),/Superseded · <a href="\/results\/preview-next">Current revision/);
 });
