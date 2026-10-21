@@ -80,13 +80,14 @@ test('fresh sample runs from setup through automatic stages and private publicat
     view=await api<LiveView>(organizer);
     expect(view.context.blockId).toBe(view.setup.blocks.find((b)=>b.kind==='finals')!.id);
     for (const page of judges) {
-      await page.reload();
       await expect(page.getByRole('heading',{name:'3 scores still needed',exact:true})).toBeVisible();
+      await expect(page.getByText('Stage submitted. Your scores are locked.',{exact:true})).toHaveCount(0);
       await mark(page,101,'Yes'); await mark(page,102,'A1');
       await settled(page);
       await page.getByRole('button',{name:'Score next bib · #201',exact:true}).click();
       await expect(page.locator('#judge-bib-201')).toBeFocused();
       await expect(page.locator('#judge-bib-201')).toContainText('Morgan Davis');
+      await expect(page.getByRole('heading',{name:'1 score still needed',exact:true})).toBeVisible();
       await mark(page,201,'Yes'); await submit(page,'finals');
     }
     for (let i=0;i<2;i++) { await head.getByRole('button',{name:'Approve these exact submissions',exact:true}).first().click(); await expect(head.getByRole('button',{name:'Approve these exact submissions',exact:true})).toHaveCount(1-i); }
@@ -98,10 +99,11 @@ test('fresh sample runs from setup through automatic stages and private publicat
     expect(view.heatSubmissions).toHaveLength(12);
     expect(view.rounds.every((r)=>r.standings?.approved)).toBe(true);
     expect(view.rounds.filter((r)=>r.definition.kind==='finals').map((r)=>r.standings!.rows.map((s)=>s.average))).toEqual([[10,4.5],[10]]);
-    await desk.reload();await desk.getByRole('button',{name:'03 Results',exact:true}).click();
+    await desk.getByRole('button',{name:'03 Results',exact:true}).click();
     await openResultsContext(desk);await desk.locator('#results-scorecards > summary').click();
     await expect(desk.locator('#results-scorecards details.setup-section')).toHaveCount(4);
     await desk.getByRole('button',{name:'04 Publish',exact:true}).click();
+    await expect(desk.getByText('Finals pairings saved. Scoring opens automatically when every division is ready.',{exact:true})).toHaveCount(0);
     expect(await desk.evaluate(()=>window.scrollY)).toBe(0);
     await expect(desk.getByText('All Finals are approved. Prepare a private preview before sending for website approval.',{exact:true})).toBeVisible();
     await desk.getByRole('button',{name:'Review results to publish',exact:true}).click();

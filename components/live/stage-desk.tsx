@@ -21,7 +21,7 @@ import LiveScores, { RoundScoreProgress } from './live-scores';
 type Props = { token: string; data: LiveView; error: string; refresh: () => Promise<LiveView | null>; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode };
 export default function StageDesk({ token, data, error, refresh, setupIntro, sampleHelp, recoveryExtra }: Props) {
   const [page, rememberPage] = useRememberedPage(data.eventId), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
-  function setPage(next: number) { rememberPage(next); window.scrollTo({ top: 0, behavior: 'instant' }); }
+  function setPage(next: number) { setNotice(''); rememberPage(next); window.scrollTo({ top: 0, behavior: 'instant' }); }
   const [setupRequest, setSetupRequest] = useState(0);
   const [eventsRequested, setEventsRequested] = useState(false);
   useEffect(() => {
