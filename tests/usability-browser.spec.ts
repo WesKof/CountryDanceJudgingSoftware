@@ -157,6 +157,7 @@ test('focused Results expose pending work elsewhere and route into the exact ret
   await expect(page.getByRole('region', { name: 'Pending review duties' })).toHaveCount(0);
   view = await api<LiveView>(organizer); expect(view.rounds[0].standings!.approved).toBe(false); expect(view.rounds[1].standings!.approved).toBe(true); expect(view.rounds[0].standings!.rows[0].average).toBe(10);
   await page.getByLabel('Competition and round view', { exact: true }).selectOption(round.id);
+  await page.locator('#results-decisions > summary').click();
   await page.getByRole('button', { name: 'Review finalist count', exact: true }).click();
   await expect(page.getByLabel('Select round to configure', { exact: true })).toHaveValue(setup.rounds.find((r) => r.prelimRoundId === round.id)!.id);
   await expect(page.locator('details[data-section="Finalists & pairings"]')).toHaveAttribute('open');

@@ -20,6 +20,7 @@ export default function OrganizerResults({ data, action, selected, select, setup
   const votes = result?.advancementTies?.filter((t) => !t.complete) ?? [];
   const placement = round?.definition.kind === 'finals' && result?.rows.some((r) => !r.decided);
   const head = data.setup.judges.find((j) => j.id === data.setup.headJudgeId)?.name ?? 'the head judge';
+  const headLink = data.judgeLinks?.find((j) => j.id === data.setup.headJudgeId && !j.revoked);
   const otherReview = data.rounds.find((r) => r.id !== selected && r.phase === 'discussion' && !r.standings?.approved);
   const allFinals = data.setup.competitions.length > 0 && data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'finals' && r.standings?.approved));
   const allPrelims = data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'prelims' && r.standings?.approved));
@@ -32,8 +33,8 @@ export default function OrganizerResults({ data, action, selected, select, setup
       {selectedPending.length > 0 && <p className="score-blocker">{selectedPending.length} pending correction/withdrawal requests affect this competition. Review each exact request before final approval.</p>}
       <div className="shared-inline">
         {selected && !result && <button className="primary-button" onClick={() => navigate?.(1)}>Go to Score</button>}
-        {result && !result.approved && <><button className="primary-button" onClick={() => revealResult('results-decisions')}>Review tie decisions & approval</button><button className="quiet-button" onClick={openHeadAccess}>Open head judge access</button></>}
-        {result && !result.approved && setup?.kind === 'prelims' && <button className="quiet-button" onClick={() => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')}>Review finalist count</button>}
+        {result && !result.approved && <>{headLink ? <a className="primary-button" href={headLink.path} target="_blank" rel="noreferrer">Open Head Judge — {head} ↗</a> : <button className="primary-button" onClick={openHeadAccess}>Open head judge access</button>}{(votes.length > 0 || placement || limits.length > 0) && <button className="quiet-button" onClick={() => revealResult('results-decisions')}>Review tie decisions &amp; approval</button>}</>}
+        {result && !result.approved && setup?.kind === 'prelims' && limits.length > 0 && <button className="quiet-button" onClick={() => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')}>Review finalist count</button>}
         {result?.approved && otherReview && <button className="primary-button" onClick={() => select(otherReview.id)}>Review remaining competition</button>}
         {result?.approved && !otherReview && setup?.kind === 'prelims' && allPrelims && <button className="primary-button" onClick={() => { const finals = data.setup.rounds.find((r) => r.prelimRoundId === selected); if (finals) select(finals.id); navigate?.(1); }}>Continue to Finals</button>}
         {result?.approved && setup?.kind === 'finals' && <button className={allFinals ? 'primary-button' : 'quiet-button'} onClick={() => navigate?.(3)}>{allFinals ? 'Review event to publish' : 'Review remaining event requirements'}</button>}
@@ -43,7 +44,7 @@ export default function OrganizerResults({ data, action, selected, select, setup
     <RoundContext data={data} selected={selected} select={select} overview />
     {result && round && <ResultHighlights round={round} />}
     <AllRoundScorecards data={data} />
-    <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} />
+    <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} reviewFinalistCount={limits.length ? undefined : () => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')} />
     <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
       <ReviewRequests data={data} action={action} embedded pendingOnly onReviseWithdrawal={(q) => { setRevision(q); revealResult('results-withdrawals'); }} />
       {round?.standings ? <fieldset className="shared-unframed" disabled={data.status !== 'active'}><h3>{round.definition.format} · {round.definition.division} · {round.definition.kind}</h3><Correction key={round.key} data={data} round={round} action={action} /></fieldset> : <p>Score corrections are available after the selected stage concludes.</p>}

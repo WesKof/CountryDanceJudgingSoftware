@@ -72,7 +72,7 @@ export function AllRoundScorecards({ data }: { data: LiveView }) {
   </div></SetupSection>;
 }
 
-export function ResultDecisions({ data, round, openHeadAccess }: { data: LiveView; round?: RoundView; openHeadAccess?: () => void }) {
+export function ResultDecisions({ data, round, openHeadAccess, reviewFinalistCount }: { data: LiveView; round?: RoundView; openHeadAccess?: () => void; reviewFinalistCount?: () => void }) {
   const result = round?.standings, ties = result?.advancementTies ?? [];
   const missing = ties.filter((t) => !t.complete).length + (round?.definition.kind === 'finals' ? result?.ties.filter((t) => !result.decisions.some((d) => d.key === t.key)).length ?? 0 : 0);
   const head = data.setup.judges.find((j) => j.id === data.setup.headJudgeId)?.name ?? 'Head judge';
@@ -82,6 +82,7 @@ export function ResultDecisions({ data, round, openHeadAccess }: { data: LiveVie
       {round.definition.kind === 'finals' && result.ties.map((t) => <p key={t.key}>{t.subjectIds.map((id) => { const s = round.definition.subjects.find((s) => s.id === id); return `#${s?.number} ${s?.primary} ${s?.secondary}`; }).join(' · ')} · {result.decisions.some((d) => d.key === t.key) ? 'Decision recorded' : 'Head placement decision needed'}</p>)}
       {result.decisions.map((d) => <section className="score-detail-group" key={d.key}><h4>{d.shared ? 'Shared place' : 'Ordered placement'}</h4><p>{d.order.map((id) => { const s = round.definition.subjects.find((s) => s.id === id); return `#${s?.number} ${s?.primary}`; }).join(' → ')}</p><p>{d.explanation || 'No explanation recorded'} · {new Date(d.decidedAt).toLocaleString()}</p></section>)}
       {!ties.length && !result.ties.length && <p>No tie decisions required.</p>}
+      {!result.approved && round.definition.kind === 'prelims' && reviewFinalistCount && <button className="quiet-button" onClick={reviewFinalistCount}>Review finalist count</button>}
       {!result.approved && <button className="quiet-button" onClick={openHeadAccess}>Open head judge access</button>}<p>Panel votes, head decisions and approval take place on the authorized private judge pages. Numeric averages stay unchanged by placement decisions.</p>
     </>}
   </div></SetupSection>;

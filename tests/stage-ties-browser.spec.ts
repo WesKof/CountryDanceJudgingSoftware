@@ -43,6 +43,8 @@ test('stage head buttons resolve a full-panel vote deadlock and a finals placeme
     expect(await desk.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await desk.screenshot({ path: `test-results/usability-review-deadlock-${width}.png`, fullPage: false });
   }
+  await expect(desk.getByRole('link', { name: 'Open Head Judge — Synthetic head ↗', exact: true })).toHaveAttribute('href', v.judgeLinks![2].path);
+  await desk.locator('#results-decisions > summary').click();
   await desk.getByRole('button', { name: 'Open head judge access', exact: true }).click();
   await expect(desk.locator('#run-judge-access')).toHaveAttribute('open');
   await expect(desk.locator('#run-judge-access > summary')).toBeFocused();

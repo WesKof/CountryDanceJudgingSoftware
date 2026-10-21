@@ -1,5 +1,13 @@
 # Country Dance Judging — working instructions
 
+## Autonomous local usability trials — October 21
+
+The owner explicitly authorized a full organizer/judge walkthrough and discretionary usability experiments, without stopping for approval of routine presentation choices. This supersedes earlier guided-section holds and the conservative defect-only scope for this local pass. Preserve coherent rollback points and make the result reviewable; do not treat every spacing, wording or navigation decision as a new permission gate. Keep scoring, role boundaries, stage prerequisites, exact approvals, private notes and retained records unchanged. Preserve the accepted active head-review controls while improving other scoring, waiting and completion phases.
+
+The previous verified implementation is preserved locally at `fc682ec`, tagged `checkpoint/local-before-finals-usability-2026-10-21`; it is a source checkpoint, not a data backup. Current follow-up work remains on `codex/stage-submission-usability`. Test the entire journey, including stage transitions and completion, with attention to reading, scrolling, clicks, focus, touch targets and responsive proportions. Give the active ballot priority over a redundant single-page sidebar. Keep useful non-actionable information in context disclosures; pending votes/head decisions must remain visible. A page change must show its top action; a task shortcut must reveal and focus its exact destination.
+
+The owner explicitly requested completing the named fictional sample on port 3000; that practice walkthrough is authorized. All independent regression fixtures still belong in the isolated 3001/3110 stores. Do not mutate unrelated saved events, reset browser storage, or treat this as authorization to publish/deploy. The live site remains unchanged. See PROJECT_SPEC.md for the presentation contract and LOCAL_TEST_REPORT.md for fresh evidence and handoff state.
+
 ## Automatic stages and judge-led submission — October 21
 
 The owner explicitly chose automatic opening when prerequisites are ready and removed the organizer's Open review gate. This local-only revision supersedes the October 20 manual-start/review boundary below. Saving a complete setup opens Prelims automatically and freezes its roster, heats, songs and panel. Incomplete saved preparation remains editable. Finals opens automatically only after all current Prelims results have exact head approval and every actual J&J Finals draw is saved. Setup explains the automatic freeze before Save setup. Existing stage events activate this behavior when opened at the organizer desk, retaining scores, immutable submissions and history. Explicit manual/heat API compatibility remains for older workflows and regression fixtures.

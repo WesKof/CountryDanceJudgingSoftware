@@ -1,5 +1,17 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Focused judge workspace and complete-flow usability pass — October 21 (local)
+
+The owner authorized discretionary local presentation experiments and an independent full-flow rehearsal, using checkpoints to make revisions easy. The accepted forest/cream/gold identity, full records, scoring and approval contracts remain. There are no server, schema, dependency or publication-policy changes in this pass.
+
+During stage scoring and ordinary waiting/completion, judges use a full-width focused workspace with a small home brand and clear name; the redundant one-item side rail is omitted. A compact status card puts counts and the current task together. Score next bib opens the first missing heat/song and focuses that bib. Missing-score review links also focus the exact first uncovered bib. Previous/Next song controls retain free song selection and stay within reach on long ballots; changing songs preserves all autosaved marks and private notes. Per-heat coverage uses short plain language; scoring help remains available below the ballot. Submission still requires the existing acknowledgment, complete per-heat coverage and no pending edits. No remains zero, and optional song blanks stay explicit.
+
+Ordinary judges see an explicit waiting message after their submission. Only their outstanding cutoff vote appears as an immediate review duty; other submitted results and requests are retained in collapsed history. Head judges retain all pending exact review/decision/request controls above supporting content. Once a stage is approved, the no-action state says Prelims results approved / Waiting for Finals to open, or Finals results approved / Judging is complete. Active head approval and all server rules are unchanged.
+
+A saved setup with scoring already open links directly to Open judging desk; unsaved setup retains the warning about automatic opening/freezing. Organizer Results links directly to the active head judge page. Optional finalist-count and access management routes remain inside Tie decisions & approval, while real count blockers keep their fix prominent. Organizer page navigation returns to the top; specific setup/blocker shortcuts still reveal and focus their requested section. Results margins are compacted. At tablet widths the organizer rail no longer consumes roughly a third of the page, and narrow rails retain readable page labels. Publication copy distinguishes preparing a private preview from sending for independent website approval, including the state before any preview exists.
+
+The explicitly requested fictional practice sample completed Finals with the actual J&J pair #201 Jordan Lee / #301 Morgan Davis, each judge's one Finals submission, and current head approval for both competitions. Its exact private publication preview is prepared; no approval request or public release was made for that sample. Independent synthetic checks cover a separate complete fresh sample and the fake publisher's independent release gate. Source checkpoints do not restore or rewind these saved data records.
+
 ## Action-first presentation and attention budget — October 21 (local)
 
 The owner directed continual usability, ease-of-use, interaction-cost and visual-appeal review. Screen space and attention are limited; routine operation should require little reading or navigation. Full information remains available as optional context and diagnostic material. This is standing product guidance; AGENTS.md contains the review criteria.

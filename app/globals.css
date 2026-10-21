@@ -945,3 +945,75 @@ button:disabled { cursor: not-allowed; opacity: .48; }
  .shared-shell .judge-status-card small { font-size:12px; }
  .shared-shell .score-supporting-content { padding:0 10px 10px; }
 }
+
+/* The active judge's ballot gets the space; a single-page rail adds no navigation. */
+.shared-shell.judge-focused-shell { display:block; }
+.judge-focused-shell .workspace { max-width:1100px; margin:auto; padding:20px 24px 40px; }
+.judge-focused-shell .topbar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; margin-bottom:16px; }
+.judge-focused-shell .judge-brand { width:44px; height:44px; margin:0; border-color:var(--forest); color:var(--forest); font-size:14px; }
+.judge-focused-shell .topbar h1 { font-size:27px; }
+.judge-focused-shell .topbar .eyebrow { font-size:10px; letter-spacing:.08em; }
+.judge-focused-shell .judge-action-current { margin:0 0 16px; padding:16px 18px; }
+.judge-focused-shell .judge-action-current > div { width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 20px; }
+.judge-focused-shell .judge-action-current .kicker { grid-column:1; margin:0; }
+.judge-focused-shell .judge-action-current .action-cue { display:none; }
+.judge-focused-shell .judge-action-current h2 { grid-column:1; margin:4px 0; font-size:25px; }
+.judge-focused-shell .judge-action-current p:not(.kicker) { grid-column:1; margin:0; font-size:14px; }
+.judge-focused-shell .judge-task-actions { grid-column:2; grid-row:1/4; display:flex; flex-direction:column; gap:8px; }
+.judge-focused-shell .judge-task-actions button { margin:0; }
+.judge-focused-shell .judge-task-actions .quiet-button { color:#fff8e9; background:transparent; border-color:#ffffff70; }
+.judge-focused-shell .judge-scoring-help { margin:16px 0; background:var(--panel); color:var(--ink); }
+.judge-focused-shell .judge-scoring-help > summary { min-height:24px; color:var(--forest); }
+.judge-song-navigation { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.judge-song-navigation span { color:var(--muted); font-size:13px; white-space:nowrap; }
+.judge-focused-shell .phone-row:focus { outline:3px solid var(--gold); outline-offset:-3px; background:#fff2d2; }
+.judge-focused-shell .phone-ballot:focus { outline:3px solid var(--gold); outline-offset:2px; }
+.judge-focused-shell .phone-ballot .panel-heading { padding:14px 18px; }
+.judge-focused-shell .phone-ballot .ballot-coverage { color:var(--forest); font-weight:700; }
+@media(max-width:600px) {
+ .judge-focused-shell .workspace { padding:14px 12px 28px; }
+ .judge-focused-shell .topbar { grid-template-columns:auto minmax(0,1fr); gap:10px; }
+ .judge-focused-shell .topbar .save-state { grid-column:2; font-size:12px; }
+ .judge-focused-shell .judge-action-current > div { grid-template-columns:minmax(0,1fr); gap:4px; }
+ .judge-focused-shell .judge-action-current h2 { font-size:23px; }
+ .judge-focused-shell .judge-task-actions { grid-column:1; grid-row:auto; flex-direction:row; flex-wrap:wrap; margin-top:8px; }
+ .judge-focused-shell .judge-task-actions button { flex:1; }
+ .judge-song-navigation { gap:6px; }
+ .shared-shell .judge-song-navigation button { padding:8px; font-size:13px; }
+}
+
+.judge-task-symbol { display:inline-grid; place-items:center; width:28px; height:28px; margin-right:10px; vertical-align:middle; border-radius:6px; background:#f5dba5; color:#183429; font:bold 18px Arial,sans-serif; }
+.judge-task-symbol.is-complete { border-radius:50%; background:#d7eddf; }
+
+.judge-focused-shell .judge-song-navigation { position:sticky; top:8px; z-index:3; background:var(--paper); padding:8px 0; border-bottom:1px solid var(--line); }
+.judge-focused-shell .phone-ballot, .judge-focused-shell .phone-row { scroll-margin-top:80px; }
+
+/* Results keep the next action and places close together, without repeated card margins. */
+.organizer-shell .organizer-results { gap:16px; }
+.organizer-shell .organizer-results .results-current { min-height:0; padding:18px 22px; }
+.organizer-shell .results-current h2 { margin:6px 0; font-size:28px; }
+.organizer-shell .results-current p:not(.kicker) { margin:8px 0; font-size:14px; }
+.organizer-shell .results-current .shared-inline { margin-top:12px; }
+.organizer-shell .results-current .shared-inline button { margin-top:0; }
+.organizer-shell .organizer-results .round-context { margin:0; }
+@media(max-width:600px) {
+ .organizer-shell .organizer-results .results-current { padding:16px; }
+ .organizer-shell .results-current h2 { font-size:25px; }
+}
+
+/* A tablet-width organizer view should not spend a third of its width on navigation. */
+@media(max-width:900px) {
+ .organizer-shell .rail-item { display:flex; flex-direction:column; justify-content:center; gap:6px; padding:10px 3px; }
+ .organizer-shell .rail-copy { display:block; }
+ .organizer-shell .rail-copy strong { font-size:11px; }
+ .organizer-shell .rail-copy small, .organizer-shell .rail-kicker, .organizer-shell .rail-footer { display:none; }
+}
+@media(min-width:721px) and (max-width:900px) {
+ .organizer-shell { grid-template-columns:88px minmax(0,1fr); }
+ .organizer-shell .side-rail { padding:14px 8px; }
+ .organizer-shell .workspace { padding:22px 14px 34px; }
+ .organizer-shell .topbar { gap:12px; }
+ .organizer-shell .topbar h1 { font-size:27px; }
+ .organizer-shell .save-state small, .organizer-shell .save-check { display:none; }
+ .organizer-shell .primary-button, .organizer-shell .quiet-button { min-height:44px; font-size:13px; }
+}

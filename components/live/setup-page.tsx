@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import SetupSection, { revealSetupSection } from './setup-section';
 
-export default function SetupPage({ automaticStages = false, token, competitionCount, toolbar, sampleHelp, otherEvents, children, hasRounds, hasDraft }: {
-  automaticStages?: boolean; token: string; competitionCount: number; toolbar: ReactNode; sampleHelp?: ReactNode; otherEvents?: ReactNode; children: ReactNode; hasRounds: boolean; hasDraft: boolean;
+export default function SetupPage({ automaticStages = false, scoringStage, openScoring, token, competitionCount, toolbar, sampleHelp, otherEvents, children, hasRounds, hasDraft }: {
+  automaticStages?: boolean; scoringStage?: string; openScoring?: () => void; token: string; competitionCount: number; toolbar: ReactNode; sampleHelp?: ReactNode; otherEvents?: ReactNode; children: ReactNode; hasRounds: boolean; hasDraft: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const tools = useRef<HTMLDetailsElement>(null);
@@ -18,7 +18,7 @@ export default function SetupPage({ automaticStages = false, token, competitionC
     catch { setNotice('Copy the organizer link from the address bar.'); }
   }
   return <div ref={root} className="page-stack setup-page">
-    <section className="hero-panel setup-hero"><div><p className="kicker">Event foundation</p><h2>Set up the desk once</h2><p>Prepare event details, competitions, judges and entries. {automaticStages ? 'Saving a complete stage setup opens scoring automatically and freezes its entries, heats, songs and judge assignments. Results review follows judge submissions.' : 'Save setup before starting the stage.'}</p>{sampleHelp}</div><span className="format-stamp">{competitionCount} competitions</span></section>
+    <section className="hero-panel setup-hero"><div><p className="kicker">{scoringStage && !hasDraft ? 'Setup saved · scoring is open' : 'Event foundation'}</p><h2>{scoringStage && !hasDraft ? `${scoringStage === 'prelims' ? 'Prelims' : 'Finals'} is ready for judges` : 'Set up the desk once'}</h2>{scoringStage && !hasDraft ? <><p>Judges can score now. Open the judging desk for their links and progress.</p><button className="primary-button" onClick={openScoring}>Open judging desk</button></> : <p>Prepare event details, competitions, judges and entries. {automaticStages ? 'Saving a complete stage setup opens scoring automatically and freezes its entries, heats, songs and judge assignments. Results review follows judge submissions.' : 'Save setup before starting the stage.'}</p>}{sampleHelp}</div><span className="format-stamp">{competitionCount} competitions</span></section>
     <div className="setup-toolbar">
       <div className="setup-save-controls">{toolbar}</div>
       <label className="setup-section-picker"><span>Go to section</span><select aria-label="Go to section" defaultValue="" onChange={(event) => {
