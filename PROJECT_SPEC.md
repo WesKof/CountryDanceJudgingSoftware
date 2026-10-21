@@ -1,5 +1,15 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Organizer workspace visibility and request recovery — October 21
+
+The owner authorized continued local bug/usability work, coordinated with the original project chat, preserving the walkthrough event and live site. Fresh source preflight confirmed clean main/fcf46df and 149/149 preferred/mirror byte parity. The original chat explicitly granted sole source/Git/canonical-doc/mirror ownership to maintenance and retained owner-preview/walkthrough ownership. This independent batch uses only synthetic 3001/3110 stores.
+
+Reproduced behavior and decisions: a saved event added to the retained catalog during a summary read survived the storage merge but stayed absent from the visible workspace until remount. Visible rows now follow the complete retained catalog, enriched by checked summaries, so a newly retained link appears immediately without dropping known links. Unchecked new rows still require a summary before archive/reactivate controls become available. A quiet Refresh events button beside search supplies a direct read-only retry after temporary summary failures and can discover links retained since the last read. It is disabled while loading/saving or while device history is unreadable; failure entries remain visible and links are never removed. On narrow phones search gets the full available line and refresh wraps below; keyboard Tab/Enter reaches and activates refresh without event writes.
+
+The separate new-event form previously allowed edits while a submitted creation request was pending. It now disables the submitted fields, identifies Creating event, and prevents a second in-flight submission. A failed request restores editing without clearing names/venue/date or changing the original nonce; a real retry uses that nonce and the retained values. Optional venue/date remain collapsed by default. No scoring, stage, permission, exact approval, immutable snapshot/history, archive policy, backend/API/schema or dependency behavior changed.
+
+Runtime/tests are commit 46f3e8c on the focused codex/organizer-recovery-usability development branch, based on fcf46df. Annotated checkpoint/local-organizer-recovery-2026-10-21 preserves this verified delivery and its canonical documentation closeout. Follow normal protected push/fast-forward integration, verify actual remote main/checkpoint and exact branch containment before cleanup; source checkpoints do not restore data. The preceding public-results delivery and documentation are already integrated at fcf46df, with its verified checkpoint preserved and completed branches removed. Current evidence, mirror/process preservation and limits are in LOCAL_TEST_REPORT.md.
+
 ## Event-first public website and corrected-publication rehearsal — October 21
 
 The owner authorized continuing public/admin usability improvements and a post-publication sample correction entirely locally, with automatic coordination with the new maintenance chat. Source work uses codex/public-results-usability from d3cd06d. No live hosting/source deployment or production publication is authorized by this pass.
