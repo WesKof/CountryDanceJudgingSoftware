@@ -16,7 +16,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Storage, restore, CSV, compatibility | [Data](PROJECT_SPEC.md#data-and-persistence), [compatibility](PROJECT_SPEC.md#current-implementation-and-compatibility) |
 | Presentation/source | [Attention](PROJECT_SPEC.md#action-first-presentation-and-attention-budget--october-21-local), [keyboard tasks](PROJECT_SPEC.md#keyboard-task-continuity--october-24), [result labels](PROJECT_SPEC.md#mobile-result-place-readability--october-24), [files](PROJECT_SPEC.md#architecture-and-file-map) |
 | Checks, rollback, handoff | [Verification cadence](PROJECT_SPEC.md#verification-cadence), [checkpoints](PROJECT_SPEC.md#github-checkpoints-and-rollback-map), [handoff](PROJECT_SPEC.md#maintenance-and-handoff) |
-| Dependency findings and current limits | [Review](PROJECT_SPEC.md#dependency-health-and-compatible-security-cohort--october-24), [image parser](PROJECT_SPEC.md#image-parser-security-patch--october-24), [verification](LOCAL_TEST_REPORT.md#october-24--isolated-image-parser-security-patch) |
+| Dependency findings and current limits | [Review](PROJECT_SPEC.md#dependency-health-and-compatible-security-cohort--october-24), [image parser](PROJECT_SPEC.md#image-parser-security-patch--october-24), [Miniflare transport](PROJECT_SPEC.md#selected-miniflare-undici-patch-and-runtime-limits--october-24) |
 
 ## Coordination and authority
 
