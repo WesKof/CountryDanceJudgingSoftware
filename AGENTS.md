@@ -13,7 +13,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Privacy/withdrawal/publication/recovery | [Access/release](PROJECT_SPEC.md#access-withdrawals-and-owner-publication--implemented-locally), [saves](PROJECT_SPEC.md#save-submission-and-approval-reliability), [recovery tasks](PROJECT_SPEC.md#backup-and-restore-task-recovery--october-24) |
 | Released-version comparison | [Public changes](PROJECT_SPEC.md#released-results-comparison--october-24) |
 | Storage, restore, CSV, compatibility | [Data](PROJECT_SPEC.md#data-and-persistence), [compatibility](PROJECT_SPEC.md#current-implementation-and-compatibility) |
-| Presentation/source | [Attention](PROJECT_SPEC.md#action-first-presentation-and-attention-budget--october-21-local), [keyboard tasks](PROJECT_SPEC.md#keyboard-task-continuity--october-24), [files](PROJECT_SPEC.md#architecture-and-file-map) |
+| Presentation/source | [Attention](PROJECT_SPEC.md#action-first-presentation-and-attention-budget--october-21-local), [keyboard tasks](PROJECT_SPEC.md#keyboard-task-continuity--october-24), [result labels](PROJECT_SPEC.md#mobile-result-place-readability--october-24), [files](PROJECT_SPEC.md#architecture-and-file-map) |
 | Checks, rollback, handoff | [Verification cadence](PROJECT_SPEC.md#verification-cadence), [checkpoints](PROJECT_SPEC.md#github-checkpoints-and-rollback-map), [handoff](PROJECT_SPEC.md#maintenance-and-handoff) |
 
 ## Coordination and authority
