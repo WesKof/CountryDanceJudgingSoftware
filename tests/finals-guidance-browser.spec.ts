@@ -63,6 +63,7 @@ test('a complete draw names the other unfinished division and keyboard shortcut 
     await shortcut.focus(); await page.keyboard.press('Enter');
     await expect(other.getByRole('combobox')).toBeFocused();
     await expect(other.getByRole('status')).toContainText('#201 Entrant 1-1 1');
+    await expect(other.getByRole('button', { name: 'Choose missing follow', exact: true })).toHaveCount(0);
     await other.getByRole('combobox').selectOption(event.finals[1].finalistIds[1]);
     const ready = first.getByRole('button', { name: 'Save Finals pairings', exact: true });
     await expect(ready).toBeEnabled();
