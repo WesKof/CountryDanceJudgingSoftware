@@ -13,7 +13,30 @@ Master-confirmed supported-tool schedules (no schedule change by this source pas
 
 Both wakes use the same master-owned queue and writer claims; a maintenance wake does not replace master direction. Preserve the two distinct schedules without duplicate creation or direct automation-file edits. Global instruction refinement follows the current owner authorization, coordinated fresh reads/prior-version preservation and mandatory owner-visible notice; project/transient/private facts stay scoped. No global file was changed by this execution pass.
 
-Current queue: instruction consolidation and advancement voting are verified; released-results comparison and Finals draw blocker guidance are delivered below. After reviewing each completed batch, Master Country Dancer automatically sends one actual bounded follow-up prompt into this same master chat rather than a click-only suggestion. The master selects the next useful scope/owner and prevents duplicate continuation prompts; execution workers return evidence/released claims and do not self-loop. This continuation preference is also persisted in the existing master heartbeat; both twice-daily schedules remain unchanged. Routine reporting and owner feedback stay in the master using exact chat titles.
+### Completed local deliveries
+
+The latest product source delivery is main/67c64b8. All batches in this index are merged; no delivery blocker remains for them. Delivery tips below were verified contained in main; their annotated rollback checkpoints and detailed limits remain in the linked dated records and [checkpoint map](#github-checkpoints-and-rollback-map). Test counts there are dated batch evidence, not new runs or a requirement to rerun completed suites. Source delivery does not establish an owner-preview refresh, hosted synchronization/deployment or real publication; separately attributed owner read-only preview evidence remains in its dated report.
+
+| Completed area | Delivery tip | Behavior and dated verification |
+| --- | --- | --- |
+| Operative instruction routing | 5118bf6 | [Retention map](#operative-instructions-and-retention-map--october-24) · [Instruction audit](LOCAL_TEST_REPORT.md#october-24--operative-instruction-consolidation-pass) |
+| Advancement voting | 041b455 | [Exact-count/role guidance](#advancement-cutoff-voting-guidance--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--advancement-vote-guidance-pass) |
+| Released-results comparison | 21f7fc7 | [Public change history](#released-results-comparison--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--released-version-comparison-pass) |
+| Actual Finals draw recovery | 2529218 | [Cross-division guidance](#finals-draw-blocker-guidance--october-24) · [Evidence and shortcut refinement](LOCAL_TEST_REPORT.md#october-24--finals-draw-blocker-guidance-pass) |
+| Isolated endpoints/eight judges | 222726a | [Endpoint policy and rehearsal](#isolated-test-endpoints-and-eight-judge-rehearsal--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--isolated-endpoints-and-eight-judge-full-flow-pass) |
+| Backup/restore task recovery | 79d08d0 | [Progress/privacy/same-file retry](#backup-and-restore-task-recovery--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--backuprestore-task-recovery-pass) |
+| Keyboard task continuity | bee820b | [Names and explicit-action focus](#keyboard-task-continuity--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--keyboard-task-continuity-pass) |
+| Mobile result-place readability | 67c64b8 | [Place/qualifier presentation](#mobile-result-place-readability--october-24) · [Evidence](LOCAL_TEST_REPORT.md#october-24--mobile-result-place-readability-pass) |
+
+Earlier October 24 [CSV validation](LOCAL_TEST_REPORT.md#october-24--csv-fixes-verification-and-master-coordinated-closeout-pass), [current-version correction recovery](LOCAL_TEST_REPORT.md#october-24--correction-current-version-recovery-pass) and [pending-review responsibility](LOCAL_TEST_REPORT.md#october-24--pending-review-responsibility-pass) are also completed; their dated behavior/evidence and checkpoints remain below.
+
+After reviewing each completed batch, Master Country Dancer automatically sends one actual bounded follow-up prompt into this same master chat rather than a click-only suggestion. The master selects the next useful scope/owner and prevents duplicate continuation prompts; execution workers return evidence/released claims and do not self-loop. This continuation preference is also persisted in the existing master heartbeat; both twice-daily schedules remain unchanged. Routine reporting and owner feedback stay in the master using exact chat titles.
+
+### Next audit and limits
+
+Next planned review, not yet performed: **dependency health**, owned by Master Country Dancer. After this documentation delivery is accepted and its writer claim released, the master uses its single coordinated continuation to inspect current package/lockfile/runtime facts and read-only audit findings, verify applicable advisories in official primary sources, and scope compatible evidence-backed remediation only if needed. This is not a vulnerability claim or an instruction to upgrade now; avoid routine version churn or major framework replacement. Existing 9 AM/6 PM Central reviews remain the fallback trigger if a dependency defers progress. Maintenance takes a fresh bounded assignment/writer claim before implementation; no parallel writer or routine owner-approval gate is created. Owner feedback and [documented limits](#known-limitations-and-proposed-improvements) remain part of ongoing triage.
+
+The [post-Finals replacement/redance decision](#stage-workflow-revision--implemented-locally) remains undefined, so no replacement/redance is inferred. It does not block independent local maintenance. Hosted, physical-device, venue and capacity outcomes remain outside the linked local synthetic evidence; the walkthrough/data/runtime exclusions and local-only direction still apply.
 
 ## Mobile result-place readability — October 24
 
