@@ -9,7 +9,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Ownership, priorities, schedules | [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) |
 | Instruction audit | [Map](PROJECT_SPEC.md#operative-instructions-and-retention-map--october-24) |
 | Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local) |
-| Scores/votes/Finals | [Stage](PROJECT_SPEC.md#stage-workflow-revision--implemented-locally), [legacy](PROJECT_SPEC.md#scoring-contract) |
+| Scores/votes/Finals | [Stage](PROJECT_SPEC.md#stage-workflow-revision--implemented-locally), [legacy](PROJECT_SPEC.md#scoring-contract), [draw recovery](PROJECT_SPEC.md#finals-draw-blocker-guidance--october-24) |
 | Privacy/withdrawal/publication/recovery | [Access/release](PROJECT_SPEC.md#access-withdrawals-and-owner-publication--implemented-locally), [saves](PROJECT_SPEC.md#save-submission-and-approval-reliability) |
 | Released-version comparison | [Public changes](PROJECT_SPEC.md#released-results-comparison--october-24) |
 | Storage, restore, CSV, compatibility | [Data](PROJECT_SPEC.md#data-and-persistence), [compatibility](PROJECT_SPEC.md#current-implementation-and-compatibility) |
