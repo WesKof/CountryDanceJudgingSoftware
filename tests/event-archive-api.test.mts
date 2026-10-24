@@ -1,3 +1,4 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { api, base, command, nonce, save } from './stage-helpers.ts';
@@ -36,7 +37,7 @@ test('organizer archive/return preserves exact approvals, links, snapshots and l
 test('concurrent return-to-active requests cannot reactivate a different generation or clear event history',async()=>{
  const {organizer}=await createStage(limitedStage(1,4));await command(organizer,{action:'archive'});
  const archived=await api<LiveView>(organizer);
- const responses=await Promise.all([0,1].map(()=>fetch(base+'/api/live',{method:'POST',headers:{Authorization:'Bearer '+organizer,'Content-Type':'application/json'},body:JSON.stringify({action:'reactivate',expectedVersion:archived.version,requestId:nonce()})})));
+ const responses=await Promise.all([0,1].map(()=>testFetch('app', '/api/live',{method:'POST',headers:{Authorization:'Bearer '+organizer,'Content-Type':'application/json'},body:JSON.stringify({action:'reactivate',expectedVersion:archived.version,requestId:nonce()})})));
  assert.equal(responses.filter((r)=>r.status===200).length,1);assert.ok(responses.every((r)=>[200,400,409].includes(r.status)));
  const active=await api<LiveView>(organizer);assert.equal(active.version,archived.version+1);assert.deepEqual(active.setup,archived.setup);assert.deepEqual(active.context,archived.context);
 });

@@ -1,3 +1,4 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {writeFileSync,mkdirSync,readFileSync} from 'node:fs';
@@ -26,13 +27,13 @@ test('local publication protocol: independent approvals, immutable revision, und
  await t.test('receiver authenticates exact payload, deduplicates delivery IDs and rejects altered/order/scope references',async()=>{
    const store=JSON.parse(readFileSync(process.env.LOCAL_TEST_RECEIVER_STORE ?? (receiver.endsWith(':3110')?'work/compiled-public-receiver.json':'work/public-receiver.json'),'utf8')) as {receipts:Record<string,string>};
    const original=Object.values(store.receipts).map((raw)=>JSON.parse(raw)).find((m)=>m.kind==='release'&&m.payload.id===old.id);assert.ok(original);
-   const send=async(message:unknown,key=localKey('LOCAL_RECEIVER_KEY'))=>fetch(receiver+'/receive',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(message)});
+   const send=async(message:unknown,key=localKey('LOCAL_RECEIVER_KEY'))=>testFetch('receiver','/receive',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(message)});
    assert.equal((await send(original)).status,200);assert.equal((await send(original,tokens[0])).status,403);
    const different=structuredClone(original);different.payload.snapshot.event.name+=' altered';assert.equal((await send(different)).status,409);different.deliveryId=crypto.randomUUID();assert.equal((await send(different)).status,409);
    // Even a self-consistent rehash cannot claim an unapproved source.
    different.payload.snapshot.sourceFingerprint=await snapshotFingerprint(different.payload.snapshot);different.payload.sourceFingerprint=different.payload.snapshot.sourceFingerprint;assert.equal((await send(different)).status,409);
    for(const kind of ['revision','scope','note']){const bad=structuredClone(original);bad.deliveryId=crypto.randomUUID();if(kind==='revision'){bad.payload.revision=3;bad.payload.snapshot.revision=3;}else if(kind==='scope'){bad.payload.snapshot.eventId='p-other-event';}else{bad.payload.snapshot.privateNotes='NO_PRIVATE_FIELDS';}bad.payload.sourceFingerprint=bad.payload.snapshot.sourceFingerprint=await snapshotFingerprint(bad.payload.snapshot);assert.equal((await send(bad)).status,409);}
-   const attestation=await fetch((process.env.LIVE_TEST_URL ?? 'http://127.0.0.1:3000')+'/api/publication-source',{method:'POST',headers:{Authorization:'Bearer '+tokens[0],'Content-Type':'application/json'},body:JSON.stringify({publicationId:old.id})});assert.equal(attestation.status,403);assert.deepEqual(await attestation.json(),{valid:false});
+   const attestation=await testFetch('app','/api/publication-source',{method:'POST',headers:{Authorization:'Bearer '+tokens[0],'Content-Type':'application/json'},body:JSON.stringify({publicationId:old.id})});assert.equal(attestation.status,403);assert.deepEqual(await attestation.json(),{valid:false});
  });
  await t.test('post-publication exact correction keeps original official values until a separately approved revision',async()=>{
    const r=view.rounds.find((r)=>r.definition.kind==='finals'&&r.definition.competitionId===competitionId)!,h=r.definition.heats[0],sub=view.heatSubmissions!.find((s)=>s.roundKey===r.key&&s.judgeId===setup.judges[0].id)!;
@@ -48,7 +49,7 @@ test('local publication protocol: independent approvals, immutable revision, und
    await owner({action:'release',publicationId:revision.id,sourceFingerprint:revision.sourceFingerprint});view=await api<LiveView>(organizer);assert.equal(view.publications!.find((p)=>p.id===revision.id)!.status,'released');
    assert.ok((await(await fetch(receiver+'/results/'+old.id)).text()).includes('Superseded'));assert.ok((await(await fetch(receiver+'/competition/'+revision.snapshot.eventId+'/'+revision.snapshot.competitionId)).text()).includes('Revision 2'));
    publicData=JSON.stringify(await(await fetch(receiver+'/api/public')).json());assert.ok(publicData.includes(old.id)&&publicData.includes(revision.id));
-   const forged={deliveryId:crypto.randomUUID(),kind:'release',payload:{...revision,status:'queued',organizerApprovedAt:'now',ownerApprovedAt:'now'}};const duplicate=await fetch(receiver+'/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify(forged)});assert.equal(duplicate.status,409);
+   const forged={deliveryId:crypto.randomUUID(),kind:'release',payload:{...revision,status:'queued',organizerApprovedAt:'now',ownerApprovedAt:'now'}};const duplicate=await testFetch('receiver','/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify(forged)});assert.equal(duplicate.status,409);
    await owner({action:'service',state:'shutdown'});assert.equal((await api<LiveView>(organizer)).status,'active');assert.ok((await api(organizer,{action:'backup',requestId:crypto.randomUUID()})).history);await owner({action:'service',state:'enabled'});
  });
  mkdirSync('work',{recursive:true});writeFileSync('work/publication-restart-fixture.json',JSON.stringify({organizer,tokens,path,eventId:view.eventId,publicationIds:view.publications!.filter((p)=>p.status==='released').map((p)=>p.id)}));

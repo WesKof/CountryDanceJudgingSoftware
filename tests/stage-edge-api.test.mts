@@ -1,3 +1,4 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { api, command, nonce, save, submitHeat } from './stage-helpers.ts';
@@ -39,7 +40,7 @@ test('stage CAS race, panel deadlock, amended approved advancement and explicit 
   const own = await api<LiveView>(tokens[0]), b = own.ballots[0], id = h.subjectIds[0];
   const common = { roundKey: r.key, requestId: crypto.randomUUID() };
   const inputs = [{ ...common, action: 'save-cell', performanceId: h.songs[0].id, subjectId: id, mark: 'Yes', note: 'Race observation retained', baseRevision: b.cells[cellKey(h.songs[0].id, id)].revision }, { ...common, requestId: crypto.randomUUID(), action: 'submit-heat', heatId: h.id, acknowledged: true, ballotVersion: b.version, expectedVersion: own.version }];
-  const responses = await Promise.all(inputs.map((input) => fetch(`${process.env.LIVE_TEST_URL ?? 'http://127.0.0.1:3000'}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${tokens[0]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(input) })));
+  const responses = await Promise.all(inputs.map((input) => testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${tokens[0]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(input) })));
   assert.equal(responses.filter((res) => res.status === 200).length, 1);
   assert.ok(responses.some((res) => [409, 423].includes(res.status)));
   await submitHeat(tokens[0], r, h.id); await Promise.all(tokens.slice(1).map((token) => submitHeat(token, r, h.id)));

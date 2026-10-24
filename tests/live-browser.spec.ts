@@ -1,3 +1,4 @@
+import { testEndpoint } from './test-endpoints';
 import { selectSetupRound, expandSetup, openJudgeAccess, openRecovery } from './setup-browser-helpers';
 import { test, expect, type APIRequestContext, type Page, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
@@ -5,12 +6,14 @@ import { liveFixture } from './live-fixture';
 import { cellKey, type LiveSetup, type LiveView } from '../lib/live/types';
 import { createDefaultState } from '../lib/domain';
 
-const base = process.env.LIVE_TEST_URL ?? 'http://127.0.0.1:3000';
+const base = testEndpoint('app');
 async function api<T = Record<string, unknown>>(request: APIRequestContext, token: string, input?: Record<string, unknown>): Promise<T> {
-  const response = input ? await request.post(`${base}/api/live`, { headers: { Authorization: `Bearer ${token}` }, data: input }) : await request.get(`${base}/api/live`, { headers: { Authorization: `Bearer ${token}` } });
+  testEndpoint('app', Boolean(input));
+  const response = input ? await request.post(`${base}/api/live`, { headers: { Authorization: `Bearer ${token}` }, data: input, maxRedirects: 0 }) : await request.get(`${base}/api/live`, { headers: { Authorization: `Bearer ${token}` } });
   const result = await response.json(); expect(response.ok(), result.error ?? 'Local API failed').toBeTruthy(); return result as T;
 }
 async function command(request: APIRequestContext, token: string, input: Record<string, unknown>) {
+  testEndpoint('app', true);
   const v = await api<LiveView>(request, token); return api(request, token, { ...input, requestId: crypto.randomUUID(), expectedVersion: v.version });
 }
 async function clickCommand(page: Page, locator: Locator) {
@@ -19,6 +22,7 @@ async function clickCommand(page: Page, locator: Locator) {
   await locator.click(); expect((await post).status()).toBe(200); await get;
 }
 async function fillPerformance(request: APIRequestContext, tokens: string[], performanceId: string) {
+  testEndpoint('app', true);
   for (const token of tokens) {
     const v = await api<LiveView>(request, token), r = v.rounds.find((r) => r.definition.heats.some((h) => h.songs.some((p) => p.id === performanceId)))!;
     const h = r.definition.heats.find((h) => h.songs.some((p) => p.id === performanceId))!;
@@ -28,6 +32,7 @@ async function fillPerformance(request: APIRequestContext, tokens: string[], per
   }
 }
 async function finishBlock(request: APIRequestContext, organizer: string, tokens: string[]) {
+  testEndpoint('app', true);
   const v = await api<LiveView>(request, organizer);
   const block = v.setup.blocks.find((b) => b.id === v.context.blockId)!;
   const performances = block.roundIds.flatMap((id) => v.rounds.find((r) => r.id === id)!.definition.heats.flatMap((h) => h.songs));

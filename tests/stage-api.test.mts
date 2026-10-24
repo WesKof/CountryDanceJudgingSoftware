@@ -1,3 +1,4 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stageFixture } from './stage-fixture.ts';
@@ -32,7 +33,7 @@ test('local D1 stage rehearsal: 44 couples, rotations, heat snapshots, votes, am
     const input = { action: 'save-cell', requestId: crypto.randomUUID(), roundKey: r.key, performanceId: p, subjectId: id, mark: 'Yes', note: 'PRIVATE_STAGE_NOTE', baseRevision: 0 };
     const first = await api(judge, input); assert.deepEqual(await api(judge, input), first);
     const statuses = await Promise.all(['A1', 'A2'].map(async (mark) => {
-      const response = await fetch(`${process.env.LIVE_TEST_URL ?? 'http://127.0.0.1:3000'}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, mark, baseRevision: 1, requestId: crypto.randomUUID() }) }); return response.status;
+      const response = await testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, mark, baseRevision: 1, requestId: crypto.randomUUID() }) }); return response.status;
     })); assert.deepEqual(statuses.sort(), [200, 409]);
     assert.ok(!JSON.stringify(await api<LiveView>(head)).includes('PRIVATE_STAGE_NOTE'));
     assert.ok(!JSON.stringify(await api<LiveView>(organizer)).includes('PRIVATE_STAGE_NOTE'));

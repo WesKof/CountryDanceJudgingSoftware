@@ -1,33 +1,37 @@
+import { testEndpoint, testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { liveFixture } from './live-fixture.ts';
 import { requiredCells } from '../lib/live/scoring.ts';
 import { cellKey, type Cell, type LiveSetup, type LiveView, type RoundView } from '../lib/live/types.ts';
 
-const base = process.env.LIVE_TEST_URL ?? 'http://localhost:3000';
+const base = testEndpoint('app');
 const nonce = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
 const uid = () => crypto.randomUUID();
 async function api<T = Record<string, unknown>>(token: string, input?: Record<string, unknown>, expected = 200): Promise<T> {
-  const response = await fetch(`${base}/api/live`, { method: input ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(input ? { 'Content-Type': 'application/json' } : {}) }, body: input ? JSON.stringify(input) : undefined });
+  const response = await testFetch('app', '/api/live', { method: input ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(input ? { 'Content-Type': 'application/json' } : {}) }, body: input ? JSON.stringify(input) : undefined });
   const data = await response.json() as Record<string, unknown>;
   assert.equal(response.status, expected, typeof data.error === 'string' ? data.error : `Unexpected HTTP ${response.status}`);
   assert.equal(response.headers.get('cache-control'), 'no-store, private');
   return data as T;
 }
-async function command(token: string, input: Record<string, unknown>, expected = 200) { const view = await api<LiveView>(token); return api(token, { ...input, expectedVersion: view.version, requestId: uid() }, expected); }
+async function command(token: string, input: Record<string, unknown>, expected = 200) { testEndpoint('app', true); const view = await api<LiveView>(token); return api(token, { ...input, expectedVersion: view.version, requestId: uid() }, expected); }
 async function save(token: string, r: RoundView, performanceId: string, subjectId: string, mark: Cell['mark'] = 'Yes', note = '', expected = 200) {
+  testEndpoint('app', true);
   const view = await api<LiveView>(token); const ballot = view.ballots.find((b) => b.roundKey === r.key);
   return api<{ cell: Cell }>(token, { action: 'save-cell', roundKey: r.key, performanceId, subjectId, mark, note, baseRevision: ballot?.cells[cellKey(performanceId, subjectId)]?.revision ?? 0, requestId: uid() }, expected);
 }
 async function fillCurrent(token: string) {
+  testEndpoint('app', true);
   const view = await api<LiveView>(token);
   const round = view.rounds.find((r) => r.definition.heats.some((h) => h.songs.some((p) => p.id === view.context.performanceId)))!;
   const heat = round.definition.heats.find((h) => h.songs.some((p) => p.id === view.context.performanceId))!;
   const ballot = view.ballots.find((b) => b.roundKey === round.key)!;
   await Promise.all(heat.subjectIds.map((subjectId, i) => api(token, { action: 'save-cell', roundKey: round.key, performanceId: view.context.performanceId, subjectId, mark: i < 2 ? 'Yes' : i === heat.subjectIds.length - 1 ? 'No' : 'A1', note: i === 0 ? 'PRIVATE_JUDGE_NOTE_SENTINEL' : '', baseRevision: ballot.cells[cellKey(view.context.performanceId!, subjectId)]?.revision ?? 0, requestId: uid() })));
 }
-async function submit(token: string, blockId: string, expected = 200) { const v = await api<LiveView>(token); return api(token, { action: 'submit', blockId, ballotVersions: Object.fromEntries(v.ballots.map((b) => [b.roundKey, b.version])), expectedVersion: v.version, requestId: uid() }, expected); }
+async function submit(token: string, blockId: string, expected = 200) { testEndpoint('app', true); const v = await api<LiveView>(token); return api(token, { action: 'submit', blockId, ballotVersions: Object.fromEntries(v.ballots.map((b) => [b.roundKey, b.version])), expectedVersion: v.version, requestId: uid() }, expected); }
 async function approveAll(headToken: string) {
+  testEndpoint('app', true);
   for (const rid of (await api<LiveView>(headToken)).rounds.filter((r) => r.phase === 'discussion').map((r) => r.id)) {
     let v = await api<LiveView>(headToken), r = v.rounds.find((r) => r.id === rid)!;
     for (const tie of r.standings!.ties) {
@@ -63,7 +67,7 @@ test('actual local D1/API rehearsal: isolated judges, scoped saves, immutable su
     assert.ok(!JSON.stringify(await api<LiveView>(head)).includes('PRIVATE_JUDGE_NOTE_SENTINEL'));
     assert.ok(!JSON.stringify(await api<LiveView>(organizer)).includes('PRIVATE_JUDGE_NOTE_SENTINEL'));
     const concurrent = await Promise.all([0, 1].map(async (n) => {
-      const response = await fetch(`${base}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, mark: n ? 'A1' : 'A2', baseRevision: 1, requestId: uid() }) }); return response.status;
+      const response = await testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, mark: n ? 'A1' : 'A2', baseRevision: 1, requestId: uid() }) }); return response.status;
     })); assert.deepEqual(concurrent.sort(), [200, 409]);
     const missing = r.definition.subjects.at(-1)!.id;
     await api(judge, { ...input, subjectId: missing, baseRevision: 0, requestId: uid() }, 400);
@@ -160,8 +164,8 @@ test('D1 transactions serialize a late save against block submission and approva
   await command(organizer, { action: 'discussion' });
   const reviewed = await api<LiveView>(judge), r = reviewed.rounds[0], c = requiredCells(r.definition)[0], b = reviewed.ballots.find((b) => b.roundKey === r.key)!;
   const responses = await Promise.all([
-    fetch(`${base}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save-cell', requestId: uid(), roundKey: r.key, performanceId: c.performanceId, subjectId: c.subjectId, mark: 'Yes', note: 'Late save', baseRevision: b.cells[c.key].revision }) }),
-    fetch(`${base}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', requestId: uid(), blockId: setup.blocks[0].id, expectedVersion: reviewed.version, ballotVersions: Object.fromEntries(reviewed.ballots.map((b) => [b.roundKey, b.version])) }) }),
+    testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save-cell', requestId: uid(), roundKey: r.key, performanceId: c.performanceId, subjectId: c.subjectId, mark: 'Yes', note: 'Late save', baseRevision: b.cells[c.key].revision }) }),
+    testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${judge}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'submit', requestId: uid(), blockId: setup.blocks[0].id, expectedVersion: reviewed.version, ballotVersions: Object.fromEntries(reviewed.ballots.map((b) => [b.roundKey, b.version])) }) }),
   ]);
   const statuses = responses.map((r) => r.status);
   assert.ok((statuses[0] === 200 && statuses[1] === 409) || ([409, 423].includes(statuses[0]) && statuses[1] === 200));
@@ -174,8 +178,8 @@ test('D1 transactions serialize a late save against block submission and approva
     headView = await api<LiveView>(head); headRound = headView.rounds[0];
   }
   const operations = await Promise.all([
-    fetch(`${base}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${head}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', requestId: uid(), expectedVersion: headView.version, roundKey: headRound.key, roundVersion: headRound.version, fingerprint: headRound.standings!.fingerprint }) }),
-    fetch(`${base}/api/live`, { method: 'POST', headers: { Authorization: `Bearer ${organizer}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reopen', requestId: uid(), expectedVersion: headView.version, roundKey: headRound.key, reason: 'Concurrent correction rehearsal' }) }),
+    testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${head}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve', requestId: uid(), expectedVersion: headView.version, roundKey: headRound.key, roundVersion: headRound.version, fingerprint: headRound.standings!.fingerprint }) }),
+    testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${organizer}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reopen', requestId: uid(), expectedVersion: headView.version, roundKey: headRound.key, reason: 'Concurrent correction rehearsal' }) }),
   ]);
   assert.deepEqual(operations.map((r) => r.status).sort(), [200, 409]);
   const after = await api<LiveView>(organizer), current = after.rounds.find((r) => r.id === headRound.id)!;

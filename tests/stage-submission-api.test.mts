@@ -1,6 +1,7 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { api, base, command, save, submitHeat } from './stage-helpers.ts';
+import { api, command, save, submitHeat } from './stage-helpers.ts';
 import { createStage, limitedStage, exact } from './publication-helpers.ts';
 import type { LiveView } from '../lib/live/types.ts';
 import { stageFixture } from './stage-fixture.ts';
@@ -89,7 +90,7 @@ test('concurrent stage submission versus a same-judge save never accepts a parti
   v = await api<LiveView>(token); const r = v.rounds.at(-1)!, h = r.definition.heats[0], id = h.subjectIds[0];
   const inputs = [await submission(token), { action: 'save-cell', roundKey: r.key, performanceId: h.songs[0].id, subjectId: id, mark: 'Yes', note: '', baseRevision: 1, requestId: crypto.randomUUID() }];
   const outcomes = await Promise.all(inputs.map(async (input) => {
-    const response = await fetch(base + '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(input) }); return response.status;
+    const response = await testFetch('app', '/api/live', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(input) }); return response.status;
   }));
   assert.equal(outcomes.filter((s) => s === 200).length, 1);
   assert.ok(outcomes.every((s) => [200, 409, 423].includes(s)));

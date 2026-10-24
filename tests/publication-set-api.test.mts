@@ -1,3 +1,4 @@
+import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {api,command} from './stage-helpers.ts';
@@ -37,7 +38,7 @@ test('complete-event approval is exact, permission checked, atomic, durable and 
   await fault(false);
   const queued=(await api<LiveView>(organizer)).publications!,invalid=structuredClone(queued);invalid[1].snapshot.stages[1].entrants[0].average=999;
   const before=await(await fetch(receiver+'/api/public')).text();
-  const rejected=await fetch(receiver+'/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify({deliveryId:crypto.randomUUID(),kind:'release-set',payload:invalid})});assert.equal(rejected.status,409);assert.equal(await(await fetch(receiver+'/api/public')).text(),before);
+  const rejected=await testFetch('receiver','/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify({deliveryId:crypto.randomUUID(),kind:'release-set',payload:invalid})});assert.equal(rejected.status,409);assert.equal(await(await fetch(receiver+'/api/public')).text(),before);
   await owner({action:'retry'});assert.ok((await api<LiveView>(organizer)).publications!.every((p)=>p.status==='released'));
   const data=await(await fetch(receiver+'/api/public')).json() as {current:Record<string,string>};for(const p of records)assert.equal(data.current[p.snapshot.eventId+'/'+p.snapshot.competitionId],p.id);
   await owner({action:'release-event',publications:manifest(records)},400);
@@ -54,7 +55,7 @@ test('complete-event approval is exact, permission checked, atomic, durable and 
  });
  await t.test('receiver rejects malformed event batches without any public pointer changes',async()=>{
   const before=await(await fetch(receiver+'/api/public')).text();const p=records[0],body={deliveryId:crypto.randomUUID(),kind:'release-set',payload:[{...p,status:'queued',organizerApprovedAt:'now',ownerApprovedAt:'now'},{...p,status:'queued',organizerApprovedAt:'now',ownerApprovedAt:'now'}]};
-  const response=await fetch(receiver+'/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(response.status,409);assert.equal(await(await fetch(receiver+'/api/public')).text(),before);
+  const response=await testFetch('receiver','/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(response.status,409);assert.equal(await(await fetch(receiver+'/api/public')).text(),before);
  });
 });
 
@@ -72,7 +73,7 @@ test('queued event correction invalidates the entire undelivered set and permits
  }finally{await fault(false);}
 });
 test('website admin session is private and rejects anonymous, cross-origin and forged approvals',async()=>{
- const post=(path:string,body:URLSearchParams,cookie='',origin=receiver)=>fetch(receiver+path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:origin,...(cookie?{Cookie:cookie}:{})},body,redirect:'manual'});
+ const post=(path:string,body:URLSearchParams,cookie='',origin=receiver)=>testFetch('receiver',path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:origin,...(cookie?{Cookie:cookie}:{})},body,redirect:'manual'});
  const signed=await post('/admin/login',new URLSearchParams({credential:localKey('LOCAL_OWNER_KEY')}));assert.equal(signed.status,303);const cookie=signed.headers.get('set-cookie')!;assert.ok(cookie.includes('HttpOnly')&&cookie.includes('SameSite=Strict'));const session=cookie.split(';')[0];
  const html=await(await fetch(receiver+'/admin',{headers:{Cookie:session}})).text();assert.ok(!html.includes(localKey('LOCAL_OWNER_KEY'))&&!html.includes(localKey('LOCAL_RECEIVER_KEY'))&&!html.includes('PUBLICATION_PRIVATE_NOTE_SENTINEL'));
  const csrf=/name="csrf" value="([^"]+)"/.exec(html)![1];
