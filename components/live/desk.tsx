@@ -1,12 +1,12 @@
 'use client';
-import Recovery from './recovery';
+import Recovery, { useRecovery } from './recovery';
 import Link from 'next/link';
 import { useRememberedPage } from './remembered-page';
 
-import { useState, type ChangeEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { LiveSetup, LiveView } from '@/lib/live/types';
 import { freezeRound, roundOpeningIssues } from '@/lib/live/validation';
-import { creationNonce, download, liveApi, useLive } from './client';
+import { liveApi, useLive } from './client';
 import { LiveShell } from './shell';
 import SetupEditor from './setup';
 import SetupPage from './setup-page';
@@ -19,7 +19,7 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
   const [page, setPage] = useRememberedPage(data?.role === 'organizer' && data.setup.workflow !== 'stage-v1' ? data.eventId : undefined); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<LiveSetup | null>(null); const [draftVersion, setDraftVersion] = useState(0);
   const [correction, setCorrection] = useState(false); const [reason, setReason] = useState('');
-  const [includeNotes, setIncludeNotes] = useState(false);
+  const recovery = useRecovery(token);
   async function action(input: Record<string, unknown>) {
     if (!data) return false; setBusy(true); setNotice('');
     try { await liveApi(token, { ...input, expectedVersion: data.version, requestId: crypto.randomUUID() }); await refresh(); if(input.action==='discussion') setPage(2); return true; }
@@ -33,16 +33,6 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
     try { await liveApi(token, { action: 'setup', setup: draft, expectedVersion: draftVersion, correction, reason, requestId: crypto.randomUUID() }); setDraft(null); setCorrection(false); setReason(''); await refresh(); setNotice('Setup saved to the shared event.'); }
     catch (error) { setNotice((error as Error).message); }
     finally { setBusy(false); }
-  }
-  async function backup() {
-    try { const result = await liveApi(token, { action: 'backup', includeNotes, requestId: crypto.randomUUID() }); download('shared-event-backup.json', JSON.stringify(result, null, 2)); }
-    catch (error) { setNotice((error as Error).message); }
-  }
-  async function restore(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
-    if (!window.confirm('Restore this backup into a new event with new private links? This event will stay as it is. Historical results remain historical.')) return;
-    try { if (file.size > 1500000) throw new Error('Backup is too large.'); const result = await liveApi<{ path: string }>('', { action: 'restore', requestId: creationNonce(), backup: JSON.parse(await file.text()) }); window.location.assign(result.path); }
-    catch (error) { setNotice((error as Error).message); }
   }
   if (data && data.role !== 'organizer') return <p role="alert">Organizer access required.</p>;
   if (!data) return <LiveShell navigationDisabled title="Shared event" identity="Organizer desk" status={error ? 'Unable to open event' : 'Connecting…'} items={['Set up', 'Score', 'Results', 'Publish']} current={0} navigate={setPage}><p role="status">{error || 'Loading the private event…'}</p>{error && <Link className="quiet-button" href="/#other-events" prefetch={false}>Open saved events</Link>}<button className="quiet-button" onClick={() => void refresh()}>Retry</button></LiveShell>;
@@ -101,7 +91,7 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
       {data.rounds.map((r) => <section className="form-panel" key={r.key}><div className="panel-heading"><h2>{r.definition.format} · {r.definition.division} · {r.definition.kind}</h2><span>{r.phase}</span></div><div className="form-body">{r.definition.judges.map((j) => <p key={j.id}>{j.name}: {r.submissions?.some((s) => s.judgeId === j.id) ? 'Finalized submission received' : 'Awaiting finalized submission'} · {r.draftProgress?.find((p) => p.judgeId === j.id)?.filled ?? 0} / {r.draftProgress?.find((p) => p.judgeId === j.id)?.required ?? 0} marks saved to event</p>)}<p>{r.standings?.submitted ?? 0} / {r.standings?.required ?? r.definition.judgeIds.length} submitted · {r.standings?.approved ? 'Head approved' : 'Approval pending'}</p></div></section>)}</div></section>}
     {page === 1 && <SetupSection title="Event-long private judge links" caption="Access" count={data.judgeLinks?.length ?? 0}><div className="form-body">{data.judgeLinks?.map((link) => <div className="shared-inline" key={link.id}><strong>{link.name}{link.id === data.setup.headJudgeId ? ' · Head judge' : ''}</strong><span>{link.revoked ? 'Revoked' : 'Active'}</span><button className="quiet-button" disabled={link.revoked} onClick={() => void navigator.clipboard.writeText(new URL(link.path, window.location.origin).href).then(() => setNotice(`${link.name}’s link copied. Send it individually.`)).catch(() => setNotice('Clipboard unavailable. Use Open judge page and copy its address.'))}>Copy judge link</button><a className="quiet-button" href={link.path} target="_blank" rel="noreferrer">Open judge page</a><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm(`Revoke ${link.name}’s current link?`)) void action({ action: 'revoke-link', judgeId: link.id }); }}>Revoke</button><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm(`Replace ${link.name}’s link? The old link will stop working.`)) void action({ action: 'replace-link', judgeId: link.id }); }}>Replace link</button></div>)}</div></SetupSection>}
     {page === 2 && <><LiveResults data={data} action={action} />{data.rounds.length === 0 && <p>Open and complete a judging block to review results.</p>}</>}
-    {page === 3 && <Recovery includeNotes={includeNotes} setIncludeNotes={setIncludeNotes} backup={backup} restore={restore} extra={recoveryExtra} history={data.restoredHistory}><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm('Archive this shared event? All links become read only.')) void action({ action: 'archive' }); }}>Archive event</button><button className="quiet-button" disabled={busy || data.status !== 'archived'} onClick={async () => { if (!window.confirm('Permanently delete this archived event and all its shared ballots, notes, links and history?')) return; try { await liveApi(token, { action: 'delete', expectedVersion: data.version, requestId: crypto.randomUUID() }); window.location.assign('/'); } catch (error) { setNotice((error as Error).message); } }}>Delete archived event</button></Recovery>}
+    {page === 3 && <Recovery {...recovery} disabled={busy} extra={recoveryExtra} history={data.restoredHistory}><button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm('Archive this shared event? All links become read only.')) void action({ action: 'archive' }); }}>Archive event</button><button className="quiet-button" disabled={busy || data.status !== 'archived'} onClick={async () => { if (!window.confirm('Permanently delete this archived event and all its shared ballots, notes, links and history?')) return; try { await liveApi(token, { action: 'delete', expectedVersion: data.version, requestId: crypto.randomUUID() }); window.location.assign('/'); } catch (error) { setNotice((error as Error).message); } }}>Delete archived event</button></Recovery>}
     {page === 3 && <p>New publication of legacy-only events is deferred. Use Data & recovery here to manage backups and retained history.</p>}
   </LiveShell>;
 }
