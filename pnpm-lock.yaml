@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  vinext@1.0.0-beta.3>image-size: 2.0.3
+
 importers:
 
   .:
@@ -2609,9 +2612,9 @@ packages:
     resolution: {integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw==}
     engines: {node: '>= 4'}
 
-  image-size@2.0.2:
-    resolution: {integrity: sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w==}
-    engines: {node: '>=16.x'}
+  image-size@2.0.3:
+    resolution: {integrity: sha512-9BJAtVCBth+76NwqnEfWr3PiRnYhbquk6K/USuQ1GQajz5NgLzO7tNsnoNjHfO7LuftgkBf+CCH6j28hjMbIYQ==}
+    engines: {node: '>=18'}
     hasBin: true
 
   import-fresh@3.3.1:
@@ -5974,7 +5977,7 @@ snapshots:
 
   ignore@7.0.6: {}
 
-  image-size@2.0.2: {}
+  image-size@2.0.3: {}
 
   import-fresh@3.3.1:
     dependencies:
@@ -7019,7 +7022,7 @@ snapshots:
       '@vercel/og': 0.8.6
       '@vinext/types': 1.0.0-beta.2
       '@vitejs/plugin-react': 6.0.2(vite@8.1.6(@types/node@22.19.19)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.15))
-      image-size: 2.0.2
+      image-size: 2.0.3
       ipaddr.js: 2.5.0
       magic-string: 0.30.21
       react: 19.2.9

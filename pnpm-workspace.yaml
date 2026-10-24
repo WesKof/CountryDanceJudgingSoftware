@@ -1,6 +1,10 @@
 packages:
   - .
 
+# Remove when Vinext no longer pins the affected parser; keep this to one parent/version.
+overrides:
+  'vinext@1.0.0-beta.3>image-size': 2.0.3
+
 allowBuilds:
   esbuild: true
   sharp: true
