@@ -974,6 +974,8 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .judge-song-navigation { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .judge-song-navigation span { color:var(--muted); font-size:13px; white-space:nowrap; }
 .judge-focused-shell .phone-row:focus { outline:3px solid var(--gold); outline-offset:-3px; background:#fff2d2; }
+.judge-focused-shell .judge-action-current:focus { outline:3px solid var(--gold); outline-offset:3px; }
+.shared-shell .result-sheet:focus { outline:3px solid var(--forest); outline-offset:3px; }
 .judge-focused-shell .phone-ballot:focus { outline:3px solid var(--gold); outline-offset:2px; }
 .judge-focused-shell .phone-ballot .panel-heading { padding:14px 18px; }
 .judge-focused-shell .phone-ballot .ballot-coverage { color:var(--forest); font-weight:700; }
