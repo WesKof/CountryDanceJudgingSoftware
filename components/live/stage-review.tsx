@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { AdvancementTie, LiveView, RoundView } from '@/lib/live/types';
 import { LiveResults } from './results';
 import SetupSection from './setup-section';
@@ -10,9 +10,22 @@ import OrganizerResults from './organizer-results';
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
 function Vote({ data, round, tie, action }: { data: LiveView; round: RoundView; tie: AdvancementTie; action: Action }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const ownVote = tie.votes.find((v) => v.judgeId === data.judgeId);
-  const voted = Boolean(ownVote);
-  return <fieldset className="tie-editor"><legend>{round.definition.division} · {tie.group} advancement tie</legend><p>Choose exactly {tie.slots} of these tied entrants. {tie.votes.length} / {round.definition.judgeIds.length} panel votes received. Marks and numeric averages stay unchanged.</p>{tie.subjectIds.map((id) => { const s = round.definition.subjects.find((s) => s.id === id)!; return <label className="check-label" key={id}><input type="checkbox" checked={(ownVote?.selected ?? selected).includes(id)} disabled={round.phase !== 'discussion' || voted || data.role === 'organizer' || data.status !== 'active'} onChange={(e) => setSelected(e.target.checked ? [...selected, id] : selected.filter((x) => x !== id))} />#{s.number} {s.primary}</label>; })}{data.role !== 'organizer' && round.definition.judgeIds.includes(data.judgeId!) && <button className="primary-button" disabled={voted || selected.length !== tie.slots || round.phase !== 'discussion' || data.status !== 'active'} onClick={() => void action({ action: 'vote', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint, tieKey: tie.key, selected })}>{voted ? 'Vote finalized' : 'Submit advancement vote'}</button>}<p>{tie.complete ? `Advancing: ${tie.selected.map((id) => '#' + round.definition.subjects.find((s) => s.id === id)!.number).join(', ')}` : tie.deadlocked ? 'Full panel is tied. The head judge must resolve the remaining vote tie.' : 'Every assigned judge, including the head, must vote.'}</p></fieldset>;
+  const statusId = useId();
+  const ownVote = tie.votes.find((vote) => vote.judgeId === data.judgeId), voted = Boolean(ownVote);
+  const choices = ownVote?.selected ?? selected, remaining = tie.slots - choices.length;
+  const canChoose = round.phase === 'discussion' && !voted && data.role !== 'organizer' && data.status === 'active' && round.definition.judgeIds.includes(data.judgeId!);
+  const selectionStatus = `${choices.length} / ${tie.slots} selected · ${voted ? 'Vote finalized.' : !canChoose ? 'Read only · voting is closed.' : remaining > 0 ? `Choose ${remaining} more.` : remaining < 0 ? `Remove ${-remaining} ${remaining === -1 ? 'choice' : 'choices'}.` : 'Ready to submit.'}`;
+  const waiting = round.definition.judgeIds.filter((id) => !tie.votes.some((vote) => vote.judgeId === id)).map((id) => round.definition.judges.find((judge) => judge.id === id)?.name ?? 'an assigned judge');
+  return <fieldset className="tie-editor"><legend>{round.definition.division} · {tie.group} advancement tie</legend>
+    <p>Choose exactly {tie.slots} of these tied entrants. {tie.votes.length} / {round.definition.judgeIds.length} panel votes received. Marks and numeric averages stay unchanged.</p>
+    {tie.subjectIds.map((id) => {
+      const subject = round.definition.subjects.find((subject) => subject.id === id)!;
+      return <label className="check-label" key={id}><input type="checkbox" checked={choices.includes(id)} disabled={!canChoose} onChange={(event) => setSelected(event.target.checked ? [...selected, id] : selected.filter((choice) => choice !== id))} />#{subject.number} {subject.primary}{subject.secondary ? ` & ${subject.secondary}` : ''}</label>;
+    })}
+    <p id={statusId} role="status">{selectionStatus}</p>
+    {data.role !== 'organizer' && round.definition.judgeIds.includes(data.judgeId!) && <button className="primary-button" aria-describedby={statusId} disabled={!canChoose || remaining !== 0} onClick={() => void action({ action: 'vote', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint, tieKey: tie.key, selected })}>{voted ? 'Vote finalized' : 'Submit advancement vote'}</button>}
+    <p>{tie.complete ? `Advancing: ${tie.selected.map((id) => '#' + round.definition.subjects.find((subject) => subject.id === id)!.number).join(', ')}` : tie.deadlocked ? 'Full panel is tied. The head judge must resolve the remaining vote tie.' : `Waiting for ${waiting.length > 3 ? waiting.length + ' judges' : waiting.join(', ')} to submit advancement votes.`}</p>
+  </fieldset>;
 }
 
 function SubmittedReview({ data, round, action }: { data: LiveView; round: RoundView; action: Action }) {
