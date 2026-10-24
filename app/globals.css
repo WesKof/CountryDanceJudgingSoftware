@@ -848,6 +848,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .results-pending { border-top: 1px solid var(--gold); margin-top: 20px; padding-top: 12px; }
 .results-pending > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0; }
 .results-pending h3 { color: inherit; }
+.results-pending small { display: block; margin-top: 4px; color: inherit; font-weight: 700; }
 .result-card-link { display: block; background: none; border: 0; padding: 8px 0; color: var(--forest); text-decoration: underline; font-size: 12px; cursor: pointer; }
 .result-entry-status { color: var(--forest); font-weight: 700; }
 .result-audit-entry { border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-wrap: anywhere; }
