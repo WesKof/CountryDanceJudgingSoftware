@@ -17,7 +17,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 
 ## Coordination and authority
 
-Master Country Dancer `01a1568c-2c3b-7160-9978-d5ec5748d38f` is the owner-designated coordinator/contact. Maintenance `01a1609a-64aa-7920-b691-7626cbbcf118` and execution chats return verified evidence/dependencies/released claims there. Check active work; coordinate fresh file/runtime claims and one source/Git/docs/mirror writer. Preserve model/reasoning. Both have distinct daily **9 AM and 6 PM America/Chicago** schedules; serialize wakes on one queue, avoid duplicates/use supported tools.
+Master Country Dancer `01a1568c-2c3b-7160-9978-d5ec5748d38f` is the owner-designated coordinator/contact. Maintenance `01a1609a-64aa-7920-b691-7626cbbcf118` and execution chats return verified evidence/dependencies/released claims there. Check active work; coordinate fresh file/runtime claims and one source/Git/docs/mirror writer. Preserve model/reasoning. Both have distinct daily **9 AM and 6 PM America/Chicago** schedules; serialize wakes on one queue, avoid duplicates/use supported tools. After reviewing a completed batch, the master automatically sends one bounded follow-up prompt into its own chat; workers report delivery/release claims there and do not create continuation loops or duplicate prompts.
 
 Complete authorized work without minor/major approval stops. For substantial work communicate scope, benefit, tradeoffs, dependencies, staging, verification/rollback, then proceed within owner/system/tool boundaries. Incorporate owner steering; ask only for real dependencies. Improve purposefully; no invented limits, manufactured changes or prolonged finished work.
 
