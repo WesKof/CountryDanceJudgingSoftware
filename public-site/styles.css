@@ -95,3 +95,11 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
 .comparison-marks ul { padding-left: 20px; }
 .comparison-marks li { margin: 6px 0; }
 .comparison-marks span { display: block; }
+
+.public-supporting { margin-top: 16px; border-top: 1px solid var(--line); }
+.public-supporting > summary { min-height: 48px; padding: 12px 0; font-weight: 600; }
+.card .public-supporting > .public-stage-records { margin: 18px 0 0; }
+.public-stage-records > h3 { font: 600 16px/1.5 system-ui, sans-serif; margin: 10px 0; }
+.public-judge-scorecards > details { margin-left: 12px; }
+.public-supporting .public-prelims { padding-top: 12px; }
+@media(max-width:760px) { .public-judge-scorecards > details { margin-left: 0; } }

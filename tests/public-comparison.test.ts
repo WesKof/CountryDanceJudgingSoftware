@@ -119,3 +119,73 @@ test('comparison HTML escapes names and labels, ignores private extras and stays
   assert.match(html, /<details class="public-comparison"><summary>/);
   assert.ok(html.indexOf('Final places') < html.indexOf('class="public-comparison"'));
 });
+
+test('public overview puts the correction before one supporting group without losing stage or judge links', () => {
+  const first = published(), current = published('v2', 2);
+  for (const record of [first, current]) {
+    const prelims = structuredClone(record.snapshot.stages[0]); prelims.id = 'prelims'; prelims.kind = 'prelims';
+    record.snapshot.stages.unshift(prelims);
+  }
+  current.snapshot.stages[1].marks[0].mark = 'Yes';
+  const store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': current.id } };
+  const before = JSON.stringify(store), html = renderResults(current, store);
+  assert.ok(html.indexOf('Final places') < html.indexOf('class="public-comparison"'));
+  assert.ok(html.indexOf('class="public-comparison"') < html.indexOf('class="public-supporting"'));
+  assert.equal((html.match(/class="public-supporting"/g) ?? []).length, 1);
+  assert.match(html, /Finals judge scorecards · 2 judges/);
+  assert.match(html, /Scorecards, Prelims &amp; scoring details/);
+  assert.match(html, /class="public-stage-records public-prelims"><h3>prelims<\/h3><table/);
+  for (const stage of current.snapshot.stages) {
+    for (const entrant of stage.entrants) assert.ok(html.includes(`/results/v2/entrant/${entrant.id}`));
+    for (const judge of stage.judges) assert.ok(html.includes(`/results/v2/judge/${judge.id}`));
+  }
+  assert.ok(html.includes('/results/v1'));
+  assert.match(html, /No<\/p>/);
+  assert.equal(JSON.stringify(store), before);
+});
+
+test('first-release, private-preview and scoped empty results avoid misleading comparison or extra gates', () => {
+  const first = published(), current = published('v2', 2), records = { v1: first, v2: current };
+  const store = { records, current: { 'public-event/public-competition': current.id } };
+  assert.doesNotMatch(renderResults(first, store), /public-comparison/);
+  const preview = structuredClone(current); preview.id = preview.snapshot.id = 'private'; preview.status = 'requested'; delete preview.releasedAt;
+  const privateHtml = renderResults(preview, store);
+  assert.doesNotMatch(privateHtml, /public-supporting|public-comparison|href="\/results\//);
+  assert.match(privateHtml, /Private preview · Not published/);
+  for (const [entrant, judge] of [['entry-1', undefined], [undefined, 'judge-a']]) {
+    const html = renderResults(current, store, entrant, judge);
+    assert.doesNotMatch(html, /public-supporting/);
+    assert.match(html, /class="public-scorecards" open/);
+  }
+  assert.doesNotMatch(renderResults(current, store, 'missing-entry'), /public-supporting|Final places|<h3>/);
+});
+
+test('retained stage kinds and no-Finals scoped records keep escaped standings before comparisons without duplicate tables', () => {
+  const first = published(), current = published('v2', 2);
+  for (const record of [first, current]) record.snapshot.stages[0].kind = 'Qualification & review';
+  current.snapshot.stages[0].marks[0].mark = 'Yes';
+  const store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': current.id } };
+  for (const scoped of [false, true]) {
+    const html = renderResults(current, store, scoped ? 'entry-1' : undefined);
+    assert.match(html, /<h3>Qualification &amp; review<\/h3><table>/);
+    assert.doesNotMatch(html, /Prelims judge scorecards/);
+    assert.equal((html.match(/<table>/g) ?? []).length, 1);
+    assert.ok(html.indexOf('</table>') < html.indexOf('class="public-comparison"'));
+  }
+  for (const record of [first, current]) {
+    const finals = structuredClone(record.snapshot.stages[0]); finals.id = 'finals'; finals.kind = 'finals';
+    record.snapshot.stages.unshift(finals);
+  }
+  const html = renderResults(current, store, 'entry-1');
+  assert.equal((html.match(/<table>/g) ?? []).length, 2);
+  assert.ok(html.lastIndexOf('</table>') < html.indexOf('class="public-comparison"'));
+  assert.ok(html.indexOf('Final places') < html.indexOf('Qualification &amp; review'));
+  for (const record of [first, current]) {
+    record.snapshot.stages = [record.snapshot.stages[1]];
+    record.snapshot.stages[0].kind = 'prelims';
+  }
+  const prelimOnly = renderResults(current, store, 'entry-1');
+  assert.equal((prelimOnly.match(/<table>/g) ?? []).length, 1);
+  assert.ok(prelimOnly.indexOf('</table>') < prelimOnly.indexOf('class="public-comparison"'));
+  assert.doesNotMatch(prelimOnly, /public-supporting|Final places/);
+});

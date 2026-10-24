@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { api, base, command } from './stage-helpers';
 import { createStage, limitedStage, finish, owner, receiver, localKey } from './publication-helpers';
 import { openResultManagement } from './setup-browser-helpers';
@@ -10,6 +11,10 @@ type PublicData = { records: { snapshot: PublicSnapshot }[]; current: Record<str
 test('published correction requires both roles and renewed release while the original public version stays intact', async ({ browser }) => {
   const setup = limitedStage(1, 4);
   setup.name = 'Synthetic published correction rehearsal';
+  if (process.env.PUBLIC_HIERARCHY_LONG_NAMES === 'true') for (const round of setup.rounds) for (const entrant of round.subjects) {
+    entrant.primary += ' Alexandra Montgomery-Wellington';
+    if (entrant.secondary) entrant.secondary += ' Christopher Beaumont-Richardson';
+  }
   const event = await createStage(setup);
   await finish(setup, event.organizer, event.tokens, event.head, false);
   await command(event.organizer, { action: 'prepare-event-publication' });
@@ -73,6 +78,7 @@ test('published correction requires both roles and renewed release while the ori
     await site.goto(receiver + '/admin?event=' + original.snapshot.eventId);
     await expect(site.getByRole('cell', { name: '6.3333', exact: true })).toBeVisible();
     await expect(site.locator('.public-comparison')).toHaveCount(0);
+    await expect(site.locator('.public-supporting')).toHaveCount(0);
     await site.getByRole('button', { name: 'Approve & publish results', exact: true }).click();
     await expect(site.getByRole('heading', { name: 'Results published', exact: true })).toBeVisible();
     await site.getByRole('link', { name: 'View published results', exact: true }).click();
@@ -81,7 +87,42 @@ test('published correction requires both roles and renewed release while the ori
     const comparison = site.locator('.public-comparison');
     await expect(comparison).not.toHaveAttribute('open');
     expect(await comparison.evaluate((element) => Boolean(document.querySelector('article.card table')!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    const hierarchy = [];
+    for (const width of [390, 1264, 1440]) {
+      await site.setViewportSize({ width, height: 900 });
+      hierarchy.push(await site.evaluate(() => {
+        const table = document.querySelector('article.card table')!.getBoundingClientRect();
+        const change = document.querySelector('.public-comparison')!.getBoundingClientRect();
+        const supporting = document.querySelector('.public-supporting, .public-scorecards')!.getBoundingClientRect();
+        return { width: innerWidth, rankingBottom: table.bottom, comparisonTop: change.top, supportingTop: supporting.top, gap: change.top - table.bottom };
+      }));
+      if (process.env.PUBLIC_HIERARCHY_EVIDENCE) {
+        mkdirSync(process.env.PUBLIC_HIERARCHY_EVIDENCE, { recursive: true });
+        await site.screenshot({ path: `${process.env.PUBLIC_HIERARCHY_EVIDENCE}/corrected-${width}.png`, fullPage: true });
+      }
+    }
+    if (process.env.PUBLIC_HIERARCHY_EVIDENCE) writeFileSync(`${process.env.PUBLIC_HIERARCHY_EVIDENCE}/hierarchy.json`, JSON.stringify(hierarchy, null, 2));
+    expect(hierarchy.every((row) => row.comparisonTop < row.supportingTop)).toBe(true);
+    expect(hierarchy.every((row) => row.gap >= 0 && row.gap < 90)).toBe(true);
     const publicPosts: string[] = []; site.on('request', (request) => { if (request.method() === 'POST') publicPosts.push(request.url()); });
+    const supporting = site.locator('.public-supporting');
+    await expect(supporting).toHaveCount(1); await expect(supporting).not.toHaveAttribute('open');
+    const supportingSummary = supporting.locator(':scope > summary');
+    await supportingSummary.focus(); await site.keyboard.press('Enter');
+    await expect(supporting).toHaveAttribute('open');
+    await expect(supporting.locator('.public-stage-records.public-prelims > table')).toBeVisible();
+    for (const judge of setup.judges) await expect(supporting.locator('.public-judge-scorecards').getByRole('link', { name: judge.name, exact: true })).toBeVisible();
+    await site.keyboard.press('Tab');
+    const firstJudge = supporting.locator('.public-judge-scorecards > details').first();
+    await expect(firstJudge.locator(':scope > summary')).toBeFocused();
+    await site.keyboard.press('Enter'); await expect(firstJudge.locator('h4').first()).toBeVisible();
+    if (process.env.PUBLIC_HIERARCHY_EVIDENCE) for (const width of [390, 1440]) {
+      await site.setViewportSize({ width, height: 900 });
+      expect(await site.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await supporting.screenshot({ path: `${process.env.PUBLIC_HIERARCHY_EVIDENCE}/supporting-open-${width}.png` });
+    }
+    await supportingSummary.focus(); await site.keyboard.press('Space');
+    await expect(supporting).not.toHaveAttribute('open'); await expect(supportingSummary).toBeFocused();
     await comparison.locator(':scope > summary').focus(); await site.keyboard.press('Enter');
     await expect(comparison.getByText('4.5000 → 6.3333', { exact: true })).toBeVisible();
     await expect(comparison.getByText('Recorded scorecard changes · 1', { exact: true })).toBeVisible();
@@ -96,6 +137,10 @@ test('published correction requires both roles and renewed release while the ori
     const currentId = released.current[original.snapshot.eventId + '/' + original.snapshot.competitionId];
     const published = released.records.find((record) => record.snapshot.id === currentId)!.snapshot;
     const finalStage = published.stages.find((stage) => stage.kind === 'finals')!;
+    for (const entry of finalStage.entrants) {
+      const name = `#${entry.number} ${entry.primary} ${entry.secondary}`;
+      await expect(site.locator('.public-standings').getByRole('link', { name, exact: true })).toHaveText(name);
+    }
     const affected = finalStage.entrants.find((entry) => entry.number === entrant.number)!;
     await site.goto(receiver + `/results/${currentId}/entrant/${affected.id}`);
     await comparison.locator(':scope > summary').click();
@@ -111,7 +156,7 @@ test('published correction requires both roles and renewed release while the ori
     await comparison.locator(':scope > summary').click();
     await expect(comparison).toContainText('No recorded-scorecard changes for this judge.');
     await site.goto(receiver + '/results/' + currentId);
-    await expect(site.locator('.public-scorecards').first()).not.toHaveAttribute('open');
+    await expect(site.locator('.public-supporting')).not.toHaveAttribute('open');
     await site.locator('.revision > details > summary').click();
     await site.getByRole('link', { name: 'Revision 1', exact: true }).click();
     await expect(site.getByText('You are viewing an earlier published version. Its original scores are preserved.', { exact: true })).toBeVisible();
