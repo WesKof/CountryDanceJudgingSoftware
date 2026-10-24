@@ -12,6 +12,11 @@ const newId = () => crypto.randomUUID();
 const song = (number: number): Performance => ({ id: newId(), title: `Song ${number}`, artist: '', tempo: '', notes: '', partners: [] });
 const heat = (number: number) => ({ id: newId(), name: `Heat ${number}`, subjectIds: [] as string[], songs: [song(1), song(2)] });
 
+function csvColumnIssue(rows: string[][], columns: number) {
+  const row = rows.findIndex((row, index) => index > 0 && row.length !== columns);
+  return row < 0 ? '' : `CSV row ${row + 1} needs exactly ${columns} columns. Put names containing commas in double quotes.`;
+}
+
 export default function SetupEditor({ setup, update, frozenIds, correction, initialRoundId, initialSection, initialRequest, viewRoundId, onSelectRound, approvedPrelimIds, withdrawnIdsByRound = {} }: { approvedPrelimIds?: string[]; withdrawnIdsByRound?: Record<string, string[]>; initialRoundId?: string; initialSection?: string; initialRequest?: number; viewRoundId?: string; onSelectRound?: (id: string) => void; setup: LiveSetup; update: (s: LiveSetup) => void; frozenIds: string[]; correction: boolean }) {
   const editor = useRef<HTMLDivElement>(null);
   const roundSection = useRef<HTMLDetailsElement>(null);
@@ -101,7 +106,10 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
   function importRoster(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const value = String(new FormData(e.currentTarget).get('csv'));
     const rows = parseCsv(value); const jj = competition!.format === 'Jack & Jill';
-    if (!rows.length || rows[0].join(',').toLowerCase() !== (jj ? 'number,name,role' : 'number,lead,follow')) { setIssue('Use the displayed CSV header.'); return; }
+    if (rows[0]?.length !== 3 || rows[0].join(',').toLowerCase() !== (jj ? 'number,name,role' : 'number,lead,follow')) { setIssue('Use the displayed CSV header.'); return; }
+    if (rows.length < 2) { setIssue('Add at least one entrant below the CSV header.'); return; }
+    const columnIssue = csvColumnIssue(rows, 3);
+    if (columnIssue) { setIssue(columnIssue); return; }
     const subjects: LiveSubject[] = rows.slice(1).map((row) => ({ id: newId(), number: Number(row[0]), primary: row[1] ?? '', secondary: jj ? '' : row[2] ?? '', ...(jj ? { role: row[2] as 'Lead' | 'Follow' } : {}) }));
     if (subjects.some((s) => !Number.isSafeInteger(s.number) || s.number < 1 || !s.primary || (jj ? !['Lead', 'Follow'].includes(s.role!) : !s.secondary)) || new Set(subjects.map((s) => s.number)).size !== subjects.length) { setIssue('Every row needs a unique positive bib, names, and a valid role or partner.'); return; }
     if (round.subjects.length && !window.confirm('Replace this unopened roster and its heat assignments?')) return;
@@ -110,7 +118,9 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
   function importJudges(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if(panelLocked) return;
     const rows=parseCsv(String(new FormData(e.currentTarget).get('judges')));
-    if(rows[0]?.join(',').toLowerCase() !== 'name,participantid') { setIssue('Use Name,ParticipantId and distinct participant identifiers.'); return; }
+    if(rows[0]?.length !== 2 || rows[0].join(',').toLowerCase() !== 'name,participantid') { setIssue('Use Name,ParticipantId and distinct participant identifiers.'); return; }
+    const columnIssue = csvColumnIssue(rows, 2);
+    if (columnIssue) { setIssue(columnIssue); return; }
     const imported=rows.slice(1).map((row)=>({id:newId(),name:row[0]?.trim() ?? '',participantId:row[1]?.trim().toLowerCase() ?? ''}));
     if(!imported.length || imported.length>15 || imported.some((j)=>!j.name || !j.participantId || j.participantId===setup.organizerParticipantId) || new Set(imported.map((j)=>j.participantId)).size!==imported.length) {setIssue('Every judge needs a name and unique participant identifier distinct from the organizer.');return;}
     if(setup.judges.length && !window.confirm('Replace the preparation panel and clear panel assignments? Save setup applies this draft.')) return;
