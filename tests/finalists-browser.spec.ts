@@ -1,4 +1,3 @@
-import { openSetupNavigation } from './setup-browser-helpers';
 import {test,expect} from '@playwright/test';
 import {api,base,command,save,submitHeat} from './stage-helpers';
 import {limitedStage,createStage,dance,exact} from './publication-helpers';
@@ -34,7 +33,11 @@ test('J&J approved dancers are visible before their actual draw; Run dropdowns a
   // Invalid drafts cannot be saved. Valid changes require a fresh explicit head decision.
   const contextCount=await browser.newContext(),countDesk=await contextCount.newPage(),countHead=await contextCount.newPage();await countDesk.goto(base+path);await expandSetup(countDesk);await selectSetupRound(countDesk, setup, final.id);await expandSetup(countDesk);
   const count=countDesk.getByLabel('Finalists per role / number of pairs',{exact:true});await expect(count).toHaveAttribute('max','3');const before=await api<LiveView>(organizer);await count.fill('4');await expect(count).toHaveAttribute('aria-invalid','true');await expect(countDesk.getByText(/4 per role.*3 eligible leads and 3 eligible follows/).first()).toBeVisible();await expect(countDesk.getByRole('button',{name:'Save setup',exact:true})).toBeDisabled();expect((await api<LiveView>(organizer)).version).toBe(before.version);
-  await count.fill('2');let savedCount=countDesk.waitForResponse((r)=>r.url().endsWith('/api/live')&&r.request().postDataJSON()?.action==='setup');await countDesk.getByRole('button',{name:'Save setup',exact:true}).click();expect((await savedCount).status()).toBe(200);await openSetupNavigation(countDesk);await expect(countDesk.getByLabel('Previous finalist selection')).toBeVisible();await expect(countDesk.getByLabel('Approved finalists')).toHaveCount(0);
+  await count.fill('2');let savedCount=countDesk.waitForResponse((r)=>r.url().endsWith('/api/live')&&r.request().postDataJSON()?.action==='setup');await countDesk.getByRole('button',{name:'Save setup',exact:true}).click();expect((await savedCount).status()).toBe(200);
+  // The POST acknowledgement precedes the refreshed view and save-triggered disclosure close.
+  await expect(countDesk.getByText('Setup saved to the shared event.',{exact:true})).toBeVisible();
+  await expect(countDesk.locator('#setup-saved-details')).not.toHaveAttribute('open');
+  await expandSetup(countDesk);await expect(countDesk.getByLabel('Previous finalist selection')).toBeVisible();await expect(countDesk.getByLabel('Approved finalists')).toHaveCount(0);
   await countDesk.getByRole('button',{name:'02 Score',exact:true}).click();
   await expect(countDesk.getByRole('heading',{name:'Head approval needed',exact:true})).toBeVisible();
   await expect(countDesk.locator('#run-prelims')).not.toHaveAttribute('open');
