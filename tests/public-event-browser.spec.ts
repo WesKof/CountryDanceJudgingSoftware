@@ -61,7 +61,7 @@ test('selected public events keep results near navigation across one/multiple ev
     const isolated: PublicStore = { records: {}, current: {} };
     for (const record of released.records) if (record.snapshot.eventId === first.snapshot.eventId) {
       isolated.records[record.snapshot.id] = { ...record, id: record.snapshot.id, revision: record.snapshot.revision, status: 'released', sourceFingerprint: record.snapshot.sourceFingerprint, competitionId: record.snapshot.competitionId };
-      isolated.current[record.snapshot.competitionId] = record.snapshot.id;
+      isolated.current[record.snapshot.eventId + '/' + record.snapshot.competitionId] = record.snapshot.id;
     }
     await page.route(directory, (route) => route.fulfill({ contentType: 'text/html', body: renderIndex(isolated, true, first.snapshot.eventId) }));
     const one = await measure(page, first, 'one-event');
