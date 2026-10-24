@@ -1,0 +1,121 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import type { PublicationRecord, PublicSnapshot } from '../lib/live/publication.ts';
+import { comparePublicResults, renderPublicComparison } from '../public-site/comparison.ts';
+import { renderResults } from '../public-site/render.ts';
+
+function published(id = 'v1', revision = 1): PublicationRecord {
+  const judges = [{ id: 'judge-a', name: 'Public Alex', head: false }, { id: 'judge-b', name: 'Public Robin', head: true }];
+  const entrants: PublicSnapshot['stages'][number]['entrants'] = [1, 2].map((number) => ({ id: `entry-${number}`, number: 100 + number, primary: `Dancer ${number}`, secondary: `Partner ${number}`, role: '', members: [], withdrawn: false, average: number === 1 ? 4.5 : 0, numericPlace: number, place: number, observations: 4, judgeMeans: judges.map((judge) => ({ judgeId: judge.id, average: number === 1 ? 4.5 : 0, observations: 2 })) }));
+  const snapshot: PublicSnapshot = { schemaVersion: 1, scoringVersion: 'equal-judge-stage-v1', id, revision, supersedes: revision === 1 ? null : 'v1', eventId: 'public-event', competitionId: 'public-competition', event: { name: 'Synthetic public results', venue: 'Local', date: '2026-10-24' }, competition: { format: 'Strictly', division: 'Beginner' }, sourceFingerprint: 'opaque-public-digest', preparedAt: '2026-10-24T10:00:00Z', headApproval: ['public-approval'], changeSummary: 'Approved score correction', stages: [{ id: 'finals', kind: 'finals', judges, entrants, heats: [{ id: 'heat', name: 'Heat 1', entrants: entrants.map((entrant) => entrant.id), songs: ['song-a', 'song-b'].map((id) => ({ id, title: id === 'song-a' ? 'Two-step' : 'Country swing', partners: [] })) }], marks: entrants.flatMap((entrant) => judges.flatMap((judge) => ['song-a', 'song-b'].map((songId) => ({ entrantId: entrant.id, judgeId: judge.id, songId, mark: entrant.number === 101 ? 'A1' as const : 'No' as const })))), advancing: [], decisions: [] }] };
+  return { id, revision, competitionId: 'PRIVATE_INTERNAL_COMPETITION', sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'released', releasedAt: `2026-10-24T${String(10 + revision).padStart(2, '0')}:00:00Z` };
+}
+
+test('released history chooses the highest valid preceding release across private gaps without trusting pointers or mutating inputs', () => {
+  const first = published(), third = published('v3', 3), current = published('v5', 5), privateSecond = published('v2', 2), privateFourth = published('v4', 4), unrelated = published('other', 4);
+  privateSecond.status = 'requested'; privateFourth.status = 'queued'; unrelated.snapshot.eventId = 'another-event'; current.snapshot.supersedes = unrelated.id;
+  const records = Object.fromEntries([first, privateSecond, third, privateFourth, unrelated, current].map((record) => [record.id, record]));
+  const before = JSON.stringify(records);
+  assert.equal(comparePublicResults(current, records).previous?.id, 'v3');
+  assert.equal(comparePublicResults(third, records).previous?.id, 'v1', 'a historical view never compares forward to a newer release');
+  assert.equal(JSON.stringify(records), before);
+  assert.doesNotMatch(renderPublicComparison(current, records), /another-event|PRIVATE_INTERNAL_COMPETITION|published revision 4/);
+});
+
+test('missing, cross-competition, future, mismatched and ambiguous predecessor records stay unavailable', () => {
+  const current = published('v3', 3), foreign = published(), future = published('future', 2), mismatch = published('mismatch', 2);
+  foreign.snapshot.competitionId = 'other-competition'; foreign.snapshot.stages[0].entrants[0].primary = 'UNRELATED_SECRET';
+  future.releasedAt = '2026-10-25T12:00:00Z'; mismatch.snapshot.id = 'not-the-record'; current.snapshot.supersedes = foreign.id;
+  const broken = { id: 'broken', status: 'released', releasedAt: '2026-10-24T11:00:00Z' } as PublicationRecord;
+  const records = { [current.id]: current, [foreign.id]: foreign, [future.id]: future, [mismatch.id]: mismatch, broken };
+  assert.equal(comparePublicResults(current, records).state, 'unavailable');
+  const html = renderPublicComparison(current, records);
+  assert.match(html, /earlier published version is not available/); assert.doesNotMatch(html, /UNRELATED_SECRET|other-competition/);
+  const one = published(), duplicate = published('duplicate', 1);
+  assert.equal(comparePublicResults(current, { ...records, [one.id]: one, [duplicate.id]: duplicate }).state, 'unavailable');
+});
+
+test('first, unchanged, private preview and under-review released states are honest without exposing private preparations', () => {
+  const first = published(), current = published('v2', 2), records = { v1: first, v2: current };
+  assert.equal(renderPublicComparison(first, records), '');
+  assert.match(renderPublicComparison(current, records), /No public result or recorded-scorecard changes for this view/);
+  const privateView = structuredClone(current); privateView.status = 'requested'; privateView.snapshot.stages[0].entrants[0].primary = 'UNRELEASED_SECRET';
+  assert.equal(renderPublicComparison(privateView, records), '');
+  assert.equal(comparePublicResults(privateView, records).state, 'unavailable');
+  current.underReview = true;
+  assert.equal(comparePublicResults(current, records).previous?.id, first.id);
+});
+
+test('withdrawal, official place and average changes preserve null and zero without recalculation', () => {
+  const first = published(), current = published('v2', 2), entrant = current.snapshot.stages[0].entrants[1];
+  entrant.withdrawn = true; entrant.average = null; entrant.place = null;
+  const changes = comparePublicResults(current, { v1: first, v2: current }).changes;
+  assert.equal(changes.length, 1); assert.equal(changes[0].before?.average, 0); assert.equal(changes[0].after?.average, null);
+  const html = renderPublicComparison(current, { v1: first, v2: current });
+  assert.match(html, /0\.0000 → —/); assert.match(html, /2 → —/); assert.match(html, /Active → Withdrawn/);
+  assert.equal(entrant.observations, 4);
+});
+
+test('recorded mark changes remain visible when displayed averages do not change; blank, No and absent cells differ', () => {
+  const first = published(), current = published('v2', 2), stage = current.snapshot.stages[0];
+  first.snapshot.stages[0].marks[0].mark = 'Yes';
+  first.snapshot.stages[0].entrants[0].average = stage.entrants[0].average = 5.875;
+  stage.marks[1].mark = 'Yes';
+  const swapped = renderPublicComparison(current, { v1: first, v2: current });
+  assert.match(swapped, /Yes → A1/); assert.match(swapped, /A1 → Yes/);
+  assert.doesNotMatch(swapped, /5\.8750 → 5\.8750/);
+  stage.marks[0].mark = ''; stage.marks[1].mark = 'No';
+  const result = comparePublicResults(current, { v1: first, v2: current });
+  assert.equal(result.changes[0].before?.average, result.changes[0].after?.average);
+  assert.equal(result.changes[0].marks.length, 2);
+  let html = renderPublicComparison(current, { v1: first, v2: current });
+  assert.match(html, /Recorded scorecard changes · 2/); assert.match(html, /Yes → Blank · Not observed/); assert.match(html, /A1 → No \(0\)/);
+  stage.marks = stage.marks.slice(1);
+  html = renderPublicComparison(current, { v1: first, v2: current }); assert.match(html, /Yes → Not present/);
+});
+
+test('sub-display precision and observation-only changes render meaningful facts rather than identical values or empty entries', () => {
+  const first = published(), current = published('v2', 2);
+  first.snapshot.stages[0].entrants[0].average = 4.500001; current.snapshot.stages[0].entrants[0].average = 4.500002;
+  current.snapshot.stages[0].entrants[1].observations = 3;
+  const html = renderPublicComparison(current, { v1: first, v2: current });
+  assert.match(html, /Average \(full published value\)/); assert.match(html, /4\.500001 → 4\.500002/);
+  assert.match(html, /Recorded observations<\/dt><dd>4 → 3/); assert.doesNotMatch(html, /4\.5000 → 4\.5000/);
+});
+
+test('entrant and judge contexts exclude unrelated changes and keep only the selected recorded scorecard', () => {
+  const first = published(), current = published('v2', 2), stage = current.snapshot.stages[0];
+  stage.marks[0].mark = 'Yes'; stage.marks.find((mark) => mark.entrantId === 'entry-2' && mark.judgeId === 'judge-b')!.mark = 'A1';
+  assert.equal(comparePublicResults(current, { v1: first, v2: current }).changes.length, 2);
+  const judge = comparePublicResults(current, { v1: first, v2: current }, { judgeId: 'judge-a' });
+  assert.equal(judge.changes.length, 1); assert.equal(judge.changes[0].after?.id, 'entry-1'); assert.ok(judge.changes[0].marks.every((mark) => mark.judgeId === 'judge-a'));
+  const entrant = comparePublicResults(current, { v1: first, v2: current }, { entrantId: 'entry-2' });
+  assert.equal(entrant.changes.length, 1); assert.equal(entrant.changes[0].after?.id, 'entry-2');
+  assert.equal(comparePublicResults(current, { v1: first, v2: current }, { judgeId: 'unknown' }).changes.length, 0);
+});
+
+test('published member links connect an entrant and their couple across stages without matching unrelated bibs', () => {
+  const first = published(), finals = first.snapshot.stages[0];
+  finals.entrants[0].members = ['public-lead', 'public-follow'];
+  const prelims = structuredClone(finals); prelims.id = 'prelims'; prelims.kind = 'prelims'; prelims.entrants = [{ ...structuredClone(finals.entrants[0]), id: 'public-lead', role: 'Lead', secondary: '', members: [] }];
+  prelims.marks = prelims.marks.filter((mark) => mark.entrantId === 'entry-1').map((mark) => ({ ...mark, entrantId: 'public-lead' }));
+  first.snapshot.stages.push(prelims);
+  const current = structuredClone(first); current.id = current.snapshot.id = 'v2'; current.revision = current.snapshot.revision = 2; current.releasedAt = '2026-10-24T12:00:00Z';
+  current.snapshot.stages.forEach((stage) => { stage.marks[0].mark = 'Yes'; });
+  const records = { v1: first, v2: current };
+  assert.equal(comparePublicResults(current, records, { entrantId: 'public-lead' }).changes.length, 2);
+  assert.equal(comparePublicResults(current, records, { entrantId: 'entry-1' }).changes.length, 2);
+  assert.equal(comparePublicResults(current, records, { entrantId: 'unknown' }).changes.length, 0);
+});
+
+test('comparison HTML escapes names and labels, ignores private extras and stays collapsed after rankings', () => {
+  const first = published(), current = published('v2', 2), stage = current.snapshot.stages[0];
+  stage.entrants[0].primary = '<img src=x onerror=alert(1)>'; stage.judges[0].name = 'Judge <script>bad</script>'; stage.heats[0].songs[0].title = '</summary><svg onload=bad>';
+  stage.marks[0].mark = 'Yes';
+  Object.assign(current.snapshot, { privateNotes: 'PRIVATE_REASON_NEVER_RENDER' });
+  const records = { v1: first, v2: current }, html = renderResults(current, { records, current: { 'public-event/public-competition': current.id } });
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/); assert.match(html, /Judge &lt;script&gt;bad&lt;\/script&gt;/); assert.match(html, /&lt;\/summary&gt;&lt;svg onload=bad&gt;/);
+  assert.doesNotMatch(html, /<script>|<svg|<img src=x|PRIVATE_REASON_NEVER_RENDER|PRIVATE_INTERNAL_COMPETITION/);
+  assert.match(html, /<details class="public-comparison"><summary>/);
+  assert.ok(html.indexOf('Final places') < html.indexOf('class="public-comparison"'));
+});

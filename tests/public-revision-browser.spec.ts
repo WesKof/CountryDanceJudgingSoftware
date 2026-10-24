@@ -5,7 +5,7 @@ import { openResultManagement } from './setup-browser-helpers';
 import type { LiveView } from '../lib/live/types';
 import type { PublicSnapshot } from '../lib/live/publication';
 
-type PublicData = { records: { snapshot: PublicSnapshot }[] };
+type PublicData = { records: { snapshot: PublicSnapshot }[]; current: Record<string, string> };
 
 test('published correction requires both roles and renewed release while the original public version stays intact', async ({ browser }) => {
   const setup = limitedStage(1, 4);
@@ -72,15 +72,51 @@ test('published correction requires both roles and renewed release while the ori
     await site.getByRole('button', { name: 'Sign in', exact: true }).click();
     await site.goto(receiver + '/admin?event=' + original.snapshot.eventId);
     await expect(site.getByRole('cell', { name: '6.3333', exact: true })).toBeVisible();
+    await expect(site.locator('.public-comparison')).toHaveCount(0);
     await site.getByRole('button', { name: 'Approve & publish results', exact: true }).click();
     await expect(site.getByRole('heading', { name: 'Results published', exact: true })).toBeVisible();
     await site.getByRole('link', { name: 'View published results', exact: true }).click();
     await expect(site.getByRole('cell', { name: '6.3333', exact: true })).toBeVisible();
+    await expect(site.getByText('What changed · 1 result entry', { exact: true })).toBeVisible();
+    const comparison = site.locator('.public-comparison');
+    await expect(comparison).not.toHaveAttribute('open');
+    expect(await comparison.evaluate((element) => Boolean(document.querySelector('article.card table')!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    const publicPosts: string[] = []; site.on('request', (request) => { if (request.method() === 'POST') publicPosts.push(request.url()); });
+    await comparison.locator(':scope > summary').focus(); await site.keyboard.press('Enter');
+    await expect(comparison.getByText('4.5000 → 6.3333', { exact: true })).toBeVisible();
+    await expect(comparison.getByText('Recorded scorecard changes · 1', { exact: true })).toBeVisible();
+    await comparison.locator('.comparison-marks > summary').focus(); await site.keyboard.press('Enter');
+    await expect(comparison.getByText('A1 → Yes', { exact: true })).toBeVisible();
+    for (const width of [360, 390, 738, 1440]) {
+      await site.setViewportSize({ width, height: 900 });
+      expect(await site.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      if ([390, 1440].includes(width)) await comparison.screenshot({ path: `test-results/public-comparison-${width}.png` });
+    }
+    const released = await (await fetch(receiver + '/api/public')).json() as PublicData;
+    const currentId = released.current[original.snapshot.eventId + '/' + original.snapshot.competitionId];
+    const published = released.records.find((record) => record.snapshot.id === currentId)!.snapshot;
+    const finalStage = published.stages.find((stage) => stage.kind === 'finals')!;
+    const affected = finalStage.entrants.find((entry) => entry.number === entrant.number)!;
+    await site.goto(receiver + `/results/${currentId}/entrant/${affected.id}`);
+    await comparison.locator(':scope > summary').click();
+    await expect(comparison.locator('.comparison-list')).toContainText('#' + entrant.number);
+    await expect(comparison.locator('.comparison-list')).not.toContainText('#101');
+    await site.goto(receiver + `/results/${currentId}/entrant/${finalStage.entrants.find((entry) => entry.number === 101)!.id}`);
+    await comparison.locator(':scope > summary').click();
+    await expect(comparison).toContainText('No public result or recorded-scorecard changes for this entrant.');
+    await site.goto(receiver + `/results/${currentId}/judge/${finalStage.judges[0].id}`);
+    await comparison.locator(':scope > summary').click();
+    await expect(comparison).toContainText('Recorded scorecard changes · 1');
+    await site.goto(receiver + `/results/${currentId}/judge/${finalStage.judges[1].id}`);
+    await comparison.locator(':scope > summary').click();
+    await expect(comparison).toContainText('No recorded-scorecard changes for this judge.');
+    await site.goto(receiver + '/results/' + currentId);
     await expect(site.locator('.public-scorecards').first()).not.toHaveAttribute('open');
     await site.locator('.revision > details > summary').click();
     await site.getByRole('link', { name: 'Revision 1', exact: true }).click();
     await expect(site.getByText('You are viewing an earlier published version. Its original scores are preserved.', { exact: true })).toBeVisible();
     await expect(site.getByRole('cell', { name: '4.5000', exact: true })).toBeVisible();
+    await expect(comparison).toHaveCount(0);
     await site.getByRole('link', { name: 'Current revision', exact: true }).click();
     await expect(site.getByRole('cell', { name: '6.3333', exact: true })).toBeVisible();
     for (const width of [390, 1440]) {
@@ -90,6 +126,8 @@ test('published correction requires both roles and renewed release while the ori
     }
     const after = await (await fetch(receiver + '/api/public')).json() as PublicData;
     expect(after.records.find((r) => r.snapshot.id === original.id)!.snapshot).toEqual(originalPublic!.snapshot);
+    expect(after.current[original.snapshot.eventId + '/' + original.snapshot.competitionId]).toBe(currentId);
+    expect(publicPosts).toEqual([]);
     const backup = await command(event.organizer, { action: 'backup' }) as { history: { heatSubmissions: { id: string }[] } };
     expect(backup.history.heatSubmissions.some((s) => s.id === source.id)).toBe(true);
     expect(JSON.stringify(after)).not.toContain('PUBLICATION_PRIVATE_NOTE_SENTINEL');

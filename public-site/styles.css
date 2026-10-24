@@ -80,3 +80,18 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
   .hero { grid-template-columns:1fr; }
   .hero figure { display:none; }
 }
+
+.public-comparison { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.public-comparison > summary { padding: 12px 0; font-weight: 600; }
+.comparison-list { padding: 0; list-style: none; }
+.comparison-list > li { padding: 14px 0; border-top: 1px solid var(--line); }
+.comparison-list h4 { margin: 0 0 8px; }
+.comparison-list dl { margin: 0; }
+.comparison-list dl > div { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0; }
+.comparison-list dt { font-weight: 600; min-width: 90px; }
+.comparison-list dd { margin: 0; }
+.comparison-marks { margin-top: 10px; }
+.comparison-marks > summary { padding: 8px 0; }
+.comparison-marks ul { padding-left: 20px; }
+.comparison-marks li { margin: 6px 0; }
+.comparison-marks span { display: block; }
