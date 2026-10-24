@@ -103,3 +103,16 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
 .public-judge-scorecards > details { margin-left: 12px; }
 .public-supporting .public-prelims { padding-top: 12px; }
 @media(max-width:760px) { .public-judge-scorecards > details { margin-left: 0; } }
+
+.selected-event-heading { padding: 22px 0 20px; }
+.selected-event-context { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.selected-event-context > a { flex-shrink: 0; font-size: 14px; padding: 8px 0; }
+.selected-event-heading h1 { font-size: clamp(30px, 3.5vw, 44px); margin: 6px 0 0; overflow-wrap: anywhere; }
+.selected-event-heading .filters { flex-direction: row; align-items: end; gap: 12px; margin: 16px 0 0; }
+.selected-event-heading .filters button { flex-shrink: 0; padding: 12px; }
+.selected-event-heading select { min-height: 46px; }
+@media(max-width:760px) {
+  .selected-event-heading { padding: 12px 0 18px; }
+  .selected-event-context .eyebrow { font-size: 10px; letter-spacing: .08em; }
+  .selected-event-heading .filters { gap: 10px; }
+}

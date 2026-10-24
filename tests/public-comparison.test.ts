@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { PublicationRecord, PublicSnapshot } from '../lib/live/publication.ts';
 import { comparePublicResults, renderPublicComparison } from '../public-site/comparison.ts';
-import { renderResults } from '../public-site/render.ts';
+import { renderIndex, renderResults, type PublicStore } from '../public-site/render.ts';
 
 function published(id = 'v1', revision = 1): PublicationRecord {
   const judges = [{ id: 'judge-a', name: 'Public Alex', head: false }, { id: 'judge-b', name: 'Public Robin', head: true }];
@@ -10,6 +10,38 @@ function published(id = 'v1', revision = 1): PublicationRecord {
   const snapshot: PublicSnapshot = { schemaVersion: 1, scoringVersion: 'equal-judge-stage-v1', id, revision, supersedes: revision === 1 ? null : 'v1', eventId: 'public-event', competitionId: 'public-competition', event: { name: 'Synthetic public results', venue: 'Local', date: '2026-10-24' }, competition: { format: 'Strictly', division: 'Beginner' }, sourceFingerprint: 'opaque-public-digest', preparedAt: '2026-10-24T10:00:00Z', headApproval: ['public-approval'], changeSummary: 'Approved score correction', stages: [{ id: 'finals', kind: 'finals', judges, entrants, heats: [{ id: 'heat', name: 'Heat 1', entrants: entrants.map((entrant) => entrant.id), songs: ['song-a', 'song-b'].map((id) => ({ id, title: id === 'song-a' ? 'Two-step' : 'Country swing', partners: [] })) }], marks: entrants.flatMap((entrant) => judges.flatMap((judge) => ['song-a', 'song-b'].map((songId) => ({ entrantId: entrant.id, judgeId: judge.id, songId, mark: entrant.number === 101 ? 'A1' as const : 'No' as const })))), advancing: [], decisions: [] }] };
   return { id, revision, competitionId: 'PRIVATE_INTERNAL_COMPETITION', sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'released', releasedAt: `2026-10-24T${String(10 + revision).padStart(2, '0')}:00:00Z` };
 }
+
+test('selected event navigation is compact, escaped, consistent and leaves direct views complete', () => {
+  const first = published(); first.snapshot.event.name = 'Latest <Autumn> & Friends';
+  const older = published('older'); older.snapshot.competitionId = 'second-competition'; older.releasedAt = '2026-10-23T10:00:00Z'; older.snapshot.event.name = 'Earlier event name';
+  const store: PublicStore = { records: { v1: first, older }, current: { first: 'v1', second: 'older' } };
+  const before = JSON.stringify(store), one = renderIndex(store, true, 'public-event');
+  assert.match(one, /<h1>Latest &lt;Autumn&gt; &amp; Friends<\/h1>/);
+  assert.match(one, /Published results · 2 competitions/);
+  assert.doesNotMatch(one, /<form|Final places first|<h2>Latest/);
+  assert.match(one, /<h2>Earlier event name · Strictly · Beginner/);
+  assert.match(one, /href="\/leaderboard">All events/);
+  const another = published('another'); another.snapshot.eventId = 'other-event';
+  store.records = { ...store.records, another };
+  store.current = { ...store.current, another: 'another' };
+  const multi = renderIndex(store, true, 'public-event');
+  assert.match(multi, /<label>Switch event<select name="event">/);
+  assert.match(multi, /value="public-event" selected>Latest &lt;Autumn&gt; &amp; Friends/);
+  assert.doesNotMatch(multi, /<script/);
+  assert.match(renderResults(first, store), /<h2>Latest &lt;Autumn&gt; &amp; Friends · Strictly · Beginner/);
+  assert.equal(JSON.stringify({ records: { v1: first, older }, current: { first: 'v1', second: 'older' } }), before);
+});
+
+test('unknown selected events retain recovery with one event or an empty directory', () => {
+  const first = published(), store = { records: { v1: first }, current: { first: 'v1' } };
+  for (const candidate of [store, { records: {}, current: {} }]) {
+    const html = renderIndex(candidate, true, 'missing-event');
+    assert.match(html, /No released competitions for this selection/);
+    assert.match(html, /href="\/leaderboard">Choose another event/);
+    assert.doesNotMatch(html, /selected-event-heading/);
+  }
+  assert.match(renderIndex({ records: {}, current: {} }, true), /No released competitions yet/);
+});
 
 test('released history chooses the highest valid preceding release across private gaps without trusting pointers or mutating inputs', () => {
   const first = published(), third = published('v3', 3), current = published('v5', 5), privateSecond = published('v2', 2), privateFourth = published('v4', 4), unrelated = published('other', 4);
