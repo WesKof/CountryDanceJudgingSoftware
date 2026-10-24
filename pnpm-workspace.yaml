@@ -1,9 +1,11 @@
 packages:
   - .
 
-# Remove when Vinext no longer pins the affected parser; keep this to one parent/version.
 overrides:
+  # Remove/reassess when Vinext no longer pins the affected parser.
   'vinext@1.0.0-beta.3>image-size': 2.0.3
+  # External Miniflare host transport only; remove/reassess when this parent supports fixed Undici.
+  'miniflare@4.20260515.0>undici': 7.30.1
 
 allowBuilds:
   esbuild: true
