@@ -11,6 +11,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local) |
 | Scores/votes/Finals | [Stage](PROJECT_SPEC.md#stage-workflow-revision--implemented-locally), [legacy](PROJECT_SPEC.md#scoring-contract) |
 | Privacy/withdrawal/publication/recovery | [Access/release](PROJECT_SPEC.md#access-withdrawals-and-owner-publication--implemented-locally), [saves](PROJECT_SPEC.md#save-submission-and-approval-reliability) |
+| Released-version comparison | [Public changes](PROJECT_SPEC.md#released-results-comparison--october-24) |
 | Storage, restore, CSV, compatibility | [Data](PROJECT_SPEC.md#data-and-persistence), [compatibility](PROJECT_SPEC.md#current-implementation-and-compatibility) |
 | Presentation/source | [Attention](PROJECT_SPEC.md#action-first-presentation-and-attention-budget--october-21-local), [files](PROJECT_SPEC.md#architecture-and-file-map) |
 | Checks, rollback, handoff | [Verification cadence](PROJECT_SPEC.md#verification-cadence), [checkpoints](PROJECT_SPEC.md#github-checkpoints-and-rollback-map), [handoff](PROJECT_SPEC.md#maintenance-and-handoff) |
