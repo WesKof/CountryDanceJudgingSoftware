@@ -21,7 +21,11 @@ export default function OrganizerResults({ data, action, selected, select, setup
     const target = document.getElementById('results-new-correction');
     if (!target) return;
     for (let parent = target.parentElement; parent; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
-    target.querySelectorAll('details').forEach((details) => { details.open = true; });
+    const editor = target.querySelector<HTMLDetailsElement>('[data-correction-editor]');
+    if (editor) editor.open = true;
+    const transfer = target.querySelector<HTMLDetailsElement>('[data-correction-transfer]');
+    if (transfer) transfer.open = Boolean(transfer.querySelector('select')?.value);
+    target.querySelectorAll<HTMLDetailsElement>('[data-correction-help]').forEach((help) => { help.open = false; });
     const heading = target.querySelector<HTMLElement>('h3');
     heading?.focus({ preventScroll: true });
     heading?.scrollIntoView({ block: 'start', behavior: 'instant' });

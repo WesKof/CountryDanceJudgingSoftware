@@ -110,7 +110,7 @@ for (const width of [390, 738]) test(`one event-owned correction survives page u
     await expect(panel.getByRole('button', { name: 'Requesting correction…', exact: true })).toBeDisabled(); await expect(panel.getByRole('button', { name: 'Discard correction draft', exact: true })).toBeDisabled();
     await panel.locator('form').evaluate(form => (form as HTMLFormElement).requestSubmit()); expect(requests).toHaveLength(3); release!(); release = undefined;
     await expect(panel.getByRole('button', { name: 'Request correction', exact: true })).toBeEnabled();
-    await panel.getByRole('button', { name: 'Discard draft and use selected round', exact: true }).click(); await openForm();
+    await panel.getByRole('button', { name: 'Discard correction draft', exact: true }).click(); await openForm();
     await expect(panel.getByLabel(labels[5], { exact: true })).toHaveValue(''); await expect(panel.getByText('Draft retained. Check Pending requests for confirmation.', { exact: true })).toHaveCount(0);
     await choose(page, A); await fill('Source version retained ' + width); projection = 'replaced-source';
     await expect(panel.getByLabel(labels[0], { exact: true })).toHaveValue(''); await expect(panel.getByText(/selected submitted heat was replaced/)).toBeVisible();
@@ -183,7 +183,7 @@ for (const width of [390, 738]) test(`a retained correction is one Results actio
     const heading = panel.getByRole('heading'); await expect(heading).toBeFocused();
     await expect(heading).toBeInViewport();
     expect(await fields()).toEqual(expected); await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(B);
-    expect(await panel.locator('details').evaluateAll(details => details.every(item => (item as HTMLDetailsElement).open))).toBe(true);
+    expect(await panel.locator('details:not([data-correction-help])').evaluateAll(details => details.every(item => (item as HTMLDetailsElement).open))).toBe(true);
     const bounds = await heading.evaluate(element => {
       const box = element.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(element);
       const painted = document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2);
@@ -204,6 +204,52 @@ for (const width of [390, 738]) test(`a retained correction is one Results actio
     eventBoundary = true; await expect(page.getByText('Controlled recovery boundary', { exact: true }).first()).toBeVisible(); await expect(action).toHaveCount(0);
     expect(writes).toEqual([]);
     if (process.env.CORRECTION_NAV_EVIDENCE) writeFileSync(`${process.env.CORRECTION_NAV_EVIDENCE}/reopen-result-${width}.json`, JSON.stringify({ width, oneClick: true, keyboardEnter: true, ancestorsAndFormOpened: true, exactTargetAndSixFields: true, selectedRoundUnchanged: true, focusExposedAndTextFits: true, noAutomaticOpen: true, pristineDiscardAndEventBoundaryHideAction: true, archivedProjectionReadOnly: true, mutations: writes.length }));
+  } finally { await context.close(); }
+});
+
+for (const width of [390, 738]) test(`managed correction keeps its editor and optional context usable at ${width}`, async ({ browser }) => {
+  const { event, A, B } = await fixture(), view = await api<LiveView>(event.organizer), original = view.rounds.find(round => round.id === A)!;
+  const source = view.heatSubmissions!.filter(submission => submission.roundKey === original.key).at(-1)!;
+  const baseline = process.env.CORRECTION_LAYOUT_BASELINE === '1', context = await browser.newContext({ viewport: { width, height: 589 } }), page = await context.newPage(), writes: string[] = [];
+  await context.route('**/*', route => { if (new URL(route.request().url()).origin !== base) return route.abort('blockedbyclient'); if (route.request().method() !== 'GET') { writes.push(route.request().postDataJSON()?.action); return route.abort('blockedbyclient'); } return route.continue(); });
+  const panel = page.getByRole('region', { name: 'New correction draft', exact: true });
+  const labels = ['Submitted heat / judge', 'Correction song', 'Wrong or affected bib', 'Corrected mark for affected bib', 'Intended bib for mistaken-bib transfer (optional)', 'Correction reason'];
+  const fields = () => Promise.all(labels.map(label => panel.getByLabel(label, { exact: true }).inputValue()));
+  try {
+    await page.goto(base + event.path); await openResultManagement(page); await choose(page, A);
+    for (const text of ['Request a score correction', 'Mark entered against the wrong bib']) { const summary = panel.locator('details > summary').filter({ hasText: text }).first(); if (await summary.evaluate(element => !(element.parentElement as HTMLDetailsElement).open)) await summary.click(); }
+    for (const [label, value] of [[labels[0], source.id], [labels[1], original.definition.heats[0].songs[1].id], [labels[2], original.definition.subjects[1].id], [labels[3], 'A2'], [labels[4], original.definition.subjects[2].id]]) await panel.getByLabel(label, { exact: true }).selectOption(value);
+    await panel.getByLabel(labels[5], { exact: true }).fill('Compact editor intent ' + width); const expected = await fields();
+    await choose(page, B); await page.getByRole('button', { name: '02 Score', exact: true }).click(); await page.getByRole('button', { name: '03 Results', exact: true }).click();
+    await page.getByRole('button', { name: 'Open correction draft', exact: true }).focus(); await page.keyboard.press('Enter');
+    const heading = panel.getByRole('heading'); await expect(heading).toBeFocused(); await expect(heading).toContainText(original.definition.division); expect(await fields()).toEqual(expected);
+    await expect(panel.getByLabel(labels[4], { exact: true })).toBeVisible();
+    const measurements = await panel.evaluate(element => {
+      const heading = element.querySelector('h3')!, first = element.querySelector('select')!, h = heading.getBoundingClientRect(), f = first.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(heading);
+      const painted = document.elementFromPoint((h.left + h.right) / 2, (h.top + h.bottom) / 2);
+      return { firstFieldTop: f.top, firstFieldBottom: f.bottom, firstFieldOffset: f.top - h.bottom, firstFieldFullyVisible: f.top >= 0 && f.bottom <= innerHeight, headingVisible: h.top >= 0 && h.bottom <= innerHeight, focusExposed: painted === heading || heading.contains(painted), headingTextFits: [...range.getClientRects()].every(rect => rect.left >= h.left - 1 && rect.right <= h.right + 1), pageFits: document.documentElement.scrollWidth <= innerWidth };
+    });
+    expect(measurements.headingVisible && measurements.focusExposed && measurements.headingTextFits && measurements.pageFits).toBe(true);
+    if (process.env.CORRECTION_NAV_EVIDENCE) { mkdirSync(process.env.CORRECTION_NAV_EVIDENCE, { recursive: true }); await page.screenshot({ path: `${process.env.CORRECTION_NAV_EVIDENCE}/layout-${width}.png` }); }
+    if (!baseline) {
+      expect(measurements.firstFieldFullyVisible).toBe(true);
+      if (process.env.CORRECTION_LAYOUT_BASELINE_EVIDENCE) { const prior = JSON.parse(readFileSync(`${process.env.CORRECTION_LAYOUT_BASELINE_EVIDENCE}/layout-${width}.json`, 'utf8')); expect(measurements.firstFieldTop).toBeLessThan(prior.measurements.firstFieldTop - 60); }
+      await expect(panel.getByRole('button', { name: /Discard/ })).toHaveCount(1);
+      const help = panel.locator('details[data-correction-help]'); await expect(help).not.toHaveAttribute('open');
+      const helpSummary = help.locator(':scope > summary'); await helpSummary.focus(); await page.keyboard.press('Enter'); await expect(help).toHaveAttribute('open');
+      await expect(help).toContainText('Both organizer and head must approve this exact request.'); await expect(help).toContainText('This does not unlock the ballot.'); await expect(help).toContainText('Reloading or leaving this event ends the draft.');
+      // Recovery keeps optional prose closed and exposes a nonempty transfer without changing the intent.
+      await page.getByRole('button', { name: '04 Publish', exact: true }).click(); await page.getByRole('button', { name: '03 Results', exact: true }).click(); await page.getByRole('button', { name: 'Open correction draft', exact: true }).click();
+      await expect(help).not.toHaveAttribute('open'); expect(await fields()).toEqual(expected); await expect(panel.getByLabel(labels[4], { exact: true })).toBeVisible();
+      await panel.getByLabel(labels[4], { exact: true }).selectOption('');
+      await page.getByRole('button', { name: '02 Score', exact: true }).click(); await page.getByRole('button', { name: '03 Results', exact: true }).click(); await page.getByRole('button', { name: 'Open correction draft', exact: true }).click();
+      const transfer = panel.locator('details[data-correction-transfer]'); await expect(transfer).not.toHaveAttribute('open'); await transfer.locator(':scope > summary').focus(); await page.keyboard.press('Enter'); await expect(panel.getByLabel(labels[4], { exact: true })).toBeVisible();
+    } else await expect(panel.getByRole('button', { name: /Discard/ })).toHaveCount(2);
+    if (process.env.CORRECTION_NAV_EVIDENCE) { const dir = process.env.CORRECTION_NAV_EVIDENCE; mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/layout-${width}.json`, JSON.stringify({ width, baseline, measurements, exactSixFieldsRetained: true, optionalHelpKeyboardAccessible: !baseline, nonemptyTransferVisible: true, mutations: writes.length })); }
+    await panel.getByRole('button', { name: 'Discard correction draft', exact: true }).click(); await expect(page.getByRole('button', { name: 'Open correction draft', exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(B);
+    const summary = panel.locator('details > summary').filter({ hasText: 'Request a score correction' }).first(); if (await summary.evaluate(element => !(element.parentElement as HTMLDetailsElement).open)) await summary.click();
+    await expect(panel.getByLabel(labels[5], { exact: true })).toHaveValue(''); await expect(panel.getByRole('heading')).toContainText(view.rounds.find(round => round.id === B)!.definition.division); expect(writes).toEqual([]);
   } finally { await context.close(); }
 });
 
