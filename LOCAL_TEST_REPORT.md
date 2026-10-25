@@ -1,5 +1,19 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred admin heading-wrapping promotion PASS
+
+Master reviewed delivery 7bae389, initial source 7d4e131 and completion follow-up 1a2e344: one CSS declaration targeting only pending-review h2/h3 and the published card's direct h2. Final original competition-heading and completed-event phone images were inspected. Three dedicated fixture runs each executed one pass/zero skips (2.2s/2.1s/1.6s), covering 30 normal/stress scenarios at 360/390/760/761/1440. Full heading text fits padded containers and page width equals viewport. Normal geometry/table widths/score tokens/fonts/actions remain; long event names naturally add vertical height. TypeScript/focused lint pass; no framework build/install/restart or broad API/security/scoring/correction/audit replay.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Source/serving | Fresh clean preferred main 6d879bb and five affected mirror baselines verified before guarded fast-forward on codex/admin-heading-promotion-proof. GET /styles.css returns 200 and the exact three-selector wrapping declaration. Existing organizer 14644 and receiver 68708 keep listener identities; neither service restarted. |
+| Preservation | All 16 business-table logical contents, complete publication JSON and private configuration hashes match before/after serving. No source code/schema/protocol action changed. Original/current publications and all seven review tabs remain available, without navigating their selected events or submitting forms. |
+| Evidence attribution | Geometry uses actual receiver/admin HTTP with explicitly read-only synthetic authority, not an operational approval/release. Exact original fixture and separately attributed event-name/released-status copies remain hash-verified. Expanded support explains why the full baseline width differs from the earlier collapsed-preview measurement; every final fixture now fits. Dedicated opt-in tests actually execute; absent fixture variables skip only these special cases, invalid configured files fail before browser context. |
+| Recovery/closeout | Unchanged retained recovery snapshots remain; no redundant full copy or restoration claim. Private work/owner-runtime-backups/admin-preview-heading-20261024/transition.json records baseline/mirror/CSS/data proof. Final checkpoint is checkpoint/local-admin-heading-wrapping-promotion-2026-10-24; remote/main/mirror/expected-tip cleanup verified at handoff. Source checkpoints are not data backups. |
+
+No owner sign-in/action/form submission, score/note/draw/approval/publication mutation, global edit, live/hosted operation, native desktop input or physical-device/venue/screen-reader proof occurred. Next proposed task is a targeted browser-fixture integration audit, with source assumptions verified before any test change; no speculative full-suite failure is claimed.
+
+
 ## October 24 — Isolated admin heading wrapping PASS
 
 Master assigned sole retained-checkout source/Git/docs/test/runtime ownership on codex/admin-preview-heading-wrapping from fresh main 6d879bb. Affected preferred/mirror bytes matched before changes. Source 7d4e131 adds one scoped wrapping declaration and dedicated opt-in geometry test; master review's same-phase completion finding is reproduced and covered by 1a2e344. Final product diff is one CSS rule targeting .admin-request h2/h3 and .admin-complete > h2. Master retains preferred/mirror/operator integration; these records do not yet claim promotion.
