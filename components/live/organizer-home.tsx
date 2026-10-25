@@ -11,6 +11,7 @@ import EventWorkspace, { type SavedEvent } from './event-workspace';
 import { LiveShell } from './shell';
 import { revealSetupSection } from './setup-section';
 import { creationNonce, download, liveApi } from './client';
+import { createdEventPath } from '@/lib/live/create-ack';
 
 const BINDING_KEY = 'country-dance-judging:rehearsal';
 const HISTORY_KEY = 'country-dance-judging:organizer-history';
@@ -37,8 +38,8 @@ async function configure(binding: Binding, setup: LiveSetup): Promise<Binding> {
   const pending = (async () => {
     let current = binding;
     if (!current.path) {
-      const created = await liveApi<{ path: string }>('', { action: 'create', requestId: current.nonce, name: setup.name, venue: setup.venue, date: setup.date });
-      current = { ...current, path: created.path }; localStorage.setItem(BINDING_KEY, JSON.stringify(current));
+      const created = await liveApi<unknown>('', { action: 'create', requestId: current.nonce, name: setup.name, venue: setup.venue, date: setup.date });
+      current = { ...current, path: createdEventPath(created) }; localStorage.setItem(BINDING_KEY, JSON.stringify(current));
     }
     const token = current.path!.split('/').at(-1)!;
     let view = await liveApi<LiveView>(token);
