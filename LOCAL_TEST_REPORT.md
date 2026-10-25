@@ -1,5 +1,17 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred create-acknowledgement promotion PASS
+
+Master reviewed delivery4df8b9c/source78e3430, the pure helper and both consumers, full normalized removal proof, unit input boundaries and actual rebuilt retained-form/configure images. Fresh acknowledgement validation precedes navigation/persistence, while existing nonces/payloads/forms/catch/retry/configure and historical saved links retain their behavior. The reproduced direct-form navigation loss is distinct from configure raw-error recovery; {} did not corrupt its binding/catalog.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred source serving | Clean preferred main d84d6d2 and184 tracked mirror baselines verified before exact fast-forward on codex/create-acknowledgement-promotion. Actual preferred create/organizer-home client transforms and lib/live/create-ack.ts return200 with helper integration and retry error markers. An initial PowerShell reserved-variable assignment was corrected to task-specific response variables before serving/data verification; no environment/settings change. Organizer home and both original/corrected result pages return200. Existing14644/68708 retain3000/3100 listeners; no redundant preferred build/restart. |
+| Preservation and recovery | All16 owner business-table contents retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON/private configuration hashes match baseline. No owner creation, score/note/link/approval/submission/publication or browser-state mutation occurred. Isolated exact retry JSON/same accepted path and partial-configuration recovery are verified below; independent database event-count or cross-reload draft persistence is not claimed. Logical equality is distinct from physical SQLite/WAL identity. |
+| Closeout | Private work/owner-runtime-backups/create-ack-20261024/transition.json retains serving/data and guarded mirror proof. Historical SPEC tail from Event workspace navigation and recovery and REPORT tail from Preferred event-workspace promotion remain unchanged. Final source checkpoint is checkpoint/local-create-acknowledgement-promotion-2026-10-24; normal remote/main/peeled-tag, tracked mirror and expected-tip merged-branch cleanup are verified at handoff. Existing data recovery snapshots remain; source checkpoints are not data backups. |
+
+Production build, TypeScript/focused lint, two pure unit cases and ten rebuilt browser cases pass (9.8s browser total). No broad full-application/audit, live/hosted operation, global instruction edit, physical-device/venue/screen-reader result or owner dependency is claimed. Next is a bounded fictional long-ballot wayfinding observation; existing context/save cues and core coverage/submission rules stay authoritative until actual evidence justifies an improvement.
+
 ## October 24 — Fresh creation acknowledgement recovery PASS
 
 Master assigned sole retained-checkout source/Git/docs/test/runtime ownership on codex/create-acknowledgement-recovery from fresh main d84d6d2. A separate released read-only audit supplied the hypothesis; worker reproduced it before source changes. Affected existing source and canonical documents matched preferred/mirror before editing. Source78e3430 adds a pure fresh-path helper and invokes it at both create consumers before navigation/binding. Master retains preferred/mirror/operator integration.
