@@ -12,8 +12,8 @@ export function NewCorrection({ data, round, action, draft }: { data: LiveView; 
   const retained = current?.standings ? current : target ?? current;
   const available = Boolean(current?.standings && data.status === 'active');
   if (!retained?.standings) return <p>Score corrections are available after the selected stage concludes.</p>;
-  return <section aria-label="New correction draft">
-    <h3>Correction · {retained.definition.format} · {retained.definition.division} · {retained.definition.kind}</h3>
+  return <section id="results-new-correction" aria-label="New correction draft">
+    <h3 tabIndex={-1} style={{ scrollMarginBlock: 24 }}>Correction · {retained.definition.format} · {retained.definition.division} · {retained.definition.kind}</h3>
     {target && <><p role="status">This draft stays with this round across Score, Results and Publish. Reloading or leaving this event ends the draft.</p><div className="shared-inline"><button className="quiet-button" disabled={pending} onClick={discard}>Discard correction draft</button>{round?.standings && round.key !== target.key && data.status === 'active' && <button className="quiet-button" disabled={pending} onClick={discard}>Discard draft and use selected round</button>}</div></>}
     {!available && <p role="status">This correction target is unavailable or read only. Your draft is retained. Discard it or explicitly choose an available round.</p>}
     <fieldset className="shared-unframed" disabled={!available || pending}><Correction key={`${data.eventId}/${retained.key}/${generation}`} data={data} round={retained} action={action} draft={draft} /></fieldset>

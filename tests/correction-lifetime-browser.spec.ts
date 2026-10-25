@@ -144,6 +144,69 @@ for (const width of [390, 738]) test(`one event-owned correction survives page u
   } finally { release?.(); await context.close(); }
 });
 
+for (const width of [390, 738]) test(`a retained correction is one Results action away at ${width}`, async ({ browser }) => {
+  const { event, A, B } = await fixture(), view = await api<LiveView>(event.organizer), original = view.rounds.find(round => round.id === A)!;
+  const source = view.heatSubmissions!.filter(submission => submission.roundKey === original.key).at(-1)!;
+  const context = await browser.newContext({ viewport: { width, height: 589 } }), page = await context.newPage(), writes: string[] = [];
+  let archived = false, eventBoundary = false;
+  await context.route('**/*', async route => {
+    if (new URL(route.request().url()).origin !== base) return route.abort('blockedbyclient');
+    if (route.request().method() !== 'GET') { writes.push(route.request().postDataJSON()?.action); return route.abort('blockedbyclient'); }
+    if (route.request().url().includes('/api/live') && (archived || eventBoundary)) {
+      const response = await route.fetch(), projected = await response.json() as LiveView;
+      if (archived) projected.status = 'archived';
+      if (eventBoundary) { projected.eventId += '-recovery-boundary'; projected.setup.name = 'Controlled recovery boundary'; }
+      return route.fulfill({ response, json: projected });
+    }
+    return route.continue();
+  });
+  const action = page.getByRole('button', { name: 'Open correction draft', exact: true }), panel = page.getByRole('region', { name: 'New correction draft', exact: true });
+  const labels = ['Submitted heat / judge', 'Correction song', 'Wrong or affected bib', 'Corrected mark for affected bib', 'Intended bib for mistaken-bib transfer (optional)', 'Correction reason'];
+  const fields = () => Promise.all(labels.map(label => panel.getByLabel(label, { exact: true }).inputValue()));
+  async function openInitialForm() {
+    await openResultManagement(page);
+    for (const text of ['Request a score correction', 'Mark entered against the wrong bib']) { const summary = panel.locator('details > summary').filter({ hasText: text }).first(); if (await summary.evaluate(element => !(element.parentElement as HTMLDetailsElement).open)) await summary.click(); }
+  }
+  async function fill() {
+    for (const [label, value] of [[labels[0], source.id], [labels[1], original.definition.heats[0].songs[1].id], [labels[2], original.definition.subjects[1].id], [labels[3], 'A2'], [labels[4], original.definition.subjects[2].id]]) await panel.getByLabel(label, { exact: true }).selectOption(value);
+    await panel.getByLabel(labels[5], { exact: true }).fill('One action recovery intent ' + width);
+  }
+  async function returnClosed(name: 'Score' | 'Publish') {
+    await page.getByRole('button', { name: name === 'Score' ? '02 Score' : '04 Publish', exact: true }).click(); await expect(panel).toHaveCount(0);
+    await page.getByRole('button', { name: '03 Results', exact: true }).click();
+    await expect(page.locator('#results-supporting')).not.toHaveAttribute('open');
+    await expect(page.locator('#results-new-correction details').first()).not.toHaveAttribute('open');
+    await expect(action).toBeInViewport();
+    await expect(page.locator('#results-correction-draft-context')).toHaveText(`${original.definition.format} · ${original.definition.division} · ${original.definition.kind}`);
+  }
+  async function checkOpened(name: string, expected: string[]) {
+    const heading = panel.getByRole('heading'); await expect(heading).toBeFocused();
+    await expect(heading).toBeInViewport();
+    expect(await fields()).toEqual(expected); await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(B);
+    expect(await panel.locator('details').evaluateAll(details => details.every(item => (item as HTMLDetailsElement).open))).toBe(true);
+    const bounds = await heading.evaluate(element => {
+      const box = element.getBoundingClientRect(), range = document.createRange(); range.selectNodeContents(element);
+      const painted = document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2);
+      return { fullyVisible: box.top >= 0 && box.bottom <= innerHeight && box.left >= 0 && box.right <= innerWidth, exposed: painted === element || element.contains(painted), textFits: [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1), pageFits: document.documentElement.scrollWidth <= innerWidth };
+    });
+    expect(bounds).toEqual({ fullyVisible: true, exposed: true, textFits: true, pageFits: true });
+    if (process.env.CORRECTION_NAV_EVIDENCE) { const dir = process.env.CORRECTION_NAV_EVIDENCE; mkdirSync(dir, { recursive: true }); await page.screenshot({ path: `${dir}/reopen-${name}-${width}.png` }); writeFileSync(`${dir}/reopen-${name}-${width}.json`, JSON.stringify(bounds)); }
+  }
+  try {
+    await page.goto(base + event.path); await page.getByRole('button', { name: '03 Results', exact: true }).click(); await expect(action).toHaveCount(0);
+    await choose(page, A); await openInitialForm(); await fill(); const expected = await fields(); await choose(page, B);
+    await returnClosed('Score'); await action.click(); await checkOpened('click', expected);
+    await returnClosed('Publish'); await action.focus(); await page.keyboard.press('Enter'); await checkOpened('keyboard', expected);
+    await panel.getByRole('button', { name: 'Discard correction draft', exact: true }).click(); await expect(action).toHaveCount(0);
+    await choose(page, A); await openInitialForm(); await fill(); await choose(page, B); await returnClosed('Score');
+    archived = true; await expect(page.getByRole('heading', { name: 'Archived results · read only', exact: true })).toBeVisible();
+    await action.click(); await checkOpened('readonly', expected); await expect(panel.getByRole('button', { name: 'Request correction', exact: true })).toBeDisabled();
+    eventBoundary = true; await expect(page.getByText('Controlled recovery boundary', { exact: true }).first()).toBeVisible(); await expect(action).toHaveCount(0);
+    expect(writes).toEqual([]);
+    if (process.env.CORRECTION_NAV_EVIDENCE) writeFileSync(`${process.env.CORRECTION_NAV_EVIDENCE}/reopen-result-${width}.json`, JSON.stringify({ width, oneClick: true, keyboardEnter: true, ancestorsAndFormOpened: true, exactTargetAndSixFields: true, selectedRoundUnchanged: true, focusExposedAndTextFits: true, noAutomaticOpen: true, pristineDiscardAndEventBoundaryHideAction: true, archivedProjectionReadOnly: true, mutations: writes.length }));
+  } finally { await context.close(); }
+});
+
 test('pending correction revision retains its local field and exact request behavior', async ({ browser }) => {
   const { event, A } = await fixture(), view = await api<LiveView>(event.organizer), round = view.rounds.find(item => item.id === A)!;
   const sources = view.heatSubmissions!.filter(submission => submission.roundKey === round.key), source = sources.at(-1)!, next = sources[0];

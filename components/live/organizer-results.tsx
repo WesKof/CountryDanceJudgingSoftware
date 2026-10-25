@@ -17,6 +17,15 @@ export default function OrganizerResults({ data, action, selected, select, setup
   const pending = (data.reviewRequests ?? []).filter((q) => !q.appliedAt && !q.cancelledAt);
   const selectedPending = pending.filter((q) => q.payload.roundKey === round?.key || q.payload.competitionId === competition?.id);
   const [revision, setRevision] = useState<ReviewRequest | undefined>();
+  function openCorrectionDraft() {
+    const target = document.getElementById('results-new-correction');
+    if (!target) return;
+    for (let parent = target.parentElement; parent; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
+    target.querySelectorAll('details').forEach((details) => { details.open = true; });
+    const heading = target.querySelector<HTMLElement>('h3');
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
   const limits = round?.definition.kind === 'prelims' && result ? finalistCountIssues(round.definition.format, result.finalistCount ?? 0, round.definition.subjects.filter((s) => !round.definition.withdrawnIds?.includes(s.id))) : [];
   const votes = result?.advancementTies?.filter((t) => !t.complete) ?? [];
   const placement = round?.definition.kind === 'finals' && result?.rows.some((r) => !r.decided);
@@ -26,7 +35,9 @@ export default function OrganizerResults({ data, action, selected, select, setup
   const allFinals = data.setup.competitions.length > 0 && data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'finals' && r.standings?.approved));
   const allPrelims = data.setup.competitions.every((c) => data.rounds.some((r) => r.definition.competitionId === c.id && r.definition.kind === 'prelims' && r.standings?.approved));
   return <div className="page-stack organizer-results">
-    <section className="hero-panel results-current" aria-label="Results status and next action"><div><p className="kicker">{competition || round ? `${competition?.format ?? round?.definition.format} · ${competition?.division ?? round?.definition.division} · ${setup?.kind ?? round?.definition.kind}` : 'Event records'}</p><h2>{data.status === 'archived' ? 'Archived results · read only' : !selected ? 'No current competition selected' : result?.approved ? 'Head-approved results' : result ? 'Results ready for review' : 'Judging not yet concluded'}</h2><p>{data.status === 'archived' ? 'Inspect saved scores, approvals and history below. Use Events to return this event to active.' : !selected ? 'Add a competition in Set up, or open Audit trail below to review retained event records.' : !result ? 'Results for this round become available after the whole stage concludes. Complete judging and all required submissions in Score.' : result.approved ? `This competition and round have current head approval from ${head}.` : `These results are provisional. ${head} reviews and approves this exact round from their private judge page.`}</p>
+    <section className="hero-panel results-current" aria-label="Results status and next action"><div><p className="kicker">{competition || round ? `${competition?.format ?? round?.definition.format} · ${competition?.division ?? round?.definition.division} · ${setup?.kind ?? round?.definition.kind}` : 'Event records'}</p><h2>{data.status === 'archived' ? 'Archived results · read only' : !selected ? 'No current competition selected' : result?.approved ? 'Head-approved results' : result ? 'Results ready for review' : 'Judging not yet concluded'}</h2>
+{correctionDraft.target && correctionDraft.fields && <div className="shared-inline"><button className="quiet-button" aria-describedby="results-correction-draft-context" onClick={openCorrectionDraft}>Open correction draft</button><small id="results-correction-draft-context">{correctionDraft.target.definition.format} · {correctionDraft.target.definition.division} · {correctionDraft.target.definition.kind}</small></div>}
+<p>{data.status === 'archived' ? 'Inspect saved scores, approvals and history below. Use Events to return this event to active.' : !selected ? 'Add a competition in Set up, or open Audit trail below to review retained event records.' : !result ? 'Results for this round become available after the whole stage concludes. Complete judging and all required submissions in Score.' : result.approved ? `This competition and round have current head approval from ${head}.` : `These results are provisional. ${head} reviews and approves this exact round from their private judge page.`}</p>
       {data.status === 'active' && <>
       {limits.map((issue) => <p className="score-blocker" key={issue}>{issue}</p>)}
       {votes.length > 0 && <p className="score-blocker">{votes.some((t) => t.deadlocked) ? 'Head decision needed for the remaining cutoff vote tie.' : 'Panel votes needed at the advancement cutoff.'}</p>}
