@@ -10,7 +10,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Completed work and latest evidence | [Delivery index](PROJECT_SPEC.md#completed-local-deliveries) · [Latest local evidence](LOCAL_TEST_REPORT.md) |
 | Instruction audit | [Map](PROJECT_SPEC.md#operative-instructions-and-retention-map--october-24) |
 | Development watching/startup diagnostics | [Dependency-backup exclusion](PROJECT_SPEC.md#development-dependency-backup-watch-scope--october-25) · [Validated controls, cache layout and limits](PROJECT_SPEC.md#local-startup-diagnostic-controls--october-25) |
-| Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local), [review/submission status](PROJECT_SPEC.md#judge-stage-review-status--october-24), [setup-save recovery](PROJECT_SPEC.md#setup-save-acknowledgement-and-inline-recovery--october-25) |
+| Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local), [review/submission status](PROJECT_SPEC.md#judge-stage-review-status--october-24), [setup-save recovery](PROJECT_SPEC.md#setup-save-acknowledgement-and-inline-recovery--october-25), [preparation routing](PROJECT_SPEC.md#prelims-preparation-task-routing--october-25) |
 | Legacy setup corrections | [Acknowledgement and retained intent](PROJECT_SPEC.md#legacy-setup-save-and-correction-recovery--october-25) |
 | Organizer Publish blockers | [Workflow guidance and exact destinations](PROJECT_SPEC.md#organizer-publish-readiness-guidance--october-24) |
 | Organizer judge access | [Judge-link cards and progress](PROJECT_SPEC.md#organizer-judge-link-cards--october-24), [exact revoked-link recovery](PROJECT_SPEC.md#organizer-revoked-link-recovery--october-24) |
