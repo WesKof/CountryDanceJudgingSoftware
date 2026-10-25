@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { SetupTask } from '@/lib/live/setup-guidance';
 import SetupSection, { revealSetupSection } from './setup-section';
 
@@ -20,7 +20,13 @@ export default function SetupPage({ automaticStages = false, tasks = [], openTas
     catch { setNotice('Copy the organizer link from the address bar.'); }
   }
   const nextTask=tasks.find((t)=>!t.complete), readyCount=tasks.filter((t)=>t.complete).length;
-  return <div ref={root} className="page-stack setup-page">
+  function guardSavedEventNavigation(event: MouseEvent<HTMLDivElement>) {
+    if (!hasDraft || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[data-saved-event-link]') : null;
+    if (!link || !event.currentTarget.contains(link) || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+    if (!window.confirm('Open this saved event? Unsaved setup edits will be discarded. Saved setup and judging history stay intact.')) event.preventDefault();
+  }
+  return <div ref={root} className="page-stack setup-page" onClickCapture={guardSavedEventNavigation}>
     <section className="hero-panel setup-hero setup-action-first"><div><p className="kicker">{archived ? 'Saved record' : scoringStage && !hasDraft && !nextTask ? 'Setup saved · scoring is open' : nextTask ? 'Your next setup step' : hasDraft ? 'Ready to save' : 'Event foundation'}</p>
       <h2>{archived ? 'Archived event · read only' : nextTask ? nextTask.label : scoringStage && !hasDraft ? `${scoringStage === 'prelims' ? 'Prelims' : 'Finals'} is ready for judges` : hasDraft ? 'Review and save your setup' : 'Setup is saved'}</h2>
       <p>{archived ? 'Scores, results and history stay available. Use Events to return this event to active.' : nextTask ? nextTask.detail : scoringStage && !hasDraft ? 'Judges can score now. Open the judging desk for their links and progress.' : hasDraft ? 'Save when the preparation is ready.' : 'Open the judging desk for current progress and next steps.'}</p>
