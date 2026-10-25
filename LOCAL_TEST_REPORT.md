@@ -1,5 +1,18 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Preferred withdrawal-target promotion PASS
+
+Master independently reviewed delivery3085f75/source2d6a190, the current-membership button/handler guards, retained round metadata and revision-effect separation, source contract comparison, and final compiled phone/desktop recovery images. A reason started for one entrant remains attached to that entrant when polling changes eligibility; unavailable targets stay visible with an explicit recovery message. No score, pairing, approval or replacement/redance policy is changed.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred serving | Clean main d58c8e3 and188 tracked mirror baselines were checked before exact fast-forward on codex/withdrawal-target-promotion. Actual preferred withdrawal client returns200 with retained-round/membership/recovery markers. Organizer home and original/corrected result links return200; owner14644/68708 still hold3000/3100. No redundant preferred build/restart. Active-draft behavior is established by the isolated rebuilt tests below, not by altering the completed owner walkthrough. |
+| Preservation | All16 owner business tables retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON and private configuration hashes match baseline. No owner mark, note, link, approval, submission, publication or browser-state mutation. Logical equality does not assert physical SQLite/WAL identity. In fictional tests, retained score cells/private notes/immutable submissions are distinct from the expected ballot version increment after a legitimate withdrawal. |
+| Verification attribution | Productionca7c238 passed ten browser cases40.6s and two withdrawal API cases4.643s. Final wording-only source2d6a190 was rebuilt and the three affected cases passed16.3s. TypeScript, focused lint and whitespace passed. Independent contract comparison preserved plan validation, entrant payload/success, revision loader, whole-competition form/action and backend eligibility/dual approval. No broad full-application, dependency, physical-device, venue, screen-reader or hosted claim. |
+| Closeout | Private work/owner-runtime-backups/withdrawal-target-20261025/transition.json retains serving/data and guarded mirror evidence. Historical SPEC tail from Current-view judge bib lookup and REPORT tail from Preferred judge-bib-lookup promotion are preserved. Annotated source checkpoint is checkpoint/local-withdrawal-target-promotion-2026-10-25; normal remote/main/peeled-tag, tracked mirror parity and expected-tip merged-branch cleanup are verified at handoff. Existing recovery snapshots remain; source checkpoints are not data backups. |
+
+Next bounded observation is the independent whole-competition reason/view-change hypothesis. Reproduce before implementation using isolated fictional fixtures and an intercepted request; the entrant fix does not establish that separate form's behavior. No global instructions, schedules, permissions or live site changes in this batch.
+
 ## October 25 — Withdrawal draft target recovery PASS
 
 Master assigned sole isolated source/Git/docs/test/runtime ownership on codex/withdrawal-target-recovery from fresh maind58c8e3 after its read-only audit. Existing affected source matched preferred/mirror bytes; canonical documents matched normalized content before edits. This executes follow-up29's candidate, without a new continuation. Sourceca7c238 contains identity/guards and2d6a190 the final feedback-only refinement. Master retains preferred/mirror/operator integration.
