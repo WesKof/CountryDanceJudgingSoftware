@@ -1,5 +1,15 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Preferred development watch scope promotion PASS
+
+Master independently reviewed deliveryed75570/source0c4f03f, portable patterns, platform/functional/check JSON and the actual browser HMR/config-reload helper. Source-removal equivalence proves only the intended watch setting differs from07bf671; package/lock/CSS/application source are unchanged. Worker rollback checkpoint and remote branch tips were independently verified before normal fast-forward promotion.
+
+Existing organizer browser was observed on October21 walkthrough, Already published, with no exposed editable form or pending input. Master checked all195 tracked preferred/mirror preimages, private config/public store/process manifest and all16live-table logical contents before stopping only the exact owned organizer node and proved workerd child. Receiver3100 remained running with unchanged process identity. The new organizer starts with the promoted Vite config; its log shows local readiness and GET home/API200, and the existing browser returns to the same event/Already published/Strictly2/J&J1 view. No manual owner reload or event mutation was needed. No causal startup-speed claim is made from this single operational activation.
+
+Post-start read-only checks verify home200, original/corrected publication GET200 with retained4.5000/5.4167 values, exact public-store/config hashes and unchanged logical contents digest across all16tables. Only organizer/session fields in the private process manifest are deliberately updated after its exact preimage check; receiver fields remain. A read-only operator helper initially used PowerShell's reserved HOME variable and failed before manifest mutation; corrected task-specific naming completed the checks. No additional production build is needed for this dev-watch-only setting beyond the successful isolated build. Ignored work/owner-runtime-backups/dev-backup-watch-scope-20261025 retains preimages, process identities, checks and transition journal. Source checkpoints are not data recovery.
+
+Normal push, annotated checkpoint/local-development-watch-scope-promotion-2026-10-25, exact remote main/peeled-tag verification, guarded tracked mirror parity and expected-tip merged-branch cleanup are the master closeout. Earlier dated evidence below remains retained. No score, note, approval, original/corrected snapshot, history, owner link, permission, dependency, schedule, global instruction or live/hosted site change. Owner review tabs remain available.
+
 ## October 25 — Development dependency-backup watch scope PASS
 
 Master assigned retained-checkout source/test/docs/runtime ownership on codex/dev-backup-watch-scope from fresh github/main07bf671. Preferred/mirror affected files were equal before edits; retained normalized source/docs matched. Source0c4f03f changes only two portable development-watch ignore patterns and preserves seatbelt polling flags, all other config, plugin order, bindings, packages/lock, CSS and application code. Preferred activation/integration/mirror and owner operator duties remain with Master Country Dancer.
