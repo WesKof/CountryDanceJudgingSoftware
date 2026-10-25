@@ -9,7 +9,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Ownership, priorities, schedules | [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) |
 | Completed work and latest evidence | [Delivery index](PROJECT_SPEC.md#completed-local-deliveries), [evidence-index audit](LOCAL_TEST_REPORT.md#october-24--current-queue-and-evidence-index-pass) |
 | Instruction audit | [Map](PROJECT_SPEC.md#operative-instructions-and-retention-map--october-24) |
-| Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local) |
+| Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local), [review/submission status](PROJECT_SPEC.md#judge-stage-review-status--october-24) |
 | Organizer Publish blockers | [Workflow guidance and exact destinations](PROJECT_SPEC.md#organizer-publish-readiness-guidance--october-24) |
 | Admin navigation/layout | [Selected-event continuity](PROJECT_SPEC.md#admin-selected-event-sign-in-continuity--october-24), [heading wrapping](PROJECT_SPEC.md#admin-preview-and-completion-heading-wrapping--october-24), [Version column](PROJECT_SPEC.md#admin-overview-version-column--october-24) |
 | Scores/votes/Finals | [Stage](PROJECT_SPEC.md#stage-workflow-revision--implemented-locally), [judge scrolling context](PROJECT_SPEC.md#selected-judge-scoring-context--october-24), [save feedback](PROJECT_SPEC.md#judge-pending-save-feedback--october-24), [legacy](PROJECT_SPEC.md#scoring-contract), [draw recovery](PROJECT_SPEC.md#finals-draw-blocker-guidance--october-24) |
