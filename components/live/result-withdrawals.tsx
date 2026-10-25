@@ -11,6 +11,7 @@ export default function ResultWithdrawals({ data, action, selected, revision }: 
   const [plans, setPlans] = useState<Record<string, [string, string][]>>({});
   const [retainedRound, setRetainedRound] = useState<RoundView>();
   const [chosenCompetition, setCompetition] = useState<string | null>(null), [competitionReason, setCompetitionReason] = useState(''), [competitionRevision, setCompetitionRevision] = useState('');
+  const [retainedCompetition, setRetainedCompetition] = useState<LiveView['setup']['competitions'][number]>();
   const pending = (data.reviewRequests ?? []).filter((q) => q.kind === 'withdrawal' && !q.appliedAt && !q.cancelledAt);
   const r = chosenRound ? data.rounds.find((r) => r.key === chosenRound) : data.rounds.find((r) => r.id === selected) ?? data.rounds[0];
   const draftRound = r ?? retainedRound;
@@ -21,6 +22,12 @@ export default function ResultWithdrawals({ data, action, selected, revision }: 
   const retainedSubject = draftRound?.definition.subjects.find((s) => s.id === subjectId);
   function retainTarget() { if (!subject) setSubject(subjectId); if (r) { setRetainedRound(r); if (!chosenRound) setRound(r.key); } }
   const competitionId = chosenCompetition ?? draftRound?.definition.competitionId ?? '';
+  const competitions = data.setup.competitions.filter((c) => data.rounds.some((r) => r.definition.competitionId === c.id));
+  const competition = competitions.find((c) => c.id === competitionId), competitionAvailable = Boolean(competition);
+  const competitionName = competition ?? retainedCompetition;
+  const competitionLabel = competitionName ? competitionName.format + ' · ' + competitionName.division : 'Selected competition';
+  function retainCompetitionTarget() { if (chosenCompetition === null) setCompetition(competitionId); if (competition) setRetainedCompetition(competition); }
+  useEffect(() => { if (chosenCompetition && competition) queueMicrotask(() => setRetainedCompetition(competition)); }, [chosenCompetition, competition]);
   function loadRevision(q?: ReviewRequest) {
     if (!q) { setRevise(''); return; }
     if (q.payload.subjectId) {
@@ -53,8 +60,8 @@ export default function ResultWithdrawals({ data, action, selected, revision }: 
       })}</details>}
       <p>Requesting does not remove scores or apply a withdrawal. Existing eligibility and pairing checks must pass before both approvals can apply it.</p><button className="quiet-button" disabled={!r || !subjectAvailable}>Request entrant withdrawal</button>
     </form></div></SetupSection>
-    <SetupSection title="Withdraw a started competition" caption="Whole competition" detailsRef={(n) => { if (n) n.id = 'results-competition-withdrawal'; }}><div className="form-body"><form className="form-body" onSubmit={(e) => { e.preventDefault(); if (window.confirm('Request withdrawal of this entire competition? Both roles must approve. Scores and history remain.')) void action({ action: 'request-withdrawal', competitionId, reason: competitionReason, ...(competitionRevision ? { reviewRequestId: competitionRevision } : {}) }); }}>
-      <label>Competition to withdraw<select name="competition" aria-label="Competition to withdraw" value={competitionId} onChange={(e) => { setCompetition(e.target.value); setCompetitionRevision(''); }}>{data.setup.competitions.filter((c) => data.rounds.some((r) => r.definition.competitionId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.format} · {c.division}</option>)}</select></label><label>Withdrawal reason<input name="reason" required maxLength={500} value={competitionReason} onChange={(e) => setCompetitionReason(e.target.value)} /></label><p>This affects the entire competition. Both roles must approve; previous scores, submissions and approval snapshots remain in history.</p><button className="quiet-button" disabled={!competitionId}>Request competition withdrawal</button>
+    <SetupSection title="Withdraw a started competition" caption="Whole competition" detailsRef={(n) => { if (n) n.id = 'results-competition-withdrawal'; }}><div className="form-body"><form className="form-body" onFocusCapture={retainCompetitionTarget} onSubmit={(e) => { e.preventDefault(); if (!competitionAvailable) return; if (window.confirm(`Request withdrawal of the entire competition “${competitionLabel}”? Both roles must approve. Scores and history remain.`)) void action({ action: 'request-withdrawal', competitionId, reason: competitionReason, ...(competitionRevision ? { reviewRequestId: competitionRevision } : {}) }); }}>
+      <label>Competition to withdraw<select name="competition" aria-label="Competition to withdraw" value={competitionId} aria-describedby={!competitionAvailable ? 'competition-target-help' : undefined} onChange={(e) => { setCompetition(e.target.value); setRetainedCompetition(competitions.find((c) => c.id === e.target.value)); setCompetitionRevision(''); }}>{!competitionAvailable && <option value={competitionId} disabled>{competitionLabel} · Unavailable</option>}{competitions.map((c) => <option key={c.id} value={c.id}>{c.format} · {c.division}</option>)}</select></label>{!competitionAvailable && <p id="competition-target-help" role="status">{competitionLabel} is no longer available. Choose an available competition. Your reason is kept.</p>}<label>Withdrawal reason<input name="reason" required maxLength={500} value={competitionReason} onChange={(e) => { retainCompetitionTarget(); setCompetitionReason(e.target.value); }} /></label><p>This affects the entire competition. Both roles must approve; previous scores, submissions and approval snapshots remain in history.</p><button className="quiet-button" disabled={!competitionAvailable}>Request competition withdrawal</button>
     </form></div></SetupSection>
   </fieldset>;
 }

@@ -858,6 +858,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .result-audit-entry table { width: 100%; }
 .result-audit-entry td, .result-audit-entry th { padding: 8px; text-align: left; }
 .correction-preview { padding: 16px; background: var(--sage); border-radius: 12px; }
+#competition-target-help { overflow-wrap:anywhere; }
 .withdrawal-pair { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 12px 0; }
 .withdrawal-pair label { flex: 1; min-width: 140px; }
 .organizer-results .shared-unframed { min-width: 0; }
