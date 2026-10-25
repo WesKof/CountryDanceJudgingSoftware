@@ -7,6 +7,8 @@ main:has(.admin-request)>.page-title{padding:20px 0 10px}main:has(.admin-request
 
 /* Match review clarity to the judging desk without changing the community identity. */
 .card, .winner-card { box-shadow: 0 5px 20px #23352e06; }
+.winner-card { overflow-wrap: anywhere; }
+.winner-card .podium a { min-width: 0; }
 .card table th { color: var(--ink); background: #edf0e7; border-top: 1px solid var(--line); }
 .card table tbody tr:nth-child(even) { background: #f8f6ef; }
 .card table td:first-child { color: var(--ink); font-weight: 650; }
