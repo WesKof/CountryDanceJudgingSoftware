@@ -19,6 +19,7 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
   const [page, setPage] = useRememberedPage(data?.role === 'organizer' && data.setup.workflow !== 'stage-v1' ? data.eventId : undefined); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<LiveSetup | null>(null); const [draftVersion, setDraftVersion] = useState(0);
   const [correction, setCorrection] = useState(false); const [reason, setReason] = useState('');
+  const [setupSaveError, setSetupSaveError] = useState('');
   const recovery = useRecovery(token);
   async function action(input: Record<string, unknown>) {
     if (!data) return false; setBusy(true); setNotice('');
@@ -29,9 +30,9 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
   async function saveSetup() {
     if (!data || !draft) return;
     if (correction && (!reason.trim() || !window.confirm('Apply this versioned setup correction? Current submissions and approvals will be invalidated; previous work stays in history.'))) return;
-    setBusy(true);
-    try { await liveApi(token, { action: 'setup', setup: draft, expectedVersion: draftVersion, correction, reason, requestId: crypto.randomUUID() }); setDraft(null); setCorrection(false); setReason(''); await refresh(); setNotice('Setup saved to the shared event.'); }
-    catch (error) { setNotice((error as Error).message); }
+    setBusy(true); setSetupSaveError(''); setNotice('');
+    try { const saved = await liveApi<{ ok?: unknown }>(token, { action: 'setup', setup: draft, expectedVersion: draftVersion, correction, reason, requestId: crypto.randomUUID() }); if (saved.ok !== true) throw new Error('Setup save was not confirmed. Your edits are still here.'); setDraft(null); setCorrection(false); setReason(''); setSetupSaveError(''); await refresh(); setNotice('Setup saved to the shared event.'); }
+    catch (error) { setSetupSaveError((error as Error).message); }
     finally { setBusy(false); }
   }
   if (data && data.role !== 'organizer') return <p role="alert">Organizer access required.</p>;
@@ -66,7 +67,7 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
   }
   return <LiveShell title={data.setup.name} identity={`Organizer · Head judge: ${data.setup.judges.find((j) => j.id === data.setup.headJudgeId)?.name ?? 'Choose in setup'}`} status={error ? 'Connection interrupted' : data.status === 'archived' ? 'Archived · read only' : busy ? 'Saving…' : 'Shared event connected'} items={['Set up', 'Score', 'Results', 'Publish']} current={page} navigate={setPage}>
     {(notice || error) && <p className="notice" role="status">{notice || error}</p>}
-    {page === 0 && <SetupPage openScoring={()=>setPage(1)} token={token} competitionCount={setup.competitions.length} hasRounds={setup.rounds.length > 0} hasDraft={Boolean(draft)} sampleHelp={sampleHelp} otherEvents={setupIntro} toolbar={<><button className="primary-button" disabled={!draft || busy || data.status !== 'active'} onClick={() => void saveSetup()}>Save setup</button>{draft && <><span>Unsaved setup edits</span><button className="quiet-button" onClick={() => { if (window.confirm('Discard the unsaved setup edits?')) setDraft(null); }}>Discard edits</button></>}{!draft && <span className="setup-save-feedback">Saved setup · changes need Save setup</span>}</>}>
+    {page === 0 && <SetupPage openScoring={()=>setPage(1)} token={token} competitionCount={setup.competitions.length} hasRounds={setup.rounds.length > 0} hasDraft={Boolean(draft)} sampleHelp={sampleHelp} otherEvents={setupIntro} toolbar={<><button className="primary-button" aria-describedby={setupSaveError ? 'legacy-setup-save-error' : undefined} disabled={!draft || busy || data.status !== 'active'} onClick={() => void saveSetup()}>Save setup</button>{setupSaveError && <span id="legacy-setup-save-error" role="status">{setupSaveError}</span>}{draft && <><span>Unsaved setup edits</span><button className="quiet-button" onClick={() => { if (window.confirm('Discard the unsaved setup edits?')) {setDraft(null);setSetupSaveError('');} }}>Discard edits</button></>}{!draft && <span className="setup-save-feedback">Saved setup · changes need Save setup</span>}</>}>
       {data.rounds.length > 0 && data.status === 'active' && <details><summary>Versioned setup correction</summary><label className="check-label"><input type="checkbox" checked={correction} onChange={(e) => setCorrection(e.target.checked)} />Unlock frozen setup for an explicit correction</label><label><span>Correction reason</span><input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label><p>Saving a correction invalidates current submissions and approvals and returns affected rounds to setup. Prior versions are retained.</p></details>}
       <fieldset disabled={busy || data.status !== 'active'} className="shared-unframed"><SetupEditor setup={setup} update={(next) => { if (!draft) setDraftVersion(data.version); setDraft(next); }} frozenIds={data.rounds.filter((r) => r.phase !== 'setup').map((r) => r.id)} correction={correction} /></fieldset>
 
