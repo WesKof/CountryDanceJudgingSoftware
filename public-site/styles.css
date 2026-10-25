@@ -28,6 +28,8 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
 @media (max-width: 760px) {
   .card table td { font-size: 14px; line-height: 1.45; padding: 12px 6px; }
   .card table th { font-size: 10px; }
+  .admin-request > table th:first-child { width: auto; }
+  .admin-request > table th:nth-child(2) { width: 5rem; }
   .card table td small { font-size: 12px; margin-top: 4px; }
   .admin-request > form { padding: 10px; }
   .admin-request > form button { width: 100%; justify-content: center; padding: 12px 10px; }
