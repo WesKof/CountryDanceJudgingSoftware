@@ -9,6 +9,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Ownership, priorities, schedules | [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) |
 | Completed work and latest evidence | [Delivery index](PROJECT_SPEC.md#completed-local-deliveries) · [Latest local evidence](LOCAL_TEST_REPORT.md) |
 | Instruction audit | [Map](PROJECT_SPEC.md#operative-instructions-and-retention-map--october-24) |
+| Local startup diagnostics | [Validated controls, cache layout and limits](PROJECT_SPEC.md#local-startup-diagnostic-controls--october-25) |
 | Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local), [review/submission status](PROJECT_SPEC.md#judge-stage-review-status--october-24) |
 | Organizer Publish blockers | [Workflow guidance and exact destinations](PROJECT_SPEC.md#organizer-publish-readiness-guidance--october-24) |
 | Organizer judge access | [Judge-link cards and progress](PROJECT_SPEC.md#organizer-judge-link-cards--october-24), [exact revoked-link recovery](PROJECT_SPEC.md#organizer-revoked-link-recovery--october-24) |

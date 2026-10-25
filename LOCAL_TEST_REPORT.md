@@ -1,5 +1,20 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Startup diagnostic calibration and limits PASS
+
+Follow-up33 completed controlled diagnostics and established a faithful healthy isolated profile; no app startup/production-watch fix is delivered. Master independently reviewed helpers, source/API boundaries, aggregate results and the cache-profile equivalence proof. Production source remainscfd4644; this batch changes only the three canonical documents.
+
+| Observation | Evidence and limits |
+| --- | --- |
+| Watcher-only counterbalance | Default runs observed1117 watched directories/9172–10174 child-name entries,16.344–17.437 Node CPU-seconds and304.8–323.0 decimalMB RSS. Exact exclusion observed0/0,0.172–0.188 CPU-seconds and85.0–85.3MB. All createServer calls returned3.4–3.7ms; default ready events were unobserved before bounded close. This establishes background traversal cost, not a blocking createServer wait or owner startup cause. Entries include files/subdirectories; CPU sums process threads, excluding descendants. Four exact children exited0 with no parent kill. |
+| Invalid full-app probes | Four instrumented/simplified trials and one plain fresh-unconventional-cache control failed before port/home readiness with a multiple-default-exports module error. Failure times are not startup improvements.18 own generated cache files parsed; duplicate-name counts did not support duplicated existing plugin registration. Neither result establishes the failing virtual module or framework cause. All artifacts remain. |
+| Healthy cache control | A fresh owned node_modules/.vite plain control reached rootHTTP200 at7060ms after parent spawn; no error/censoring. Independent read-only profile comparison verifies launchers equal except cacheDir and namespace, with equal temporary config/receiver after normalization. Earlier direct-work-cache control failed at4048ms. This supports cache-topology relevance in this profile, not the responsible transform, statistical causality, browser hydration or the earlier330.8s cause. |
+| Runtime/privacy | Helpers/cache/logs/fictional stores remain in retained work/startup-watch-check, startup-app-check, startup-plain-control and startup-cache-shape-control. Corrected parent cleanup uses finally and exact helper/CIM lineage, retaining primary failures; all owned processes stopped,3001/3110 absent, protected configuration/generated/build hashes restored. Wrangler's actual retained .dev.vars read was verified by metadata/hash without values; Vite envDir:false alone did not establish it. Experiments performed no owner HTTP/profile/restart/browser/data operation. |
+
+The master records normal documentation checkpoint/push/merge, guarded tracked mirror and expected-tip cleanup at handoff; no app tests/build are repeated for these documentation-only changes. Owner-data/config/publication/process-manifest hashes and3000/3100 provenance are checked read-only. Existing recovery snapshots remain; source history is not data recovery. Earlier browser-state wording means no direct browser/navigation/storage action; automatic reload, scroll and hydration were not independently measured.
+
+Next priority is a bounded fictional reproduction of malformed saved-event summaries and lifecycle confirmation, preserving existing catalog metadata/path/binding on uncertain outcomes. Startup watcher A/B remains deferred with the master as owner and a faithful conventional-cache control as prerequisite; no permission/global/schedule/hosted or replacement-policy change.
+
 ## October 25 — Preferred public-comparison-scope promotion PASS
 
 Master independently reviewed deliverye4a8eb1/productioncfd4644, complete source-removal proof, compiled phone image and four actual prior-link task results. Only previous-path selection/href differs; comparison selection/math/filtering, renderer/admin/receiver/publication/server remain exact. The preserved public identity resolves directly in the prior released snapshot, with overview fallback otherwise.
