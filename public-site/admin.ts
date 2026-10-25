@@ -14,7 +14,7 @@ async function authority(key:string,input:Record<string,unknown>){
 }
 function hidden(name:string,value:unknown){return `<input type="hidden" name="${name}" value="${escape(value)}">`;}
 function form(session:Session,action:string,body:string,extra=''){return `<form method="post" action="/admin/action">${hidden('csrf',session.csrf)}${hidden('action',action)}${extra}${body}</form>`;}
-function login(notice=''){return page(`<div class="page-title"><p class="eyebrow">Website admin</p><h1>Approve competition results</h1><p>Organizers send the results. You review and publish them here.</p></div><section class="card admin-login">${notice?`<p role="alert">${escape(notice)}</p>`:''}<form method="post" action="/admin/login"><label>Admin access code<input type="password" name="credential" autocomplete="current-password" required></label><button>Sign in</button></form><details><summary>About this local preview</summary><p>Use the local admin code for this preview. Connecting the hosted website’s admin sign-in is a separate step.</p></details></section>`,'Admin');}
+function login(notice='',event=''){return page(`<div class="page-title"><p class="eyebrow">Website admin</p><h1>Approve competition results</h1><p>Organizers send the results. You review and publish them here.</p></div><section class="card admin-login">${notice?`<p role="alert">${escape(notice)}</p>`:''}<form method="post" action="/admin/login">${event?hidden('event',event):''}<label>Admin access code<input type="password" name="credential" autocomplete="current-password" required></label><button>Sign in</button></form><details><summary>About this local preview</summary><p>Use the local admin code for this preview. Connecting the hosted website’s admin sign-in is a separate step.</p></details></section>`,'Admin');}
 function renderAdmin(records:PublicationRecord[],session:Session,service:string,notice:string,store:PublicStore,event:string,scopes:EventScopes){
   const events=new Map<string,PublicationRecord[]>();
   for(const item of records){const list=events.get(item.snapshot.eventId)??[];list.push(item);events.set(item.snapshot.eventId,list);}
@@ -52,7 +52,7 @@ export async function adminRoute(req:IncomingMessage,res:ServerResponse,url:URL,
   const send=(html:string,status=200)=>{res.writeHead(status).end(html);};
   try{
     if(req.method==='GET'&&url.pathname==='/admin'){
-      if(!session){send(login());return true;}
+      if(!session){send(login('',url.searchParams.get('event')??''));return true;}
       const data=await authority(session.key,{action:'list'});send(renderAdmin(data.publications??[],session,data.serviceState??'enabled',url.searchParams.get('notice')??'',store,url.searchParams.get('event')??'',data.events??{}));return true;
     }
     if(req.method!=='POST'||!['/admin/login','/admin/action'].includes(url.pathname)){send('Not found',404);return true;}
@@ -60,13 +60,13 @@ export async function adminRoute(req:IncomingMessage,res:ServerResponse,url:URL,
     if(req.headers.origin!==url.origin || req.headers['content-type']?.split(';')[0]!=='application/x-www-form-urlencoded'){send('Use this website’s admin controls.',403);return true;}
     const fields=new URLSearchParams(raw);
     if(url.pathname==='/admin/login'){
-      const key=fields.get('credential')??'';
-      if(key.length>300){send(login('Check your admin credential.'),403);return true;}
-      try{await authority(key,{action:'list'});}catch{send(login('Sign-in failed. Check your credential and that the judging app is running.'),403);return true;}
-      if(sessions.size>=50){send(login('Too many active admin sessions. Try later.'),429);return true;}
+      const key=fields.get('credential')??'',event=fields.get('event')??'';
+      if(key.length>300){send(login('Check your admin credential.',event),403);return true;}
+      try{await authority(key,{action:'list'});}catch{send(login('Sign-in failed. Check your credential and that the judging app is running.',event),403);return true;}
+      if(sessions.size>=50){send(login('Too many active admin sessions. Try later.',event),429);return true;}
       const id=randomBytes(32).toString('hex');sessions.set(id,{key,csrf:randomBytes(32).toString('hex'),expires:Date.now()+8*60*60*1000});
       if(token)sessions.delete(token);
-      res.setHeader('Set-Cookie',`cdj_admin=${id}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=28800`);res.writeHead(303,{Location:'/admin'}).end();return true;
+      res.setHeader('Set-Cookie',`cdj_admin=${id}; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=28800`);res.writeHead(303,{Location:'/admin'+(event?'?event='+encodeURIComponent(event):'')}).end();return true;
     }
     if(!session || fields.get('csrf')!==session.csrf){send('Sign in again before approving results.',403);return true;}
     const action=fields.get('action');

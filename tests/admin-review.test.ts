@@ -31,6 +31,7 @@ async function harness(state: Authority, run: (session: { get: (query?: string) 
   const origin = 'http://127.0.0.1:3110';
   globalThis.fetch = async (_input, init) => {
     calls.push(JSON.parse(String(init?.body)));
+    if(new Headers(init?.headers).get('Authorization')!=='Bearer synthetic-adapter-only')return Response.json({error:'Synthetic sign-in rejected'},{status:403});
     return Response.json(state);
   };
   async function request(path: string, method = 'GET', body = '', cookie = '', requestOrigin = origin) {
@@ -137,5 +138,47 @@ test('admin session, CSRF, origin and exact action forwarding stay independent o
       assert.equal((await request('/admin/action', 'POST', new URLSearchParams({ action, state, csrf: csrf() }).toString(), cookie)).status, 303);
       assert.deepEqual(calls.at(-1), { action, state });
     }
+  });
+});
+
+test('admin sign-in keeps selected completed, pending, stale and literal event context on a fixed local destination', async () => {
+  const records=[publication('pending-a'),publication('pending-b'),publication('completed','competition-a','released')];
+  const state=authority(records),before=JSON.stringify(state);
+  await harness(state,async({get,request,calls})=>{
+    await get();
+    for(const event of ['completed','pending-a','pending-b','missing','<Friends> & "Family"','https://untrusted.invalid/path?next=/admin','//untrusted.invalid','event\r\nLocation: https://untrusted.invalid']){
+      const anonymous=await request('/admin?event='+encodeURIComponent(event));
+      const field=/name="event" value="([^"]*)"/.exec(anonymous.html);
+      assert.ok(Boolean(field),'Anonymous event login must preserve event context');
+      assert.equal(field![1],event.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'));
+      lacks(anonymous.html,'<Friends>');lacks(anonymous.html,'type="password" value=');
+      const login=await request('/admin/login','POST',new URLSearchParams({credential:'synthetic-adapter-only',event,returnTo:'https://untrusted.invalid'}).toString());
+      assert.equal(login.status,303);
+      const target=new URL(login.headers.get('location')!,'http://127.0.0.1:3110');
+      assert.equal(target.origin,'http://127.0.0.1:3110');assert.equal(target.pathname,'/admin');assert.equal(target.searchParams.get('event'),event);assert.equal(target.hash,'');
+      const cookie=login.headers.get('set-cookie')!.split(';')[0],selected=await request(target.pathname+target.search,'GET','',cookie);
+      if(event==='completed')assert.equal(heading(selected.html),'Results published');
+      if(event.startsWith('pending-'))has(selected.html,`data-event-id="${event}"`);
+      if(!records.some(record=>record.snapshot.eventId===event))assert.equal(heading(selected.html),'No results to review for this event');
+      const csrf=/name="csrf" value="([^"]+)"/.exec(selected.html)![1];
+      await request('/admin/action','POST',new URLSearchParams({action:'logout',csrf}).toString(),cookie);
+    }
+    assert.ok(calls.every(call=>call.action==='list'),'Sign-in/navigation cannot forward approval actions');assert.equal(JSON.stringify(state),before);
+  });
+});
+
+test('failed admin sign-in retains event for retry without retaining or reflecting the entered credential', async()=>{
+  await harness(authority([publication('pending-a'),publication('completed','competition-a','released')]),async({get,request})=>{
+    await get();
+    for(const credential of ['synthetic-wrong-credential', 'x'.repeat(301)]){
+      const failed=await request('/admin/login','POST',new URLSearchParams({credential,event:'completed'}).toString());
+      assert.equal(failed.status,403);has(failed.html,'name="event" value="completed"');lacks(failed.html,credential);lacks(failed.html,'type="password" value=');
+      assert.equal(failed.headers.has('set-cookie'),false);
+    }
+    const ordinary=await request('/admin');lacks(ordinary.html,'name="event"');
+    const blank=await request('/admin/login','POST',new URLSearchParams({credential:'synthetic-adapter-only',event:''}).toString());
+    assert.equal(blank.headers.get('location'),'/admin');
+    const cookie=blank.headers.get('set-cookie')!.split(';')[0],view=await request('/admin','GET','',cookie),csrf=/name="csrf" value="([^"]+)"/.exec(view.html)![1];
+    has(view.html,'data-event-id="pending-a"');await request('/admin/action','POST',new URLSearchParams({action:'logout',csrf}).toString(),cookie);
   });
 });
