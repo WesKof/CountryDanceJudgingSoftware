@@ -1,5 +1,11 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Preview activation ordering correction PASS
+
+The next isolated audit correctly refused to start: port3001 was already owned by the organizer PID57724, even though its CLI requested3000 and both ports served the app. The organizer's retained exec log shows config reloads during final branch switching, a failed restart, then Vite's automatic fallback to3001. The preceding promotion activated the organizer before switching old main07bf to integrateded7adaa; that transient checkout rewrote watched config. Initial home/browser/data checks passed but did not establish final listener isolation. This is operator sequencing evidence, not a production-glob regression or an explanation of the historical330.8s startup.
+
+Master rechecked the existing Already published browser state, private preimages and unchanged16table logical digest, then stopped only exact organizer57724/current proved workerd57664. Receiver13388 remained running. The correction finishes source-changing Git switches before the final organizer start, verifies actual listeners/process ownership and releases3001 only after it is absent. The dated transition journal retains both activation manifests, exact identities, the failure and recovery proof. AGENTS now requires this sequence and listener check; no production source, dependency, permission, owner event or publication mutation. No repeated application suites are justified for this instruction/operator correction. Subsequent final-start results supersede the first activation's incomplete listener check.
+
 ## October 25 — Preferred development watch scope promotion PASS
 
 Master independently reviewed deliveryed75570/source0c4f03f, portable patterns, platform/functional/check JSON and the actual browser HMR/config-reload helper. Source-removal equivalence proves only the intended watch setting differs from07bf671; package/lock/CSS/application source are unchanged. Worker rollback checkpoint and remote branch tips were independently verified before normal fast-forward promotion.

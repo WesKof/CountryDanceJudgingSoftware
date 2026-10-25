@@ -60,4 +60,6 @@ Small fixes use relevant fast unit/type/lint and necessary focused API/browser c
 
 Use `codex/` branches/verified commits. Preserve annotated checkpoints before major experiments/branch cleanup; push when authorized. Fetch; integrate normally respecting protection/CI/review/PR process. Never force-push/rewrite main/checkpoints. Verify remote main/peeled tags; delete only expected completed tips contained in main. Source rollback cannot restore data/reverse external effects.
 
+For preview activation, finish source-changing branch switches/integration before the final start; an intermediate checkout can reload Vite or trigger port fallback. Verify actual listeners and process/store ownership after closeout, not only the requested CLI port, before releasing test ports.
+
 At handoff/stopping points update behavior/scope in PROJECT_SPEC, fresh evidence/limits/unfinished work/next action in LOCAL_TEST_REPORT, AGENTS for rule/routing changes only. Report branch/commit/checkpoint, preferred/mirror status/released claims; distinguish implemented/proposed, local/hosted, passed/failed/unperformed. Close interrupted documentation gaps next opportunity.
