@@ -7,6 +7,7 @@ import type { PublicSnapshot } from '../lib/live/publication';
 type PublicData = { records: { snapshot: PublicSnapshot; releasedAt: string }[]; current: Record<string, string> };
 
 test('public comparison previous links retain available entrant and judge scope without writes', async ({ browser }) => {
+  test.skip(process.env.PUBLIC_COMPARISON_RETAINED_FIXTURE !== '1', 'Requires an explicitly owned retained released-correction fixture.');
   const receiver = testEndpoint('receiver', true), store = process.env.LOCAL_TEST_RECEIVER_STORE;
   if (!store) throw new Error('Set the owned receiver store for preservation proof.');
   const hash = () => createHash('sha256').update(readFileSync(store)).digest('hex');
@@ -78,6 +79,7 @@ test('public comparison previous links retain available entrant and judge scope 
         expect(await link.getAttribute('href') === `/results/${previous.id}`).toBe(true);
         await link.click(); expect(new URL(page.url()).pathname === `/results/${previous.id}`).toBe(true);
         await expect(page.getByRole('heading', { name: 'Final places', exact: true })).toBeVisible();
+        results.push({ width, scope: 'missing-entrant', overviewFallback: true });
       }
     }
     expect(nonGets).toEqual([]); expect(errors).toEqual([]); expect(hash() === beforeHash).toBe(true);
