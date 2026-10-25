@@ -5,7 +5,7 @@ import type { LiveView, ReviewRequest } from '@/lib/live/types';
 import { finalistCountIssues } from '@/lib/live/validation';
 import RoundContext, { RoundOverview } from './round-context';
 import SetupSection from './setup-section';
-import { Correction, ReviewRequests } from './result-management';
+import { NewCorrection, ReviewRequests } from './result-management';
 import { ResultHighlights, AllRoundScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
 import ResultWithdrawals from './result-withdrawals';
 
@@ -50,7 +50,7 @@ export default function OrganizerResults({ data, action, selected, select, setup
     <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} reviewFinalistCount={limits.length ? undefined : () => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')} />
     <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
       <ReviewRequests data={data} action={action} embedded pendingOnly onReviseWithdrawal={(q) => { setRevision(q); revealResult('results-withdrawals'); }} />
-      {round?.standings ? <fieldset className="shared-unframed" disabled={data.status !== 'active'}><h3>{round.definition.format} · {round.definition.division} · {round.definition.kind}</h3><Correction key={round.key} data={data} round={round} action={action} /></fieldset> : <p>Score corrections are available after the selected stage concludes.</p>}
+      <NewCorrection key={data.eventId} data={data} round={round} action={action} />
       <ResultWithdrawals data={data} action={action} selected={selected} revision={revision} />
       <button className="quiet-button" onClick={() => revealResult('results-audit')}>View completed requests in Audit trail</button>
     </div></SetupSection>
