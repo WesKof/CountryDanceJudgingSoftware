@@ -11,6 +11,44 @@ function published(id = 'v1', revision = 1): PublicationRecord {
   return { id, revision, competitionId: 'PRIVATE_INTERNAL_COMPETITION', sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'released', releasedAt: `2026-10-24T${String(10 + revision).padStart(2, '0')}:00:00Z` };
 }
 
+test('public scoped reader names the exact selected identity before competition context and counts visible judge cards', () => {
+  const record = published(), store = { records: { v1: record }, current: { 'public-event/public-competition': 'v1' } }, before = JSON.stringify(store);
+  const judge = renderResults(record, store, undefined, 'judge-b');
+  assert.match(judge, /<h2>Judge · Public Robin<\/h2><p class="quiet">Synthetic public results · Strictly · Beginner<\/p>/);
+  assert.match(judge, /Judge scorecards · 1 judge<\/summary>/); assert.match(judge, /Public Robin<\/a> · Head judge/);
+  assert.doesNotMatch(judge, /Public Alex<\/a>/);
+  const entrant = renderResults(record, store, 'entry-1');
+  assert.match(entrant, /<h2>#101 Dancer 1 &amp; Partner 1<\/h2>/); assert.match(entrant, /Judge scorecards · 2 judges/);
+  assert.ok(entrant.indexOf('#101 Dancer 1 &amp; Partner 1</h2>') < entrant.indexOf('Synthetic public results · Strictly · Beginner'));
+  assert.match(entrant, /Revision 1 · Released/); assert.match(entrant, /Local · 2026-10-24/);
+  assert.equal(JSON.stringify(store), before);
+});
+
+test('public member-only and missing reader scopes never guess a person, partner or judge', () => {
+  const record = published(), stage = record.snapshot.stages[0]; stage.entrants[0].members = ['public-member'];
+  const store = { records: { v1: record }, current: { 'public-event/public-competition': 'v1' } };
+  const member = renderResults(record, store, 'public-member'); assert.match(member, /<h2>Entrant results<\/h2>/);
+  assert.match(member, /Dancer 1/); assert.doesNotMatch(member, /<h2>[^<]*(Dancer 1|Partner 1)/);
+  assert.match(renderResults(record, store, 'absent'), /<h2>Entrant unavailable in this version<\/h2>/);
+  const unknownJudge = renderResults(record, store, undefined, 'absent');
+  assert.match(unknownJudge, /<h2>Judge unavailable in this version<\/h2>/); assert.match(unknownJudge, /Judge scorecards · 0 judges/);
+  assert.doesNotMatch(unknownJudge, /Public Alex<\/a>|Public Robin<\/a>/);
+  const named = structuredClone(stage); named.id = 'prelims'; named.kind = 'prelims'; named.entrants = [{ ...structuredClone(stage.entrants[0]), id: 'public-member', primary: 'Exact person', secondary: '', role: 'Lead', members: [] }]; record.snapshot.stages.push(named);
+  assert.match(renderResults(record, store, 'public-member'), /<h2>#101 Exact person<\/h2>/);
+});
+
+test('scoped published headings escape identity and keep stage-specific head, role and withdrawal evidence', () => {
+  const record = published(), stage = record.snapshot.stages[0]; stage.judges[0].name = '<script>Judge & Co</script>'; stage.entrants[0].primary = '<img src=x>'; stage.entrants[0].withdrawn = true; stage.entrants[0].role = 'Lead';
+  const store = { records: { v1: record }, current: { 'public-event/public-competition': 'v1' } }, before = JSON.stringify(store);
+  const entrant = renderResults(record, store, 'entry-1'), judge = renderResults(record, store, undefined, 'judge-a');
+  assert.match(entrant, /<h2>#101 &lt;img src=x&gt; &amp; Partner 1<\/h2>/); assert.match(entrant, /Withdrawn/); assert.match(entrant, /<small>Lead<\/small>/);
+  assert.match(judge, /<h2>Judge · &lt;script&gt;Judge &amp; Co&lt;\/script&gt;<\/h2>/);
+  assert.doesNotMatch(entrant + judge, /<script>|<img src=x>/); assert.equal(JSON.stringify(store), before);
+  const overview = renderResults(record, store); assert.match(overview, /<h2>Synthetic public results · Strictly · Beginner<\/h2><p>Local/); assert.doesNotMatch(overview, /<p class="quiet">Synthetic public results/);
+  const preview = structuredClone(record); preview.id = preview.snapshot.id = 'private'; preview.status = 'requested'; delete preview.releasedAt;
+  const html = renderResults(preview, store); assert.match(html, /<h2>Synthetic public results · Strictly · Beginner<\/h2><p>Local/); assert.doesNotMatch(html, /<h2>Judge ·|<h2>#101|class="quiet">Synthetic public results/);
+});
+
 test('current revision returns to exact retained entrant and judge identities without changing history or records', () => {
   const first = published(), current = published('v2', 2), store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': 'v2' } };
   const href = (entrant?: string, judge?: string) => renderResults(first, store, entrant, judge).match(/href="([^"]+)">Current revision/ )?.[1];

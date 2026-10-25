@@ -58,6 +58,9 @@ test('public comparison previous links retain available entrant and judge scope 
           await destination.click(); extraFindingActions++;
         }
         await expect.poll(() => new URL(page.url()).pathname === oldPath).toBe(true);
+        const readerHeading = page.locator('article[data-publication-id] > h2');
+        await expect(readerHeading).toHaveText(scope === 'judge' ? `Judge · ${judge.name}` : `#${entrant.number} ${entrant.primary}${entrant.secondary ? ' & ' + entrant.secondary : ''}`);
+        expect(await readerHeading.evaluate(element => element.getBoundingClientRect().top >= 0 && element.getBoundingClientRect().bottom <= innerHeight)).toBe(true);
         await expect(page.getByText('You are viewing an earlier published version. Its original scores are preserved.', { exact: true })).toBeVisible();
         await expect(page.locator('.public-comparison')).toHaveCount(0);
         const scorecards = page.locator('.public-scorecards');
@@ -65,6 +68,7 @@ test('public comparison previous links retain available entrant and judge scope 
         if (scope === 'judge') {
           for (const card of await scorecards.all()) {
             await expect(card.locator(':scope > details')).toHaveCount(1);
+            await expect(card.locator(':scope > summary')).toHaveText('Judge scorecards · 1 judge');
             await expect(card.getByRole('link', { name: judge.name, exact: true })).toBeVisible();
           }
         } else {
