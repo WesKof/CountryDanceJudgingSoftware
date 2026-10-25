@@ -43,6 +43,15 @@ function PendingSaveCue({ count, state, attention, review }: { count: number; st
   return <a className="judge-save-feedback" href="#judge-pending-saves" onClick={(event) => { event.preventDefault(); review(); }}><span role="status">{count} pending edit{count === 1 ? '' : 's'} · {state}</span><strong>Review saves ↑</strong></a>;
 }
 
+function BibJump({ bibs, jump }: { bibs: number[]; jump: (bib: number) => void }) {
+  return <form className="judge-bib-jump" onSubmit={(event) => {
+    event.preventDefault();
+    const input = event.currentTarget.elements.namedItem('bib') as HTMLInputElement, bib = Number(input.value);
+    if (!bibs.includes(bib)) { input.setCustomValidity('Choose a bib in this heat and role filter.'); input.reportValidity(); return; }
+    jump(bib);
+  }}><input name="bib" type="text" inputMode="numeric" pattern="[0-9]+" required autoComplete="off" placeholder="Bib" aria-label="Find bib in this heat" onInput={(event) => event.currentTarget.setCustomValidity('')} /><button className="quiet-button" type="submit" aria-label="Go to bib">Go</button></form>;
+}
+
 function scoringRestriction(round: RoundView, song: Performance, subjectId: string) {
   if (round.definition.withdrawnIds?.includes(subjectId)) return 'This entry is withdrawn. Retained marks and notes are read only.';
   if (song.pairingRevised && !song.partners.some((pair) => pair.includes(subjectId))) return 'Not scheduled for this song. Retained marks and notes are read only.';
@@ -195,6 +204,7 @@ export default function JudgeBallot({ token }: { token: string }) {
   const options = data.rounds.filter((r) => r.phase !== 'setup' && (!stage || r.phase === 'dancing') && r.definition.judgeIds.includes(data.judgeId!)).flatMap((r) => r.definition.heats.filter((h) => !stage || !data.heatSubmissions?.some((s) => s.roundKey === r.key && s.heatId === h.id && s.judgeId === data.judgeId)).flatMap((h) => h.songs.filter((p) => !stage || data.context.stageSubmission || data.context.visited.includes(p.id)).map((p) => ({ round: r, heat: h, song: p }))));
   const target = options.find((o) => o.song.id === selected) ?? (data.context.stageSubmission ? options[0] : undefined);
   const roomTarget = options.find((o) => o.song.id === data.context.performanceId);
+  const visibleSubjects = target ? target.round.definition.subjects.filter((s) => target.heat.subjectIds.includes(s.id) && (role === 'All' || `${s.role}s` === role)).sort((a, b) => a.number - b.number) : [];
   const ballot = data.ballots.find((b) => b.roundKey === target?.round.key);
   const locked = submitting || !ballot || ballot.locked || data.status !== 'active';
   const currentBlock = data.setup.blocks.find((b) => b.id === data.context.blockId);
@@ -283,9 +293,9 @@ export default function JudgeBallot({ token }: { token: string }) {
     </div></section>}
 
     {page === 0 && (options.length > 0 || !stage) && !reviewingStage && !(wholeStage && (stageReview || stageSubmitted)) && <div className="page-stack"><label><span>{wholeStage ? "Assigned heats & songs" : "Current & past songs"}</span><select aria-label={wholeStage ? "Assigned heats and songs" : "Current and past songs"} value={target?.song.id ?? selected ?? ''} onChange={(e) => { setSelected(e.target.value); setRole('All'); }}><option value="">{wholeStage ? "Select a song" : "Select a danced song"}</option>{options.map((o) => <option key={o.song.id} value={o.song.id}>{o.round.definition.format} · {o.round.definition.division} · {o.round.definition.kind} · {o.heat.name} · {o.song.title}</option>)}</select></label>
-      {wholeStage && target && <SongNavigation><p className="judge-song-context"><strong>{target.song.title}</strong><span>{target.round.definition.format} · {target.round.definition.division} · {target.round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · {target.heat.name}</span></p><div className="judge-song-controls"><button className="quiet-button" disabled={songIndex <= 0} onClick={() => chooseSong(options[songIndex - 1].song.id)}>← Previous song</button><span>Song {songIndex + 1} / {options.length}</span><button className="quiet-button" disabled={songIndex >= options.length - 1} onClick={() => chooseSong(options[songIndex + 1].song.id)}>Next song →</button></div>{pending.length > 0 && <PendingSaveCue count={pending.length} state={pendingState} attention={pending.some((p) => p.blocked || p.error)} review={reviewPendingSaves} />}</SongNavigation>}
+      {wholeStage && target && <SongNavigation><p className="judge-song-context"><strong>{target.song.title}</strong><span>{target.round.definition.format} · {target.round.definition.division} · {target.round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · {target.heat.name}{visibleSubjects.length > 1 ? ` · Song ${songIndex + 1} / ${options.length}` : ''}</span></p><div className="judge-song-controls"><button className="quiet-button" disabled={songIndex <= 0} onClick={() => chooseSong(options[songIndex - 1].song.id)}>← Previous song</button>{visibleSubjects.length > 1 ? <BibJump key={target.song.id + '/' + role} bibs={visibleSubjects.map((subject) => subject.number)} jump={(bib) => setScoreFocus({ bib })} /> : <span>Song {songIndex + 1} / {options.length}</span>}<button className="quiet-button" disabled={songIndex >= options.length - 1} onClick={() => chooseSong(options[songIndex + 1].song.id)}>Next song →</button></div>{pending.length > 0 && <PendingSaveCue count={pending.length} state={pendingState} attention={pending.some((p) => p.blocked || p.error)} review={reviewPendingSaves} />}</SongNavigation>}
       {target && ballot ? <section id="judge-ballot" tabIndex={-1} className="score-panel phone-ballot"><div className="panel-heading"><div><p className="kicker">{target.round.definition.format} · {target.round.definition.division} · {target.round.definition.kind} · {target.heat.name}</p><h2>{target.song.title}</h2><p>{target.song.artist}{target.song.tempo ? ` · ${target.song.tempo}` : ''}</p>{stage && <p className="ballot-coverage" role="status">{targetMissing ? `${targetMissing} still to score in this heat` : 'All bibs scored in this heat ✓'}</p>}</div></div>{locked && <p className="notice">{data.status === 'archived' ? 'Archived · read only' : 'Finalized ballot · locked'}</p>}{target.round.definition.format === 'Jack & Jill' && target.round.definition.kind === 'prelims' && <div className="phone-filters" aria-label="Role filter">{['All', 'Leads', 'Follows'].map((v) => <button className="quiet-button" key={v} aria-pressed={role === v} onClick={() => setRole(v)}>{v}</button>)}</div>}
-      {target.round.definition.subjects.filter((s) => target.heat.subjectIds.includes(s.id) && (role === 'All' || `${s.role}s` === role)).sort((a, b) => a.number - b.number).map((subject) => {
+      {visibleSubjects.map((subject) => {
         const cell = getCell(ballot, target.song.id, subject.id); const key = cellKey(target.song.id, subject.id);
         const partnerId = target.song.partners.find((pair) => pair.includes(subject.id))?.find((id) => id !== subject.id);
         const partner = target.round.definition.subjects.find((s) => s.id === partnerId);
