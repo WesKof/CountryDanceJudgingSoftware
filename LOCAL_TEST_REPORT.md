@@ -1,5 +1,17 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred judge-save-feedback promotion PASS
+
+Master independently reviewed delivery 8f7a86a/source 6a1793d, the ordinary and long-text compiled phone images and focused appearance/disappearance measurements. The presentation-only timer, global pending-state cue, existing recovery-panel focus and scoped growth adjustment preserve the current target and underlying queue. Rerunning the read-only source comparison confirms 17,352 normalized bytes of save/ack/retry/edit/submission/selection/recovery/mark handlers remain unchanged. Worker evidence below is nine focused development passes, TypeScript/focused lint, a production build and two executed rebuilt compiled-client passes; no broad suite/audit is represented as newly run.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred serving | Clean main e7bf14f and all 179 tracked mirror baselines matched before fast-forwarding exact delivery on codex/judge-save-feedback-promotion. Actual preferred GET /app/globals.css?direct and /components/live/judge.tsx return 200 with judge-save-feedback, PendingSaveCue and reviewPendingSaves markers. Organizer home and both original/corrected result links return 200. Existing organizer14644/receiver68708 retain listeners3000/3100; no redundant build/restart for this client-only change. Actual production-build proof belongs to the isolated rebuilt Worker below. |
+| Data and runtime | All 16 owner business-table contents retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON and private configuration hashes match the pre-review journal. No owner score/note/submission/draw/approval/publication action or browser-profile mutation was needed; original and corrected snapshots/history remain. This is logical business-data equality, not physical SQLite/WAL byte identity. |
+| Integration and recovery | Private work/owner-runtime-backups/judge-save-feedback-20261024/transition.json retains baseline, guarded mirror hashes and serving/data proof. Existing consistent recovery snapshots remain; no redundant full copy or restoration claim. Final source checkpoint is checkpoint/local-judge-save-feedback-promotion-2026-10-24. Normal remote/main/peeled-tag verification, tracked mirror equality and expected-tip merged-branch cleanup are checked at handoff. Source checkpoints are not data backups. |
+
+No live/hosted operation, permission change, global instruction edit, physical-device/venue/screen-reader or capacity result is claimed. Next is a bounded synthetic review of multi-heat stage review, missing-bib navigation, submission and waiting states, without assuming a defect or changing coverage/acknowledgement/approval contracts. Master owns continuation and preferred integration; maintenance receives the isolated scope after closeout.
+
 ## October 24 — Judge pending save feedback PASS
 
 Master assigned sole isolated source/Git/docs/test/runtime ownership on codex/judge-save-feedback from fresh main e7bf14f. Affected preferred/mirror content matched before changes. Source 6a1793d changes only judge presentation/scopedCSS and a new ordinary browser case file; master retains preferred/mirror/operator integration. No new save/retry/approval/selection handler or server/schema/dependency change. Static comparison preserves 17,352 normalized bytes of existing acknowledgement, queue/cache/retry/edit/submission/selection/recovery/mark logic.
