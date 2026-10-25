@@ -1,5 +1,18 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Preferred whole-competition-draft promotion PASS
+
+Master independently reviewed delivery5073acb/source66c60a3, the real before mismatch, final compiled phone/desktop target/recovery images and preservation booleans. Independent source comparison confirms the complete entrant/revision implementation and backend eligibility/approval files are unchanged; CSS differs only by the scoped new feedback wrapping rule. Whole-competition intent now survives main-view/entrant-form changes while pristine and deliberate choices retain their expected behavior. The existing single confirmation names the target.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred serving | Clean main5eb0f2b and189 tracked mirror baselines verified before exact fast-forward on codex/whole-competition-draft-promotion. Actual preferred withdrawal client/CSS return200 with independent-target/current-membership/named-target and wrapping markers. Initial CSS regex treated a Vite JavaScript string's literal newline escapes as whitespace; normalizing those escapes verifies the existing served rule, without source/config/runtime changes. Organizer home and original/corrected result pages return200; owner14644/68708 retain3000/3100. No redundant preferred build/restart. |
+| Preservation | All16 owner business tables retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON/private configuration hashes match baseline. No owner score, note, link, approval, submission, publication or browser-state mutation. Fictional durable backup readback is distinct from an active judge projection or restoration proof; source checkpoints do not restore data. |
+| Verification and context | Production build, TypeScript/focused lint and ten rebuilt browser cases41.6s pass. Evidence includes independent forms, pending revision, named confirmation/cancel, actual exact dual-approved removal, disabled control/handler, explicit recovery and entrant/J&J regressions. Valid120-character feedback fits actual ancestor bounds at390. AGENTS routes Latest local evidence to the report top; the historical audit remains intact. No new global rules, schedule/permission change or instruction-loading/reload claim. |
+| Closeout | Private work/owner-runtime-backups/whole-competition-draft-20261025/transition.json retains serving/data, source baseline and guarded mirror evidence. Historical SPEC tail from Withdrawal draft target recovery and REPORT tail from Preferred withdrawal-target promotion remain unchanged. Annotated checkpoint is checkpoint/local-whole-competition-draft-promotion-2026-10-25; normal remote/main/peeled-tag, tracked mirror parity and expected-tip merged-branch cleanup are verified at handoff. |
+
+Next master scope is a bounded whole-project priority review, with current evidence and active claims checked before implementation. No broad full-application/dependency/publication rerun, hosted/live operation, physical-device/screen-reader/venue outcome or replacement/redance policy is claimed. Existing owner walkthrough, original/corrected results and data recovery snapshots remain preserved.
+
 ## October 25 — Whole-competition withdrawal draft recovery PASS
 
 Master assigned isolated source/Git/docs/test/runtime ownership on codex/whole-competition-draft-recovery from main5eb0f2b under follow-up30. The existing component's preferred/mirror bytes matched before editing. Source66c60a3 changes only independent whole-form intent/availability, its named existing confirmation, scoped feedback wrapping and focused tests. The canonical documents matched before edits. Master retains preferred/mirror/operator integration.
