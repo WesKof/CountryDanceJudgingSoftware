@@ -11,6 +11,61 @@ function published(id = 'v1', revision = 1): PublicationRecord {
   return { id, revision, competitionId: 'PRIVATE_INTERNAL_COMPETITION', sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'released', releasedAt: `2026-10-24T${String(10 + revision).padStart(2, '0')}:00:00Z` };
 }
 
+test('previous comparison links retain only identities available in the canonical prior release', () => {
+  const first = published(), current = published('v2', 2), records = { v1: first, v2: current };
+  const href = (scope: { entrantId?: string; judgeId?: string } = {}) => renderPublicComparison(current, records, scope).match(/Compared with <a href="([^"]+)">/)?.[1];
+  const before = JSON.stringify(records);
+  assert.equal(href(), '/results/v1');
+  assert.equal(href({ entrantId: 'entry-1' }), '/results/v1/entrant/entry-1');
+  assert.equal(href({ judgeId: 'judge-a' }), '/results/v1/judge/judge-a');
+  assert.equal(href({ entrantId: 'missing' }), '/results/v1');
+  assert.equal(href({ judgeId: 'missing' }), '/results/v1');
+  assert.equal(href({ entrantId: 'entry-1', judgeId: 'judge-a' }), '/results/v1/judge/judge-a', 'never creates a combined route');
+  assert.equal(href({ entrantId: 'entry-1', judgeId: 'missing' }), '/results/v1', 'missing judge does not select a different scope');
+  assert.equal(JSON.stringify(records), before);
+  first.snapshot.stages[0].entrants[0].withdrawn = true;
+  first.snapshot.stages[0].marks = [];
+  assert.equal(href({ entrantId: 'entry-1' }), '/results/v1/entrant/entry-1', 'withdrawn prior entrants retain their history');
+  assert.equal(href({ judgeId: 'judge-a' }), '/results/v1/judge/judge-a', 'panel identity does not require observations');
+});
+
+test('previous entrant links use the original public identity or member only, never inferred pairs or bibs', () => {
+  const first = published(), current = published('v2', 2), records = { v1: first, v2: current };
+  const prior = first.snapshot.stages[0].entrants[0], now = current.snapshot.stages[0].entrants[0];
+  prior.id = 'prior-couple'; prior.members = ['public-lead', 'public-follow']; prior.withdrawn = true;
+  now.id = 'new-couple'; now.members = ['public-lead', 'public-follow'];
+  const before = JSON.stringify(records);
+  const href = (entrantId: string) => renderPublicComparison(current, records, { entrantId }).match(/Compared with <a href="([^"]+)">/)?.[1];
+  assert.equal(href('public-lead'), '/results/v1/entrant/public-lead', 'prior member route uses renderResults identity semantics');
+  assert.equal(href('prior-couple'), '/results/v1/entrant/prior-couple');
+  assert.equal(href('new-couple'), '/results/v1', 'shared members do not authorize replacing a changed couple ID');
+  assert.equal(href('absent'), '/results/v1', 'same names and bib never invent an identity');
+  assert.equal(JSON.stringify(records), before);
+});
+
+test('scoped previous links retain release selection and encode and escape every path segment', () => {
+  const first = published('prior /"&\''), current = published('v5', 5), privateGap = published('v4', 4);
+  first.snapshot.stages[0].judges[0].id = 'judge /"&\'';
+  first.snapshot.stages[0].entrants[0].id = 'entrant /"&\'';
+  privateGap.status = 'requested'; privateGap.snapshot.stages[0].judges[0].id = 'PRIVATE_JUDGE_ONLY';
+  const records = { [first.id]: first, [current.id]: current, [privateGap.id]: privateGap }, before = JSON.stringify(records);
+  for (const [scope, expected] of [
+    [{ judgeId: 'judge /"&\'' }, '/results/prior%20%2F%22%26&#39;/judge/judge%20%2F%22%26&#39;'],
+    [{ entrantId: 'entrant /"&\'' }, '/results/prior%20%2F%22%26&#39;/entrant/entrant%20%2F%22%26&#39;'],
+    [{ judgeId: 'PRIVATE_JUDGE_ONLY' }, '/results/prior%20%2F%22%26&#39;'],
+  ] as const) {
+    const html = renderPublicComparison(current, records, scope);
+    assert.equal(html.match(/Compared with <a href="([^"]+)">/)?.[1], expected);
+    assert.doesNotMatch(html, /PRIVATE_JUDGE_ONLY|published revision 4/);
+  }
+  assert.equal(JSON.stringify(records), before);
+  const duplicate = structuredClone(first); duplicate.id = duplicate.snapshot.id = 'duplicate'; records.duplicate = duplicate;
+  const ambiguousBefore = JSON.stringify(records), unavailable = renderPublicComparison(current, records, { judgeId: 'judge-a' });
+  assert.match(unavailable, /earlier published version is not available/); assert.doesNotMatch(unavailable, /Compared with <a/);
+  assert.equal(JSON.stringify(records), ambiguousBefore);
+  assert.equal(renderPublicComparison(privateGap, records, { entrantId: 'entry-1' }), '');
+});
+
 test('selected event navigation is compact, escaped, consistent and leaves direct views complete', () => {
   const first = published(); first.snapshot.event.name = 'Latest <Autumn> & Friends';
   const older = published('older'); older.snapshot.competitionId = 'second-competition'; older.releasedAt = '2026-10-23T10:00:00Z'; older.snapshot.event.name = 'Earlier event name';

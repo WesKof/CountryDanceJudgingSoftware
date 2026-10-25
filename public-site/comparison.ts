@@ -66,9 +66,15 @@ export function renderPublicComparison(record: PublicationRecord, records: Recor
   const summary = `What changed${result.changes.length ? ` · ${result.changes.length} result ${result.changes.length === 1 ? 'entry' : 'entries'}` : ''}`;
   if (result.state === 'unavailable') return `<details class="public-comparison"><summary>${summary}</summary><p>An earlier published version is not available for comparison.</p></details>`;
   const previous = result.previous!;
+  let previousPath = `/results/${encodeURIComponent(previous.id)}`;
+  if (scope.judgeId) {
+    if (previous.snapshot.stages.some((stage) => stage.judges.some((judge) => judge.id === scope.judgeId))) previousPath += `/judge/${encodeURIComponent(scope.judgeId)}`;
+  } else if (scope.entrantId && previous.snapshot.stages.some((stage) => stage.entrants.some((entrant) => entrant.id === scope.entrantId || entrant.members.includes(scope.entrantId!)))) {
+    previousPath += `/entrant/${encodeURIComponent(scope.entrantId)}`;
+  }
   const context = scope.judgeId ? 'Only changes in this judge’s recorded scorecards are listed.' : scope.entrantId ? 'Only changes for this entrant or their published couples are listed.' : 'Published averages, places, advancement and recorded scorecards are compared.';
   const unchanged = scope.judgeId ? 'No recorded-scorecard changes for this judge.' : scope.entrantId ? 'No public result or recorded-scorecard changes for this entrant.' : 'No public result or recorded-scorecard changes for this view.';
-  return `<details class="public-comparison"><summary>${summary}</summary><p>Compared with <a href="/results/${escape(encodeURIComponent(previous.id))}">published revision ${previous.revision}</a> → revision ${record.revision}. ${context}</p>${result.changes.length ? `<ul class="comparison-list">${result.changes.map((change) => {
+  return `<details class="public-comparison"><summary>${summary}</summary><p>Compared with <a href="${escape(previousPath)}">published revision ${previous.revision}</a> → revision ${record.revision}. ${context}</p>${result.changes.length ? `<ul class="comparison-list">${result.changes.map((change) => {
     const entrant = change.after ?? change.before!, before = change.before, after = change.after;
     const facts: [string, string, string][] = [];
     if (!before || !after) facts.push(['Entry', before ? 'Present' : 'Not present', after ? 'Present' : 'Not present']);
