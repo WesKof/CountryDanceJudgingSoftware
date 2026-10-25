@@ -37,7 +37,7 @@ test('admin review states and necessary navigation show the current task while e
     await page.goto(receiver + '/admin?event=' + first.eventId);
     await expect(page.getByRole('heading', { level: 1, name: 'Waiting for updated results', exact: true })).toBeVisible();
     await expect(page.getByRole('combobox')).toHaveCount(priorPending ? 1 : 0);
-    await expect(page.getByRole('button', { name: 'Approve & publish results', exact: true })).toBeDisabled(); await screenshot('blocked-390');
+    await expect(page.getByRole('button', { name: 'Approve & publish results', exact: true })).toHaveCount(0); await screenshot('blocked-390');
     await command(first.organizer, { action: 'prepare-event-publication' }); let view = await api<LiveView>(first.organizer);
     await command(first.organizer, { action: 'approve-event-publication', publications: view.publications!.map(record => ({ publicationId: record.id, sourceFingerprint: record.sourceFingerprint })) });
     const publicBefore = await (await fetch(receiver + '/api/public')).json();

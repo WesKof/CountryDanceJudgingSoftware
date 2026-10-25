@@ -104,15 +104,17 @@ test('multiple pending, completed selection and stale selection preserve necessa
   });
 });
 
-test('blocked, queued and paused admin states describe the responsible next action without changing controls', async () => {
+test('waiting admin states omit inactive approval while queued and paused controls remain exact', async () => {
   const record = publication(), state = authority([record]); state.events['event-a'].competitionIds.push('missing-competition');
   await harness(state, async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Waiting for updated results');
-    has(html, '<button disabled>Approve &amp; publish results</button>'); has(html, 'organizer needs to send updated results');
+    lacks(html, 'Approve &amp; publish results'); lacks(html, 'name="action" value="release-event"');
+    has(html, 'Organizer update needed'); has(html, 'organizer needs to send updated results');
   });
   const underReview = publication(); underReview.underReview = true;
   await harness(authority([underReview]), async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Waiting for updated results'); has(html, 'Updated results need organizer review.');
+    lacks(html, 'Approve &amp; publish results'); lacks(html, 'name="publications"');
   });
   await harness(authority([publication('event-a', 'competition-a', 'queued')]), async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Sending pending'); has(html, 'Sending has not finished. Use Retry sending.');
@@ -121,6 +123,14 @@ test('blocked, queued and paused admin states describe the responsible next acti
   for (const service of ['suspended', 'shutdown']) await harness(authority([record], service), async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Publication paused'); has(html, 'Resume it in website controls below.');
     has(html, '<button disabled>Approve &amp; publish results</button>'); has(html, 'class="card admin-supporting" open');
+    has(html, 'name="action" value="release-event"'); has(html, 'name="event" value="event-a"'); has(html, 'name="csrf"');
+    const raw = /name="publications" value="([^"]+)"/.exec(html)![1].replaceAll('&quot;', '"');
+    assert.deepEqual(JSON.parse(raw), [{ publicationId: record.id, sourceFingerprint: record.sourceFingerprint }]);
+  });
+  await harness(authority([publication('event-a', 'competition-a', 'queued')], 'suspended'), async ({ get }) => {
+    const { html } = await get(); assert.equal(heading(html), 'Publication paused');
+    has(html, 'name="action" value="retry"'); has(html, '<button disabled>Publication paused</button>');
+    lacks(html, 'name="action" value="release-event"');
   });
 });
 
