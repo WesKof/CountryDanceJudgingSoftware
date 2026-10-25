@@ -971,8 +971,12 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .judge-focused-shell .judge-task-actions .quiet-button { color:#fff8e9; background:transparent; border-color:#ffffff70; }
 .judge-focused-shell .judge-scoring-help { margin:16px 0; background:var(--panel); color:var(--ink); }
 .judge-focused-shell .judge-scoring-help > summary { min-height:24px; color:var(--forest); }
-.judge-song-navigation { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.judge-song-navigation span { color:var(--muted); font-size:13px; white-space:nowrap; }
+.judge-song-navigation { display:grid; gap:6px; }
+.judge-song-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.judge-song-controls > span { color:var(--muted); font-size:13px; white-space:nowrap; }
+.judge-song-context { margin:0; min-width:0; color:var(--ink); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.judge-song-context strong, .judge-song-context > span { display:block; }
+.judge-song-context strong { font-size:14px; }
 .judge-focused-shell .phone-row:focus { outline:3px solid var(--gold); outline-offset:-3px; background:#fff2d2; }
 .judge-focused-shell .judge-action-current:focus { outline:3px solid var(--gold); outline-offset:3px; }
 .shared-shell .result-sheet:focus { outline:3px solid var(--forest); outline-offset:3px; }
@@ -984,6 +988,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 }
 .judge-focused-shell .phone-ballot:focus { outline:3px solid var(--gold); outline-offset:2px; }
 .judge-focused-shell .phone-ballot .panel-heading { padding:14px 18px; }
+.judge-focused-shell .phone-ballot .panel-heading > div { min-width:0; overflow-wrap:anywhere; }
 .judge-focused-shell .phone-ballot .ballot-coverage { color:var(--forest); font-weight:700; }
 @media(max-width:600px) {
  .judge-focused-shell .workspace { padding:14px 12px 28px; }
@@ -993,7 +998,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
  .judge-focused-shell .judge-action-current h2 { font-size:23px; }
  .judge-focused-shell .judge-task-actions { grid-column:1; grid-row:auto; flex-direction:row; flex-wrap:wrap; margin-top:8px; }
  .judge-focused-shell .judge-task-actions button { flex:1; }
- .judge-song-navigation { gap:6px; }
+ .judge-song-controls { gap:6px; }
  .shared-shell .judge-song-navigation button { padding:8px; font-size:13px; }
 }
 
@@ -1001,7 +1006,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .judge-task-symbol.is-complete { border-radius:50%; background:#d7eddf; }
 
 .judge-focused-shell .judge-song-navigation { position:sticky; top:8px; z-index:3; background:var(--paper); padding:8px 0; border-bottom:1px solid var(--line); }
-.judge-focused-shell .phone-ballot, .judge-focused-shell .phone-row { scroll-margin-top:80px; }
+.judge-focused-shell .phone-ballot, .judge-focused-shell .phone-row, .judge-focused-shell .phone-row button, .judge-focused-shell .phone-row textarea { scroll-margin-top:var(--judge-song-clearance,80px); }
 
 /* Results keep the next action and places close together, without repeated card margins. */
 .organizer-shell .organizer-results { gap:16px; }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { cellKey, type Cell, type LiveBallot, type LiveView, type Performance, type RoundView } from '@/lib/live/types';
 import { LIVE_MARKS, missingCells, requiredCells } from '@/lib/live/scoring';
 import { ApiError, liveApi, useLive } from './client';
@@ -12,6 +12,19 @@ import { StageReview } from './stage-review';
 type Pending = { roundKey: string; performanceId: string; subjectId: string; mark: Cell['mark']; note: string; baseRevision: number; mutationId: string; error?: string; saved?: Cell; blocked?: boolean };
 const pendingKey = (p: Pick<Pending, 'roundKey' | 'performanceId' | 'subjectId'>) => `${p.roundKey}/${cellKey(p.performanceId, p.subjectId)}`;
 const emptyCell: Cell = { mark: '', note: '', revision: 0, mutationId: '' };
+
+function SongNavigation({ children }: { children: ReactNode }) {
+  const navigation = useCallback((element: HTMLElement | null) => {
+    const container = element?.parentElement;
+    if (!element || !container) return;
+    const previous = container.style.getPropertyValue('--judge-song-clearance');
+    const measure = () => container.style.setProperty('--judge-song-clearance', `${Math.ceil(element.getBoundingClientRect().height) + 24}px`);
+    measure();
+    const observer = new ResizeObserver(measure); observer.observe(element);
+    return () => { observer.disconnect(); if (previous) container.style.setProperty('--judge-song-clearance', previous); else container.style.removeProperty('--judge-song-clearance'); };
+  }, []);
+  return <nav ref={navigation} className="judge-song-navigation" aria-label="Song navigation">{children}</nav>;
+}
 
 function scoringRestriction(round: RoundView, song: Performance, subjectId: string) {
   if (round.definition.withdrawnIds?.includes(subjectId)) return 'This entry is withdrawn. Retained marks and notes are read only.';
@@ -247,7 +260,7 @@ export default function JudgeBallot({ token }: { token: string }) {
     </div></section>}
 
     {page === 0 && (options.length > 0 || !stage) && !reviewingStage && !(wholeStage && (stageReview || stageSubmitted)) && <div className="page-stack"><label><span>{wholeStage ? "Assigned heats & songs" : "Current & past songs"}</span><select aria-label={wholeStage ? "Assigned heats and songs" : "Current and past songs"} value={target?.song.id ?? selected ?? ''} onChange={(e) => { setSelected(e.target.value); setRole('All'); }}><option value="">{wholeStage ? "Select a song" : "Select a danced song"}</option>{options.map((o) => <option key={o.song.id} value={o.song.id}>{o.round.definition.format} · {o.round.definition.division} · {o.round.definition.kind} · {o.heat.name} · {o.song.title}</option>)}</select></label>
-      {wholeStage && target && <nav className="judge-song-navigation" aria-label="Song navigation"><button className="quiet-button" disabled={songIndex <= 0} onClick={() => chooseSong(options[songIndex - 1].song.id)}>← Previous song</button><span>Song {songIndex + 1} / {options.length}</span><button className="quiet-button" disabled={songIndex >= options.length - 1} onClick={() => chooseSong(options[songIndex + 1].song.id)}>Next song →</button></nav>}
+      {wholeStage && target && <SongNavigation><p className="judge-song-context"><strong>{target.song.title}</strong><span>{target.round.definition.format} · {target.round.definition.division} · {target.round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · {target.heat.name}</span></p><div className="judge-song-controls"><button className="quiet-button" disabled={songIndex <= 0} onClick={() => chooseSong(options[songIndex - 1].song.id)}>← Previous song</button><span>Song {songIndex + 1} / {options.length}</span><button className="quiet-button" disabled={songIndex >= options.length - 1} onClick={() => chooseSong(options[songIndex + 1].song.id)}>Next song →</button></div></SongNavigation>}
       {target && ballot ? <section id="judge-ballot" tabIndex={-1} className="score-panel phone-ballot"><div className="panel-heading"><div><p className="kicker">{target.round.definition.format} · {target.round.definition.division} · {target.round.definition.kind} · {target.heat.name}</p><h2>{target.song.title}</h2><p>{target.song.artist}{target.song.tempo ? ` · ${target.song.tempo}` : ''}</p>{stage && <p className="ballot-coverage" role="status">{targetMissing ? `${targetMissing} still to score in this heat` : 'All bibs scored in this heat ✓'}</p>}</div></div>{locked && <p className="notice">{data.status === 'archived' ? 'Archived · read only' : 'Finalized ballot · locked'}</p>}{target.round.definition.format === 'Jack & Jill' && target.round.definition.kind === 'prelims' && <div className="phone-filters" aria-label="Role filter">{['All', 'Leads', 'Follows'].map((v) => <button className="quiet-button" key={v} aria-pressed={role === v} onClick={() => setRole(v)}>{v}</button>)}</div>}
       {target.round.definition.subjects.filter((s) => target.heat.subjectIds.includes(s.id) && (role === 'All' || `${s.role}s` === role)).sort((a, b) => a.number - b.number).map((subject) => {
         const cell = getCell(ballot, target.song.id, subject.id); const key = cellKey(target.song.id, subject.id);
