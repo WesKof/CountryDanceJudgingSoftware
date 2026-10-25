@@ -69,7 +69,7 @@ for (const width of [390, 738]) test(`one exact correction draft survives Result
       const active = document.activeElement!, box = active.getBoundingClientRect(), painted = document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2);
       return { pageFits: document.documentElement.scrollWidth <= innerWidth, clips, focusedText: active.textContent?.trim().slice(0, 80), focusExposed: active === document.body || active === painted || active.contains(painted) };
     });
-    const beforeKeyboardRecovery = await measure(); if (!beforeKeyboardRecovery.focusExposed) { await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab'); } const measured = { ...await measure(), requiredKeyboardFocusRecovery: !beforeKeyboardRecovery.focusExposed };
+    const measured = { ...await measure(), requiredKeyboardFocusRecovery: false };
     expect(measured.pageFits).toBe(true); expect(measured.clips).toEqual([]); expect(measured.focusExposed).toBe(true);
     if (evidence) { mkdirSync(evidence, { recursive: true }); await page.screenshot({ path: `${evidence}/${label}-${width}.png` }); writeFileSync(`${evidence}/${label}-${width}.json`, JSON.stringify(measured)); }
   }

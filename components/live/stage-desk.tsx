@@ -59,6 +59,7 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
   }, [selectionKey]);
   function selectRound(id: string) { setSelection(id); try { sessionStorage.setItem(selectionKey, id); } catch { /* In-memory selection still works. */ } }
   function showRound(id: string, targetPage = 2) { selectRound(id); setPage(targetPage); }
+  function selectResultsRound(id: string) { setNotice(''); selectRound(id); }
   function reviewStage(kind: 'prelims' | 'finals') {
     const rounds = data.rounds.filter((r) => r.definition.kind === kind);
     showRound((rounds.find((r) => !r.standings?.approved) ?? rounds[0])?.id ?? '');
@@ -174,7 +175,7 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
     <ScoreProgress data={data} error={error} />
       </div></details>
     </div>}
-    {page === 2 && <StageReview data={data} action={action} selectedRoundId={selectedRoundId} showRound={showRound} openHeadAccess={() => {setPage(1);setAccessRequested(true);}} setupRoute={setupRoute} navigate={setPage} />}
+    {page === 2 && <StageReview data={data} action={action} selectedRoundId={selectedRoundId} showRound={selectResultsRound} openHeadAccess={() => {setPage(1);setAccessRequested(true);}} setupRoute={setupRoute} navigate={setPage} />}
     {page === 3 && <PublicationPanel recovery={<Recovery {...recovery} disabled={busy} extra={recoveryExtra} history={data.restoredHistory}>{data.status==='archived' ? <button className="quiet-button" disabled={busy} onClick={()=>void action({action:'reactivate'})}>Return event to active</button> : <button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm('Archive this event and make all links read only? Scores and history stay saved; it can be returned to active later.')) void action({ action: 'archive' }); }}>Archive event</button>}<button className="quiet-button" disabled={busy || data.status !== 'archived'} onClick={async () => { if (!window.confirm('Permanently delete this archived test/event and all history?')) return; try { await liveApi(token, { action: 'delete', expectedVersion: data.version, requestId: crypto.randomUUID() }); window.location.assign('/'); } catch (error) { setNotice((error as Error).message); } }}>Delete archived event</button></Recovery>} data={data} action={action} navigate={setPage} route={(competitionId, targetPage, target) => { const round = data.setup.rounds.find((r) => r.competitionId === competitionId && (target?.roundId ? r.id === target.roundId : (!target?.kind || r.kind === target.kind) && (targetPage === 2 ? !data.rounds.find((v) => v.id === r.id)?.standings?.approved : true))); if(targetPage === 0) setupRoute(round?.id,target?.section); else { if(round) selectRound(round.id); setPage(targetPage); } }} />}
 
 
