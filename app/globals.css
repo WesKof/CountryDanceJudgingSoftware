@@ -661,6 +661,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .score-work .round-context { margin-bottom: 0; }
 .shared-shell .score-view-hint { margin: 0; font-size: 14px; color: var(--muted); }
 .shared-shell .score-detail-group, .shared-shell .score-judge-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.shared-shell .score-judge-row > strong { min-width:0; max-width:100%; overflow-wrap:anywhere; }
 .shared-shell .score-detail-group h4 { margin: 0 0 12px; }
 .shared-shell .score-progress-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; }
 .shared-shell .score-progress-row strong { font-weight: 600; }
@@ -932,6 +933,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .stage-judge-links .judge-status-card.is-complete { border-color:#82b999; }
 .shared-shell .judge-status-card a { font-weight:700; overflow-wrap:anywhere; }
 .shared-shell .judge-status-card > strong { overflow-wrap:anywhere; }
+.shared-shell .judge-status-card .judge-link-recovery { justify-self:start; }
 .shared-shell .judge-status-card small { display:flex; align-items:center; gap:8px; color:#fff8e9; }
 .shared-shell .judge-state-symbol { display:inline-grid; place-items:center; width:22px; height:22px; flex:0 0 22px; border-radius:5px; background:#f5dba5; color:#183429; font-weight:900; }
 .shared-shell .is-complete .judge-state-symbol { border-radius:50%; background:#d7eddf; }
