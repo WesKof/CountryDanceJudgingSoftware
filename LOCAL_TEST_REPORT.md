@@ -1,5 +1,19 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred admin review clarity promotion PASS
+
+Master independently reviewed delivery d6edae9/source ebfb050, the unchanged exported adminRoute handler, native required-choice behavior, manifests and complete/canApprove/queued predicates. Empty/ready/paused390 images were inspected. Worker evidence remains five adapter tests, the actual 7.0s state flow, three existing owner-browser cases in 11.4s, targeted session/forged-approval API in 163ms, type/lint/build and initial viewport/contrast measurements. No broad judging/correction/dependency cohort or audit was repeated.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Source and recovery | Clean preferred main 6d63648 and six affected mirror baselines verified before fast-forward on codex/admin-review-promotion-proof. All 10 retained recovery-file hashes match, their read-only database digest matches all 16 current business tables, and file hashes remain unchanged after that read. Existing consistent recovery snapshot reused; source checkpoints are not data backups and no full restore is claimed. |
+| Build/runtime | Only exact listener/absolute-command verified organizer 35212 and receiver 28040 were stopped; proved surviving owned workerd child, if present, was handled. Quiescent business/public/configuration hashes match. Fresh preferred build passes without install. New organizer 49880 and receiver 71616 are manifest/listener/command verified; ignored preview manifest is updated. Imported admin changes require rebuild/restart, unlike the preceding CSS-only batch. |
+| HTTP/browser | Organizer, admin sign-in, original/current publication and event search return 200; original 4.5000/current 5.4167 remain. Background IAB admin sign-in using the existing local code creates only its private session, without logging the code. Subsequent GET of the preserved walkthrough shows Results published, direct results access and necessary switching to other pending events. No approval, retry, service or publication action was submitted. Prior review tabs remain available. |
+| Preservation/closeout | All 16 business-table logical contents, full publication JSON and private configuration hashes match before/quiescent/after/browser observations. Private work/owner-runtime-backups/admin-review-clarity-20261024/transition.json retains claims/hashes/build/process/HTTP/recovery evidence. Final source checkpoint is checkpoint/local-admin-review-clarity-promotion-2026-10-24; remote/main/mirror/expected-tip cleanup is verified at handoff. |
+
+The IAB image records the visible local panel, not responsive geometry; isolated measurements provide 360/390/1440 proof. Pre-existing sign-in context loss was observed: login redirects to /admin and drops the event query, selecting default pending work. Master recovered by direct GET without approval; future navigation fix queued. Next assignment remains organizer publication-readiness wording/shortcut review. No live/hosted change, real external publication, native desktop input, physical-device/venue/screen-reader claim or global instruction edit occurred.
+
+
 ## October 24 — Isolated admin review clarity PASS
 
 Master assigned sole isolated source/Git/docs/tests/runtime ownership from freshly fetched main 6d63648 to codex/admin-review-clarity. Clean retained checkout and affected preferred/mirror parity were verified. Source ebfb050 changes public-site/admin.ts plus tests/admin-review.test.ts and tests/admin-clarity-browser.spec.ts. Canonical references record current behavior/dated proof/next queue; prior sections remain preserved. Root owns preferred/mirror/operator promotion.
