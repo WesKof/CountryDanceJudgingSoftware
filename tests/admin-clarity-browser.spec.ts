@@ -53,10 +53,10 @@ test('admin review states and necessary navigation show the current task while e
     expect(await (await fetch(receiver + '/api/public')).json()).toEqual(publicBefore);
     await page.setViewportSize({ width: 390, height: 900 }); await owner({ action: 'service', state: 'suspended' }); await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: 'Publication paused', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Approve & publish results', exact: true })).toBeDisabled();
-    const tools = page.getByRole('link', { name: 'Open website controls', exact: true }); await tools.focus(); await page.keyboard.press('Enter');
-    await expect(page.getByRole('button', { name: 'Resume publication', exact: true })).toBeInViewport(); await screenshot('paused-controls-390');
-    await page.getByRole('button', { name: 'Resume publication', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Approve & publish results', exact: true })).toHaveCount(0);
+    const resume = page.getByRole('button', { name: 'Resume website publication', exact: true });
+    await expect(resume).toBeInViewport(); await expect(page.locator('.admin-supporting')).not.toHaveAttribute('open'); await screenshot('paused-primary-390');
+    await resume.click();
     await expect(page.getByRole('heading', { level: 1, name: 'Results ready for review', exact: true })).toBeVisible();
     const second = await prepared('Synthetic admin clarity · Autumn Invitational', 1);
     await page.goto(receiver + '/admin?event=' + first.eventId);

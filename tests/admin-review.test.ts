@@ -120,7 +120,7 @@ test('waiting admin states omit inactive approval while queued and paused contro
     const { html } = await get(); assert.equal(heading(html), 'Sending pending'); has(html, 'Sending has not finished. Use Retry sending.');
     lacks(html, 'name="action" value="release-event"'); has(html, 'name="action" value="retry"');
   });
-  for (const service of ['suspended', 'shutdown']) await harness(authority([record], service), async ({ get }) => {
+  for (const service of ['shutdown']) await harness(authority([record], service), async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Publication paused'); has(html, 'Resume it in website controls below.');
     has(html, '<button disabled>Approve &amp; publish results</button>'); has(html, 'class="card admin-supporting" open');
     has(html, 'name="action" value="release-event"'); has(html, 'name="event" value="event-a"'); has(html, 'name="csrf"');
@@ -129,8 +129,31 @@ test('waiting admin states omit inactive approval while queued and paused contro
   });
   await harness(authority([publication('event-a', 'competition-a', 'queued')], 'suspended'), async ({ get }) => {
     const { html } = await get(); assert.equal(heading(html), 'Publication paused');
-    has(html, 'name="action" value="retry"'); has(html, '<button disabled>Publication paused</button>');
-    lacks(html, 'name="action" value="release-event"');
+    const primary = html.slice(html.indexOf('<section class="card admin-request"'), html.indexOf('<table'));
+    has(primary, '<button>Resume website publication</button>'); has(primary, 'Sending can continue after resuming website publication.');
+    lacks(primary, 'name="action" value="retry"'); lacks(primary, 'name="action" value="release-event"');
+    has(html, 'id="website-controls"'); has(html, '<button>Retry sending</button>');
+  });
+});
+
+test('suspended selected review has a global Resume with exact context while optional controls stay available', async () => {
+  const first = publication('event-a'), selected = publication('event-b');
+  await harness(authority([first, selected], 'suspended'), async ({ get, request, cookie, csrf, calls }) => {
+    const { html } = await get('?event=event-b');
+    const primary = html.slice(html.indexOf('<section class="card admin-request"'), html.indexOf('<table'));
+    assert.equal(heading(html), 'Publication paused');
+    has(html, 'Resume website publication for all events.'); has(primary, 'Results still need separate approval.');
+    has(primary, '<button>Resume website publication</button>'); has(primary, 'name="action" value="service"');
+    has(primary, 'name="state" value="enabled"'); has(primary, 'name="event" value="event-b"'); has(primary, 'name="csrf"');
+    lacks(primary, 'name="action" value="release-event"'); lacks(primary, 'name="action" value="retry"');
+    has(html, '<details class="card admin-supporting"><summary>'); has(html, '<details id="website-controls" class="card"><summary>');
+    has(html, '<button>Pause publication</button>'); has(html, '<button>Record hosting shutdown</button>');
+    const response = await request('/admin/action', 'POST', new URLSearchParams({ action: 'service', state: 'enabled', event: 'event-b', csrf: csrf() }).toString(), cookie);
+    assert.equal(response.status, 303); const target = new URL(response.headers.get('location')!, 'http://127.0.0.1:3110');
+    assert.equal(target.origin, 'http://127.0.0.1:3110'); assert.equal(target.pathname, '/admin'); assert.equal(target.searchParams.get('event'), 'event-b');
+    assert.deepEqual(calls.at(-1), { action: 'service', state: 'enabled' });
+    const unavailable = await get('?event=missing'); lacks(unavailable.html, '<button>Resume website publication</button>');
+    has(unavailable.html, 'class="card admin-supporting" open');
   });
 });
 
