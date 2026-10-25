@@ -173,3 +173,28 @@ test('an unknown acknowledgement with a validated unchanged state permits only d
     await retained(f); evidence('retry', { unknownAckNoSuccessOrAutoRetry: true, validatedUnchangedActionable: true, nextPostOnlyAfterUserRetry: true, exactOneVersionAdvance: true, recordsRetained: true });
   } finally { await f.context.close(); }
 });
+
+test('a confirmed archive from a previous event context cannot reload a new event draft', async ({ browser }) => {
+  const f = await fixture(browser), observe = process.env.EVENT_SUMMARY_CONTEXT_OBSERVE === '1'; let hold = false, held!: () => void, release!: () => void, navigations = 0;
+  const arrived = new Promise<void>(resolve => { held = resolve; }), pending = new Promise<void>(resolve => { release = resolve; });
+  try {
+    await f.page.route('**/api/live?summary=1', async route => { if (hold && route.request().headers().authorization === 'Bearer ' + f.a.organizer) { held(); await pending; } return route.continue(); });
+    f.page.on('request', request => { if (request.isNavigationRequest() && request.frame() === f.page.mainFrame()) navigations++; });
+    hold = true; const current = f.workspace.getByRole('article', { name: f.setupA.name, exact: true }); f.page.once('dialog', dialog => void dialog.accept()); await current.getByRole('button', { name: 'Archive · ' + f.setupA.name, exact: true }).click(); await arrived;
+    await expect(f.workspace.getByRole('button', { name: 'Start a blank event', exact: true })).toBeEnabled(); f.page.once('dialog', dialog => void dialog.accept()); await f.workspace.getByRole('button', { name: 'Start a blank event', exact: true }).click();
+    await expect(f.page.getByRole('heading', { name: 'Add competitions', exact: true })).toBeVisible();
+    const binding = await f.page.evaluate(key => localStorage.getItem(key)!, bindingKey), newPath = JSON.parse(binding).path as string;
+    expect(newPath !== f.a.path && newPath !== f.b.path).toBe(true); const newView = await api<LiveView>(newPath.split('/').at(-1)!);
+    await openSetupNavigation(f.page); await f.page.getByRole('combobox', { name: 'Go to section', exact: true }).selectOption('Event details'); await f.page.getByLabel('Venue', { exact: true }).fill('Unsent later event draft'); expect(navigations).toBe(0);
+    hold = false; release();
+    await expect.poll(() => f.page.evaluate(({ key, path }) => JSON.parse(localStorage.getItem(key)!).find((entry: { path: string }) => entry.path === path)?.status === 'archived', { key: catalogKey, path: f.a.path })).toBe(true);
+    if (observe) {
+      await expect.poll(() => navigations).toBeGreaterThan(0); await expect(f.page.getByRole('heading', { name: 'Add competitions', exact: true })).toBeVisible(); await openSetupNavigation(f.page); await f.page.getByRole('combobox', { name: 'Go to section', exact: true }).selectOption('Event details'); await expect(f.page.getByLabel('Venue', { exact: true })).toHaveValue(newView.setup.venue);
+      evidence('context-before', { obsoleteResultReloadedNewDocument: true, laterDraftLost: true, laterBindingRetained: await f.page.evaluate(key => localStorage.getItem(key), bindingKey) === binding });
+    } else {
+      expect(navigations).toBe(0); await expect(f.page.getByLabel('Venue', { exact: true })).toHaveValue('Unsent later event draft'); await expect(f.page.getByText('Event archived. Its records remain available below.', { exact: true })).toHaveCount(0);
+      evidence('context', { obsoleteResultNoReload: true, laterDraftAndBindingRetained: true, oldCatalogStatusUpdated: true, noWrongContextSuccess: true });
+    }
+    expect(await f.page.evaluate(key => localStorage.getItem(key), bindingKey) === binding).toBe(true); expect(JSON.stringify(await api<LiveView>(newPath.split('/').at(-1)!)) === JSON.stringify(newView)).toBe(true); expect((await summary(f.a.organizer)).status).toBe('archived'); await retained(f);
+  } finally { release(); await f.context.close(); }
+});

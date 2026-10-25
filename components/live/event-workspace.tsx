@@ -51,6 +51,8 @@ export default function EventWorkspace({ events, current, busy, ready, create, r
     try {
       const acknowledgement = await liveApi<unknown>(entry.path.split('/').at(-1)!, { action, expectedVersion: entry.summary.version, requestId: crypto.randomUUID() });
       const checked = (await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement }))?.find(checked => checked.path === entry.path);
+      // Opening another event can replace this workspace while its readback is pending.
+      if (focusAfterChange.current !== request) return;
       if (checked?.changeState !== 'confirmed') { focusAfterChange.current = null; setNotice(checked?.changeState === 'unchanged' ? 'The event change was not confirmed. The checked event state is unchanged. You can try again.' : checked?.changeState === 'changed-again' ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events to check its current status. Your saved link is retained.'); return; }
       if (entry.path === current) { window.location.reload(); return; }
       request.ready = true; setNotice(action === 'archive' ? 'Event archived. Its records remain available below.' : 'Event returned to active. Submitted ballots and approvals are unchanged.');
