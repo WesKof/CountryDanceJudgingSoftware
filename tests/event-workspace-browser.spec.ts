@@ -24,7 +24,8 @@ test('event workspace archives old events, searches retained records, and return
   page.once('dialog',(d)=>void d.accept());await older.getByRole('button',{name:'Archive · Earlier rehearsal',exact:true}).click();
   await expect(workspace.getByText('Event archived. Its records remain available below.',{exact:true})).toBeVisible();
   await expect(workspace.getByRole('region',{name:'Active events',exact:true}).locator(`[data-event-path="${old.path}"]`)).toHaveCount(0);
-  await expect(workspace.locator('.event-archive')).not.toHaveAttribute('open');
+  await expect(workspace.locator('.event-archive')).toHaveAttribute('open');
+  await expect(older).toBeFocused();
   await workspace.getByLabel('Find an event',{exact:true}).fill('Earlier');
   await expect(workspace.locator('.event-archive')).toHaveAttribute('open');
   await expect(older.getByText('Read only',{exact:true})).toBeVisible();
