@@ -5,6 +5,7 @@ import { createStage, limitedStage } from './publication-helpers';
 import type { LiveView } from '../lib/live/types';
 
 async function tabTo(page: Page, target: Locator, backwards = false) {
+  await expect(target).toBeVisible(); await expect(target).toBeEnabled();
   for (let i = 0; i < 70; i++) {
     if (await target.count() === 1 && await target.evaluate((element) => element === document.activeElement)) return;
     await page.keyboard.press(backwards ? 'Shift+Tab' : 'Tab');
