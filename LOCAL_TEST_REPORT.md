@@ -1,5 +1,17 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred event-workspace promotion PASS
+
+Master reviewed delivery30d5b6e/final source e433a1a, asynchronous focus/current/unmount guards, exact accessible name/contrast, existing-test transition diff and final phone/desktop images. Independent comparison confirms full summary refresh unchanged, with existing mutation payload and current-event reload retained. Focus recovery respects deliberate movement, current query and destination pagination; no general search redesign or archive-policy change.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred serving | Clean main b433c40 and183 tracked mirror baselines verified before fast-forward on codex/event-workspace-promotion. Actual preferred event-workspace client/CSS return200 with focus tracking, article naming and scoped containment/focus rules. Organizer home and both original/corrected result links return200. Existing14644/68708 retain3000/3100 listeners; no redundant preferred build/restart. Final production behavior is proven by the isolated rebuilt eight-browser/two-API checks below, not mutation of the owner walkthrough. |
+| Preservation | All16 owner business-table contents retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON and private configuration hashes match pre-review. No owner archive/reactivate, score/note/link/approval/submission/publication or browser-state action occurred. Logical equality does not assert physical SQLite/WAL byte identity. Existing data recovery snapshots remain; no redundant copy or restoration claim. |
+| Closeout and next review | Private work/owner-runtime-backups/event-workspace-20261024/transition.json retains serving/data and guarded mirror evidence. Historical SPEC tail from Organizer revoked-link recovery and REPORT tail from Preferred organizer link-recovery promotion remain unchanged. Final checkpoint is checkpoint/local-event-workspace-promotion-2026-10-24; normal remote/main/peeled-tag, tracked mirror and expected-tip merged-branch cleanup are checked at handoff. Source checkpoints are not data backups. Separate read-only audit made no changes and released its claim; its fresh-creation acknowledgement hypothesis becomes the next bounded observation, not an already reproduced defect. |
+
+Final production build, TypeScript/focused lint and eight rebuilt browser cases pass10.4s; two archive API cases pass2.7935s. No broad full-application/audit, live/hosted operation, global instruction edit, physical-device/venue/screen-reader result or owner dependency is claimed. Next controlled creation test must preserve real fictional create idempotency, form/retry state and current binding before considering a validated-path fix; owner event/services/history remain excluded.
+
 ## October 24 — Event workspace navigation and recovery PASS
 
 Master assigned sole retained-checkout source/Git/docs/test/runtime ownership on codex/event-workspace-usability from fresh main b433c40. Relevant source/mirror normalized contents matched before changes; the additional existing test and all canonical documents matched preferred/mirror before edits. Main implementation0a53dd7, contrast b81b996 and accessible-name source e433a1a remain coherent separate review commits. Master retains preferred/mirror/operator integration.
