@@ -45,6 +45,7 @@ test('Publish shortcuts follow actual automatic prerequisites to preparation, Sc
     for (const width of [360, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 }); await publish(page);
       const issue = task.locator('.publication-blockers li').first(); await expect(issue).toContainText('submit the Prelims stage');
+      await expect(issue.locator('details')).not.toHaveAttribute('open');
       await expect(task).not.toContainText(' in Run'); await expect(task).not.toContainText('conclude the stage');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); await evidence('prelims-scoring-' + width);
       await issue.getByRole('button').focus(); await page.keyboard.press('Enter');
@@ -54,6 +55,10 @@ test('Publish shortcuts follow actual automatic prerequisites to preparation, Sc
     await expect(task.locator('.publication-blockers li')).toHaveCount(2);
     await expect(task.locator('.publication-blockers li').first().getByRole('button')).toHaveCount(1);
     const dependency = task.locator('.publication-blockers li').filter({ hasText: 'Finals waits for the head judge' }).first();
+    const related=dependency.locator('details'), retained=related.getByText('Finals waits for the head judge to approve current Prelims results from their private judge page.', {exact:true});
+    await expect(related).not.toHaveAttribute('open'); await expect(retained).toBeHidden();
+    await related.locator('summary').focus(); await page.keyboard.press('Space'); await expect(retained).toBeVisible();
+    await page.keyboard.press('Space'); await expect(retained).toBeHidden();
     await dependency.getByRole('button').focus(); await page.keyboard.press('Enter');
     await expect(page.getByLabel('Competition and round view', { exact: true })).toHaveValue(strictPre.id);
     const headLink = page.getByRole('link', { name: /^Open Head Judge/ }); await expect(headLink).toHaveAttribute('href', view.judgeLinks!.find(link => link.id === view.setup.headJudgeId)!.path);
