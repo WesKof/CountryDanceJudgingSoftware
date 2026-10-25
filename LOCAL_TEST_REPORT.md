@@ -1,5 +1,19 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred admin Version-column promotion PASS
+
+Master independently reviewed delivery 2fce5d1/source bfb8cb1 plus test-only boundary b51921d, the two phone-only direct-table declarations, normal390/stress390 images and explicit fixture provenance. Final dedicated geometry evidence is one executed pass/zero skips in 1.7s (2.8s total), ten matched scenarios at 360/390/760/761/1440, full header/row bounds and desktop/nested/font/action invariance. TypeScript/focused lint pass; no framework build/install/restart or API/security/scoring/correction/audit cohort was repeated for CSS-only production changes.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Source/serving | Fresh clean preferred main 36ee725 and five affected mirror baselines verified before guarded fast-forward on codex/admin-version-promotion-proof. GET /styles.css returns 200 and both exact new direct-table rules. Existing organizer 14644 and receiver 68708 retain their listener identities; neither service restarted, so existing admin session remains available. |
+| Data/review state | All 16 business-table logical contents, complete publication JSON and private configuration hashes match before/after serving. Source change contains no code/schema/protocol action. Original/current publications remain preserved; prior seven browser review tabs are marked to remain available without navigating or altering their selected events. |
+| Evidence boundary | The geometry test uses actual receiver/admin HTTP with a read-only synthetic authority, not operational approval/scoring proof. It explicitly executes with dedicated configuration/fixture paths; absent fixture variables skip only that opt-in case in ordinary suites, while invalid configured files fail. Page-width claims cover matched normal and long multiword/six-digit/status fixtures. The original unbroken preview-h3 failure remains separately preserved and queued; it is not hidden or declared fixed. |
+| Recovery/closeout | Unchanged retained recovery snapshots remain; no redundant full data copy or restoration claim. Private work/owner-runtime-backups/admin-version-column-20261024/transition.json records baseline/mirror/CSS/data proof. Final checkpoint is checkpoint/local-admin-version-column-promotion-2026-10-24; remote/main/mirror/expected-tip cleanup verified at handoff. Source checkpoints are not data backups. |
+
+No owner sign-in/action/form submission, score/note/draw/approval/publication mutation, global instruction edit, live/hosted operation, native desktop input or physical-device/venue/screen-reader verification occurred. Next scope is the observed unbroken preview heading, followed by a proposed browser-fixture integration audit rather than invented product changes.
+
+
 ## October 24 — Isolated admin Version-column PASS
 
 Final test-only source b51921d makes this mocked-authority geometry fixture opt-in when its dedicated configuration/fixture variables are absent from an ordinary operational workflow run. Invalid configured inputs still fail. The dedicated final replay supplies both variables, executes without skips and passes in 1.7s (2.8s total), with TypeScript/focused lint passing again. Product source remains bfb8cb1's two CSS rules. Reviewed-readable retains the final artifacts. That final authority 45656 and receiver 34964 cycle is stopped; all original/copy/config/root hashes are verified unchanged again. Earlier 26016/71516 cycle and unbroken residual evidence remain retained below.
