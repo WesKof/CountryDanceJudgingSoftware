@@ -931,6 +931,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .stage-judge-links .judge-status-card { min-width:0; padding:12px; border:1px solid #bda06b; border-radius:10px; background:#ffffff08; }
 .shared-shell .stage-judge-links .judge-status-card.is-complete { border-color:#82b999; }
 .shared-shell .judge-status-card a { font-weight:700; overflow-wrap:anywhere; }
+.shared-shell .judge-status-card > strong { overflow-wrap:anywhere; }
 .shared-shell .judge-status-card small { display:flex; align-items:center; gap:8px; color:#fff8e9; }
 .shared-shell .judge-state-symbol { display:inline-grid; place-items:center; width:22px; height:22px; flex:0 0 22px; border-radius:5px; background:#f5dba5; color:#183429; font-weight:900; }
 .shared-shell .is-complete .judge-state-symbol { border-radius:50%; background:#d7eddf; }
@@ -948,7 +949,9 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .shared-shell .judge-action-current .action-cue { margin-top:8px; }
 @media (max-width:600px) {
  .shared-shell .stage-judge-links { grid-template-columns:minmax(0,1fr); }
- .shared-shell .judge-status-card { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; }
+ .shared-shell .judge-status-card { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+ .shared-shell .judge-status-card > a, .shared-shell .judge-status-card > strong { flex:1 1 auto; min-width:0; max-width:100%; }
+ .shared-shell .judge-status-card > small { flex:0 0 auto; }
  .shared-shell .judge-status-card small { font-size:12px; }
  .shared-shell .score-supporting-content { padding:0 10px 10px; }
 }
