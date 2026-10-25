@@ -6,7 +6,7 @@ import { liveApi } from './client';
 import { checkedEventSummary, eventChangeState } from '@/lib/live/event-summary';
 
 export type SavedEvent = { path: string; name: string; sample?: boolean; status?: 'active' | 'archived'; date?: string; venue?: string; eventId?: string; summaryVersion?: number };
-type Entry = SavedEvent & { summary?: EventSummary; error?: string };
+type Entry = SavedEvent & { summary?: EventSummary; error?: string; changeState?: ReturnType<typeof eventChangeState> };
 export default function EventWorkspace({ events, current, busy, ready, create, remember }: { events: SavedEvent[]; current?: string; busy: boolean; ready: boolean; create: (source: 'sample' | 'blank') => void; remember: (events: SavedEvent[]) => void }) {
   const [entries, setEntries] = useState<Entry[]>(events), [loading, setLoading] = useState(false), [pending, setPending] = useState(''), [notice, setNotice] = useState('');
   const [query, setQuery] = useState(''), [activeLimit, setActiveLimit] = useState(8), [archiveLimit, setArchiveLimit] = useState(8);
@@ -26,11 +26,12 @@ export default function EventWorkspace({ events, current, busy, ready, create, r
           const response = await fetch('/api/live?summary=1', { cache: 'no-store', headers: { Authorization: 'Bearer ' + event.path.split('/').at(-1) } });
           const summary = response.ok ? checkedEventSummary(await response.json(), { eventId: previous.eventId, summaryVersion: Math.max(previous.summaryVersion ?? 0, event.summaryVersion ?? 0) }) : null;
           if (!summary) throw new Error('Event summary unavailable');
-          if (change?.entry.path === event.path && eventChangeState(change.acknowledgement, change.entry.summary, summary, change.action) !== 'confirmed') {
-            return { ...previous, summary: undefined, error: eventChangeState(change.acknowledgement, change.entry.summary, summary, change.action) === 'changed-again' ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events before another change.' };
+          const changeState = change?.entry.path === event.path ? eventChangeState(change.acknowledgement, change.entry.summary, summary, change.action) : undefined;
+          if (changeState === 'unconfirmed' || changeState === 'changed-again') {
+            return { ...previous, summary: undefined, changeState, error: changeState === 'changed-again' ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events before another change.' };
           }
-          return { ...previous, name: summary.name, status: summary.status, date: summary.date, venue: summary.venue, eventId: summary.eventId, summaryVersion: summary.version, summary, error: undefined };
-        } catch { return { ...previous, summary: undefined, error: 'Link unavailable. Your saved link is retained.' }; }
+          return { ...previous, name: summary.name, status: summary.status, date: summary.date, venue: summary.venue, eventId: summary.eventId, summaryVersion: summary.version, summary, error: undefined, changeState };
+        } catch { return { ...previous, summary: undefined, changeState: 'unconfirmed', error: 'Link unavailable. Your saved link is retained.' }; }
       })));
     }
     setEntries(next); setLoading(false); running.current = false;
@@ -50,10 +51,10 @@ export default function EventWorkspace({ events, current, busy, ready, create, r
     try {
       const acknowledgement = await liveApi<unknown>(entry.path.split('/').at(-1)!, { action, expectedVersion: entry.summary.version, requestId: crypto.randomUUID() });
       const checked = (await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement }))?.find(checked => checked.path === entry.path);
-      if (!checked?.summary) { focusAfterChange.current = null; setNotice(checked?.error?.includes('changed again') ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events to check its current status. Your saved link is retained.'); return; }
+      if (checked?.changeState !== 'confirmed') { focusAfterChange.current = null; setNotice(checked?.changeState === 'unchanged' ? 'The event change was not confirmed. The checked event state is unchanged. You can try again.' : checked?.changeState === 'changed-again' ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events to check its current status. Your saved link is retained.'); return; }
       if (entry.path === current) { window.location.reload(); return; }
       request.ready = true; setNotice(action === 'archive' ? 'Event archived. Its records remain available below.' : 'Event returned to active. Submitted ballots and approvals are unchanged.');
-    } catch (error) { focusAfterChange.current = null; await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement: null }); setNotice((error as Error).message + ' Refresh events to check its current status.'); }
+    } catch (error) { focusAfterChange.current = null; const checked = (await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement: null }))?.find(checked => checked.path === entry.path); setNotice((error as Error).message + (checked?.changeState === 'unchanged' ? '' : ' Refresh events to check its current status.')); }
     finally { stopTracking(); if (stopFocusTracking.current === stopTracking) stopFocusTracking.current = null; setPending(''); }
   }
   const matches = (entry: Entry) => [entry.name, entry.venue, entry.date, entry.sample ? 'sample' : ''].join(' ').toLowerCase().includes(query.trim().toLowerCase());

@@ -30,8 +30,14 @@ test('known identity and version guard cross-event and stale reads without mutat
 
 test('lifecycle confirmation needs a real acknowledgement and exact next version, identity and requested status', () => {
   const archived = { ...original, version: 8, status: 'archived' as const };
-  for (const acknowledgement of [undefined, null, {}, [], { ok: false }, { ok: 'true' }]) assert.equal(eventChangeState(acknowledgement, original, archived, 'archive'), 'unconfirmed');
+  for (const acknowledgement of [undefined, null, {}, [], { ok: false }, { ok: 'true' }]) {
+    assert.equal(eventChangeState(acknowledgement, original, archived, 'archive'), 'unconfirmed');
+    assert.equal(eventChangeState(acknowledgement, original, { ...original }, 'archive'), 'unchanged', 'a checked unchanged state allows deliberate retry without implying delivery');
+  }
   assert.equal(eventChangeState({ ok: true }, original, null, 'archive'), 'unconfirmed');
+  assert.equal(eventChangeState({ ok: true }, original, original, 'archive'), 'unconfirmed', 'an accepted action followed by old state remains stale');
+  assert.equal(eventChangeState({}, original, original, 'reactivate'), 'unconfirmed', 'retry must remain eligible for the requested action');
+  assert.equal(eventChangeState({}, archived, archived, 'archive'), 'unconfirmed');
   assert.equal(eventChangeState({ ok: true }, original, { ...archived, eventId: 'another-event' }, 'archive'), 'unconfirmed');
   assert.equal(eventChangeState({ ok: true }, original, { ...archived, version: 7 }, 'archive'), 'unconfirmed');
   assert.equal(eventChangeState({ ok: true }, original, { ...archived, status: 'active' }, 'archive'), 'unconfirmed');

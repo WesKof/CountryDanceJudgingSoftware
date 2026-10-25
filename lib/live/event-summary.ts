@@ -13,8 +13,9 @@ export function checkedEventSummary(value: unknown, known: KnownSummary = {}): E
 }
 
 /** An HTTP success alone cannot confirm an archive/reactivation or authorize a reload. */
-export function eventChangeState(acknowledgement: unknown, before: EventSummary, after: EventSummary | null, action: 'archive' | 'reactivate'): 'confirmed' | 'changed-again' | 'unconfirmed' {
-  if (!acknowledgement || typeof acknowledgement !== 'object' || Array.isArray(acknowledgement) || (acknowledgement as { ok?: unknown }).ok !== true || !after || after.eventId !== before.eventId) return 'unconfirmed';
+export function eventChangeState(acknowledgement: unknown, before: EventSummary, after: EventSummary | null, action: 'archive' | 'reactivate'): 'confirmed' | 'unchanged' | 'changed-again' | 'unconfirmed' {
+  if (!after || after.eventId !== before.eventId) return 'unconfirmed';
+  if (!acknowledgement || typeof acknowledgement !== 'object' || Array.isArray(acknowledgement) || (acknowledgement as { ok?: unknown }).ok !== true) return after.version === before.version && after.status === before.status && before.status === (action === 'archive' ? 'active' : 'archived') ? 'unchanged' : 'unconfirmed';
   if (after.version > before.version + 1) return 'changed-again';
   return after.version === before.version + 1 && after.status === (action === 'archive' ? 'archived' : 'active') ? 'confirmed' : 'unconfirmed';
 }
