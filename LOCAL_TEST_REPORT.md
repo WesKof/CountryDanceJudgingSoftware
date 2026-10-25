@@ -1,5 +1,16 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 25 — Preferred setup-event-draft promotion PASS
+
+Master reviewed deliverycc3039c/sourcef57f302, actual before/compiled result sets and the native link/modifier boundary. Independently executed normalized removal proof returns both complete components to their baseline; StageDesk, OrganizerHome, recovery/client/server and the existing fallback/create/archive/restore/binding/catalog/scoring protocols remain unchanged.
+
+- Preferred serving: clean main72b6121 and190 tracked mirror baselines checked before exact fast-forward on codex/setup-event-draft-promotion. Actual preferred SetupPage/Workspace clients return200 with capture guard, discard wording and saved-link marker. Organizer home and both original/corrected result links return200. Owner14644/68708 retain3000/3100; no redundant preferred build/restart or owner-form navigation.
+- Preservation: all16 business tables retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f; full publication JSON and private configuration hashes match baseline. No owner score/note/link/approval/submission/publication/browser mutation. Logical readback is distinct from physical SQLite/WAL equality or restoration.
+- Verification: production build, TypeScript/focused lint/whitespace/source proof and eleven selected compiled setup/workspace/recovery/keyboard cases pass. Final duration was not retained and is not invented. Both phone/desktop result sets preserve draft-on-cancel, exact native target-on-accept, pristine/internal navigation, new-tab defaults, current reload/archived record guards, saved data/catalog and zero browser POSTs. Initial20s launcher timeout was followed by verified owned readiness without blind restart; no persistent startup defect is claimed.
+- Handoff: private work/owner-runtime-backups/setup-event-draft-20261025/transition.json records serving/data and guarded mirror checks. Historical SPEC tail from Whole-competition withdrawal draft recovery and REPORT tail from Preferred whole-competition-draft promotion stay exact. Source checkpoint checkpoint/local-setup-event-draft-promotion-2026-10-25, normal remote/main/peeled-tag verification, tracked parity and expected-tip merged-branch cleanup are verified at closeout. Data recovery snapshots remain separate.
+
+Next is a bounded fictional observation/prototype for preserving public scorecard scope through the existing previous-revision link, with overview fallback when the original public identity does not resolve there. No global/schedule/permission change, live/hosted operation, physical-device/screen-reader/venue or data-restoration result is claimed.
+
 ## October 25 — Setup saved-event draft recovery PASS
 
 Master assigned sole retained-checkout source/Git/docs/test/runtime ownership on codex/setup-event-draft-recovery from fresh main72b6121. Relevant source and canonical references matched preferred/mirror before edits. Reproduction preceded source f57f302; master retains preferred/mirror/operator integration. No global instructions or schedules changed.
