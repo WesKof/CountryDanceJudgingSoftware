@@ -10,12 +10,20 @@ export function publicationDate(value:string|undefined){
   const date=new Date(value);
   return Number.isNaN(date.valueOf())?escape(value):`<time datetime="${escape(value)}">${new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Chicago'}).format(date)} Central</time>`;
 }
-function status(record:PublicationRecord,store:PublicStore){
+function status(record:PublicationRecord,store:PublicStore,entrantId?:string,judgeId?:string){
   if(!store.records[record.id]?.releasedAt)return `<div class="revision"><strong>Revision ${record.revision} · ${record.ownerApprovedAt?'Approved · Sending pending':'Private preview · Not published'}</strong></div>`;
   const scope=record.snapshot.eventId+'/'+record.snapshot.competitionId,currentId=store.current[scope];
   const past=Object.values(store.records).filter((r)=>r.releasedAt&&r.snapshot.eventId===record.snapshot.eventId&&r.snapshot.competitionId===record.snapshot.competitionId).sort((a,b)=>a.revision-b.revision);
   const superseded=Boolean(currentId&&record.id!==currentId);
-  return `<div class="revision${superseded?' revision-past':record.underReview?' revision-review':''}"><strong>Revision ${record.revision} · ${superseded ? 'Superseded · <a href="/results/'+escape(currentId)+'">Current revision</a>' : record.underReview ? 'Under review' : 'Released'}</strong>${superseded?'<p>You are viewing an earlier published version. Its original scores are preserved.</p>':record.underReview?'<p>A correction is under review. These are the previously approved results.</p>':''}<details><summary>Publication history · ${past.length} published ${past.length===1?'version':'versions'}</summary><p>Original publication: ${publicationDate(past[0]?.releasedAt)}</p><p>This version published: ${publicationDate(record.releasedAt)}</p><p>Last synchronized: ${publicationDate(record.lastSynchronizedAt)}</p><p>${escape(record.snapshot.changeSummary)}</p><ol class="version-list">${[...past].reverse().map((r)=>`<li>${r.id===record.id?`<strong>Revision ${r.revision} · Viewing this version</strong>`:`<a href="/results/${escape(r.id)}">Revision ${r.revision}${r.id===currentId?' · Current results':''}</a>`} · ${publicationDate(r.releasedAt)}</li>`).join('')}</ol></details></div>`;
+  let currentPath='/results/'+encodeURIComponent(currentId);
+  const target=store.records[currentId];
+  const scopedTarget=target?.snapshot&&target.status==='released'&&target.releasedAt&&Number.isFinite(Date.parse(target.releasedAt))&&target.id===currentId&&target.snapshot.id===currentId&&Number.isSafeInteger(target.revision)&&target.revision>record.revision&&target.snapshot.revision===target.revision&&target.snapshot.eventId===record.snapshot.eventId&&target.snapshot.competitionId===record.snapshot.competitionId;
+  if(scopedTarget&&judgeId){
+    if(target.snapshot.stages.some((stage)=>stage.judges.some((judge)=>judge.id===judgeId)))currentPath+='/judge/'+encodeURIComponent(judgeId);
+  }else if(scopedTarget&&entrantId&&target.snapshot.stages.some((stage)=>stage.entrants.some((entrant)=>entrant.id===entrantId||entrant.members.includes(entrantId)))){
+    currentPath+='/entrant/'+encodeURIComponent(entrantId);
+  }
+  return `<div class="revision${superseded?' revision-past':record.underReview?' revision-review':''}"><strong>Revision ${record.revision} · ${superseded ? 'Superseded · <a href="'+escape(currentPath)+'">Current revision</a>' : record.underReview ? 'Under review' : 'Released'}</strong>${superseded?'<p>You are viewing an earlier published version. Its original scores are preserved.</p>':record.underReview?'<p>A correction is under review. These are the previously approved results.</p>':''}<details><summary>Publication history · ${past.length} published ${past.length===1?'version':'versions'}</summary><p>Original publication: ${publicationDate(past[0]?.releasedAt)}</p><p>This version published: ${publicationDate(record.releasedAt)}</p><p>Last synchronized: ${publicationDate(record.lastSynchronizedAt)}</p><p>${escape(record.snapshot.changeSummary)}</p><ol class="version-list">${[...past].reverse().map((r)=>`<li>${r.id===record.id?`<strong>Revision ${r.revision} · Viewing this version</strong>`:`<a href="/results/${escape(r.id)}">Revision ${r.revision}${r.id===currentId?' · Current results':''}</a>`} · ${publicationDate(r.releasedAt)}</li>`).join('')}</ol></details></div>`;
 }
 function placement(e:PublicSnapshot['stages'][number]['entrants'][number],stage:PublicSnapshot['stages'][number]){return e.withdrawn?'Withdrawn':String(e.place)+(stage.entrants.filter((x)=>!x.withdrawn&&x.role===e.role&&x.place===e.place).length>1?' · Shared place':'');}
 export function renderResults(record: PublicationRecord, store: PublicStore, entrantId?: string, judgeId?: string, presentation: { eventNameInPageTitle?: string } = {}) {
@@ -58,7 +66,7 @@ export function renderResults(record: PublicationRecord, store: PublicStore, ent
       + primary.map((stage) => `<section class="public-focused-records">${scorecards(stage)}${context(stage)}</section>`).join('')
       + supporting.map((stage) => `<details class="public-prelims" open><summary>Prelims · standings &amp; scorecards</summary>${standings(stage)}${scorecards(stage)}${context(stage)}</details>`).join('');
   }
-  return `<article class="card" data-publication-id="${escape(s.id)}"><h2>${s.event.name === presentation.eventNameInPageTitle ? '' : escape(s.event.name) + ' · '}${escape(s.competition.format)} · ${escape(s.competition.division)}</h2><p>${escape(s.event.venue)} · ${escape(s.event.date)}</p>${status(record, store)}${contents}</article>`;
+  return `<article class="card" data-publication-id="${escape(s.id)}"><h2>${s.event.name === presentation.eventNameInPageTitle ? '' : escape(s.event.name) + ' · '}${escape(s.competition.format)} · ${escape(s.competition.division)}</h2><p>${escape(s.event.venue)} · ${escape(s.event.date)}</p>${status(record, store, entrantId, judgeId)}${contents}</article>`;
 }
 
 function currentRecords(store: PublicStore) {

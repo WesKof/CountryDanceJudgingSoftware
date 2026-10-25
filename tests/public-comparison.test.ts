@@ -11,6 +11,70 @@ function published(id = 'v1', revision = 1): PublicationRecord {
   return { id, revision, competitionId: 'PRIVATE_INTERNAL_COMPETITION', sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'released', releasedAt: `2026-10-24T${String(10 + revision).padStart(2, '0')}:00:00Z` };
 }
 
+test('current revision returns to exact retained entrant and judge identities without changing history or records', () => {
+  const first = published(), current = published('v2', 2), store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': 'v2' } };
+  const href = (entrant?: string, judge?: string) => renderResults(first, store, entrant, judge).match(/href="([^"]+)">Current revision/ )?.[1];
+  const before = JSON.stringify(store);
+  assert.equal(href(), '/results/v2');
+  assert.equal(href('entry-1'), '/results/v2/entrant/entry-1');
+  assert.equal(href('entry-2'), '/results/v2/entrant/entry-2', 'unchanged zero-valued entrant retains identity');
+  assert.equal(href(undefined, 'judge-a'), '/results/v2/judge/judge-a');
+  assert.equal(href('entry-1', 'judge-a'), '/results/v2/judge/judge-a', 'judge scope wins without a combined route');
+  assert.equal(href('entry-1', 'missing'), '/results/v2', 'missing judge never switches scope');
+  assert.equal(JSON.stringify(store), before);
+  current.snapshot.stages[0].entrants[0].withdrawn = true; current.snapshot.stages[0].marks = []; current.underReview = true;
+  assert.equal(href('entry-1'), '/results/v2/entrant/entry-1', 'retained withdrawn identity stays available');
+  assert.equal(href(undefined, 'judge-a'), '/results/v2/judge/judge-a', 'panel membership does not require observations');
+  const html = renderResults(first, store, 'entry-1');
+  assert.match(html, /href="\/results\/v2">Revision 2 · Current results/);
+});
+
+test('current revision uses exact public person membership without guessing a replacement couple, bib or name', () => {
+  const first = published(), current = published('v2', 2), now = current.snapshot.stages[0].entrants[0];
+  first.snapshot.stages[0].entrants[0].members = ['public-lead', 'public-follow']; now.id = 'new-couple'; now.members = ['public-lead', 'public-follow'];
+  const store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': 'v2' } }, before = JSON.stringify(store);
+  const href = (id: string) => renderResults(first, store, id).match(/href="([^"]+)">Current revision/)?.[1];
+  assert.equal(href('public-lead'), '/results/v2/entrant/public-lead');
+  assert.equal(href('entry-1'), '/results/v2', 'shared members and unchanged names/bib do not replace the old couple ID');
+  assert.equal(href('absent'), '/results/v2');
+  assert.equal(JSON.stringify(store), before);
+});
+
+test('current scoped return requires the canonical released target in the same event and competition', () => {
+  const first = published();
+  const variants: [string, (record: PublicationRecord) => void][] = [
+    ['requested', r => { r.status = 'requested'; }], ['queued', r => { r.status = 'queued'; }],
+    ['unreleased', r => { delete r.releasedAt; }], ['invalid release date', r => { r.releasedAt = 'not a date'; }],
+    ['wrong event', r => { r.snapshot.eventId = 'other-event'; }], ['wrong competition', r => { r.snapshot.competitionId = 'other-competition'; }],
+    ['record key mismatch', r => { r.id = 'not-v2'; }], ['snapshot mismatch', r => { r.snapshot.id = 'not-v2'; }],
+    ['revision mismatch', r => { r.snapshot.revision = 3; }], ['invalid revision', r => { r.revision = r.snapshot.revision = 1.5; }],
+    ['older target', r => { r.revision = r.snapshot.revision = 1; }],
+  ];
+  for (const [label, change] of variants) {
+    const current = published('v2', 2); change(current);
+    const store = { records: { v1: first, v2: current }, current: { 'public-event/public-competition': 'v2' } }, before = JSON.stringify(store);
+    for (const [entrant, judge] of [['entry-1', undefined], [undefined, 'judge-a']]) {
+      const html = renderResults(first, store, entrant, judge);
+      assert.equal(html.match(/href="([^"]+)">Current revision/)?.[1], '/results/v2', label);
+    }
+    assert.equal(JSON.stringify(store), before);
+  }
+  const missing = { records: { v1: first }, current: { 'public-event/public-competition': 'unavailable' } };
+  assert.equal(renderResults(first, missing, 'entry-1').match(/href="([^"]+)">Current revision/)?.[1], '/results/unavailable');
+  assert.doesNotMatch(renderResults(first, { records: { v1: first }, current: {} }, 'entry-1'), /Current revision/);
+  const preview = published('private', 3); preview.status = 'requested'; delete preview.releasedAt;
+  assert.doesNotMatch(renderResults(preview, { records: { private: preview, v2: published('v2', 2) }, current: { 'public-event/public-competition': 'v2' } }, 'entry-1'), /Current revision/);
+});
+
+test('current revision path segments are encoded and the whole href is HTML escaped', () => {
+  const first = published(), current = published('now /"&\'', 2), store = { records: { v1: first, [current.id]: current }, current: { 'public-event/public-competition': current.id } };
+  current.snapshot.stages[0].entrants[0].id = 'entrant /"&\''; current.snapshot.stages[0].judges[0].id = 'judge /"&\'';
+  for (const [entrant, judge, suffix] of [['entrant /"&\'', undefined, '/entrant/entrant%20%2F%22%26&#39;'], [undefined, 'judge /"&\'', '/judge/judge%20%2F%22%26&#39;']] as const) {
+    const html = renderResults(first, store, entrant, judge);
+    assert.equal(html.match(/href="([^"]+)">Current revision/)?.[1], '/results/now%20%2F%22%26&#39;' + suffix);
+  }
+});
+
 test('previous comparison links retain only identities available in the canonical prior release', () => {
   const first = published(), current = published('v2', 2), records = { v1: first, v2: current };
   const href = (scope: { entrantId?: string; judgeId?: string } = {}) => renderPublicComparison(current, records, scope).match(/Compared with <a href="([^"]+)">/)?.[1];

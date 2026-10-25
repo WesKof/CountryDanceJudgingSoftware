@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { testEndpoint } from './test-endpoints';
-import type { PublicSnapshot } from '../lib/live/publication';
+import { validatePublicSnapshot, type PublicSnapshot } from '../lib/live/publication';
 
 type PublicData = { records: { snapshot: PublicSnapshot; releasedAt: string }[]; current: Record<string, string> };
 
@@ -14,6 +14,7 @@ test('public comparison previous links retain available entrant and judge scope 
   const beforeHash = hash(), data = await (await fetch(receiver + '/api/public')).json() as PublicData;
   const current = data.records.find(record => Object.values(data.current).includes(record.snapshot.id) && record.snapshot.revision > 1)!.snapshot;
   const previous = data.records.filter(record => record.snapshot.eventId === current.eventId && record.snapshot.competitionId === current.competitionId && record.snapshot.revision < current.revision).sort((a, b) => b.snapshot.revision - a.snapshot.revision)[0].snapshot;
+  validatePublicSnapshot(current); validatePublicSnapshot(previous);
   const stage = current.stages.find(stage => stage.kind === 'finals')!, oldStage = previous.stages.find(old => old.id === stage.id)!;
   const cell = stage.marks.find(mark => oldStage.marks.some(old => old.entrantId === mark.entrantId && old.judgeId === mark.judgeId && old.songId === mark.songId && old.mark !== mark.mark))!;
   expect(Boolean(cell)).toBe(true);
@@ -22,12 +23,18 @@ test('public comparison previous links retain available entrant and judge scope 
   const observe = process.env.PUBLIC_COMPARISON_OBSERVE === '1', evidence = process.env.PUBLIC_COMPARISON_EVIDENCE;
   if (evidence) mkdirSync(evidence, { recursive: true });
   const context = await browser.newContext({ timezoneId: 'America/Chicago' }), page = await context.newPage();
+  await context.route('**/*', route => route.request().method() === 'GET' && new URL(route.request().url()).origin === receiver ? route.continue() : route.abort('blockedbyclient'));
   const nonGets: string[] = [], errors: string[] = [], results: object[] = [];
   page.on('request', request => { if (request.method() !== 'GET') nonGets.push(request.method()); });
   page.on('pageerror', error => errors.push(error.message));
+  const tabTo = async (target: ReturnType<typeof page.locator>) => {
+    for (let index = 0; index < 100; index++) { await page.keyboard.press('Tab'); if (await target.evaluate(element => element === document.activeElement)) return; }
+    throw new Error('Native Tab did not reach the current revision link.');
+  };
   try {
-    for (const width of [390, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
+    const shortHeight = process.env.PUBLIC_COMPARISON_SHORT_HEIGHT === '1';
+    for (const width of shortHeight ? [738, 390] : [390, 1440]) {
+      await page.setViewportSize({ width, height: shortHeight ? 589 : 900 });
       for (const scope of ['entrant', 'judge'] as const) {
         const id = scope === 'entrant' ? entrant.id : judge.id;
         const currentPath = `/results/${current.id}/${scope}/${id}`, oldPath = `/results/${previous.id}/${scope}/${id}`;
@@ -70,7 +77,21 @@ test('public comparison previous links retain available entrant and judge scope 
           linksFit: [...document.querySelectorAll('main a')].filter(link => link.getClientRects().length).every(link => [...link.getClientRects()].every(rect => rect.left >= 0 && rect.right <= innerWidth)) }));
         expect(bounds.pageFits && bounds.linksFit).toBe(true);
         if (evidence) { mkdirSync(evidence, { recursive: true }); await page.screenshot({ path: `${evidence}/${scope}-${width}.png`, fullPage: true }); }
-        results.push({ width, scope, extraFindingActions, originalMarkPresent: true, originalAveragePresent: true, ...bounds });
+        if (!observe) {
+          const currentLink = page.getByRole('link', { name: 'Current revision', exact: true });
+          expect(await currentLink.getAttribute('href')).toBe(currentPath);
+          await tabTo(currentLink);
+          expect(await currentLink.evaluate(element => {
+            const box = element.getBoundingClientRect(), painted = document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2);
+            return element === painted || element.contains(painted);
+          })).toBe(true);
+          if (evidence) await page.screenshot({ path: `${evidence}/current-return-focus-${scope}-${width}.png` });
+          await page.keyboard.press('Enter'); await expect.poll(() => new URL(page.url()).pathname).toBe(currentPath);
+          expect((await page.locator('.public-scorecards').allTextContents()).join(' ')).toContain(': ' + cell.mark);
+          expect((await page.locator('main table').allTextContents()).join(' ')).toContain(stage.entrants.find(entry => entry.id === entrant.id)!.average!.toFixed(4));
+          if (evidence) await page.screenshot({ path: `${evidence}/current-return-${scope}-${width}.png` });
+        }
+        results.push({ width, scope, extraFindingActions, originalMarkPresent: true, originalAveragePresent: true, scopedCurrentReturn: !observe, ...bounds });
       }
       if (!observe) {
         await page.goto(receiver + `/results/${current.id}/entrant/absent-couple`);
@@ -80,6 +101,15 @@ test('public comparison previous links retain available entrant and judge scope 
         await link.click(); expect(new URL(page.url()).pathname === `/results/${previous.id}`).toBe(true);
         await expect(page.getByRole('heading', { name: 'Final places', exact: true })).toBeVisible();
         results.push({ width, scope: 'missing-entrant', overviewFallback: true });
+        for (const historicalPath of [`/results/${previous.id}/entrant/absent-couple`, `/results/${previous.id}`]) {
+          await page.goto(receiver + historicalPath);
+          const currentLink = page.getByRole('link', { name: 'Current revision', exact: true });
+          expect(await currentLink.getAttribute('href')).toBe(`/results/${current.id}`);
+          await tabTo(currentLink); await page.keyboard.press('Enter');
+          await expect.poll(() => new URL(page.url()).pathname).toBe(`/results/${current.id}`);
+          await expect(page.getByRole('heading', { name: 'Final places', exact: true })).toBeVisible();
+          results.push({ width, scope: historicalPath.endsWith('absent-couple') ? 'missing-current-entrant' : 'current-overview', overviewFallback: true });
+        }
       }
     }
     expect(nonGets).toEqual([]); expect(errors).toEqual([]); expect(hash() === beforeHash).toBe(true);
