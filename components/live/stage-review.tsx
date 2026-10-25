@@ -5,6 +5,7 @@ import type { AdvancementTie, LiveView, RoundView } from '@/lib/live/types';
 import { LiveResults } from './results';
 import SetupSection from './setup-section';
 import { Correction, ReviewRequests } from './result-management';
+import type { NewCorrectionDraft } from './new-correction-draft';
 import OrganizerResults from './organizer-results';
 
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
@@ -35,11 +36,11 @@ function SubmittedReview({ data, round, action }: { data: LiveView; round: Round
   </div></section>;
 }
 
-export function StageReview({ data, action, selectedRoundId, showRound, setupRoute, navigate, openHeadAccess, part = 'all' }: { part?: 'pending' | 'history' | 'all'; data: LiveView; action: Action; managementExtra?: ReactNode; selectedRoundId?: string; showRound?: (id: string, page?: number) => void; setupRoute?: (roundId?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
+export function StageReview({ data, action, selectedRoundId, showRound, setupRoute, navigate, openHeadAccess, correctionDraft, part = 'all' }: { correctionDraft?: NewCorrectionDraft; part?: 'pending' | 'history' | 'all'; data: LiveView; action: Action; managementExtra?: ReactNode; selectedRoundId?: string; showRound?: (id: string, page?: number) => void; setupRoute?: (roundId?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
   const reviewed = data.rounds.filter((r) => r.standings);
   const pending = data.role === 'head' ? data.reviewRequests?.filter((q) => !q.appliedAt && !q.cancelledAt) ?? [] : [];
   const organizer = data.role === 'organizer';
-  if (organizer) return <OrganizerResults data={data} action={action} selected={selectedRoundId ?? ''} select={(id) => showRound?.(id, 2)} setupRoute={setupRoute} navigate={navigate} openHeadAccess={openHeadAccess} />;
+  if (organizer) return <OrganizerResults correctionDraft={correctionDraft!} data={data} action={action} selected={selectedRoundId ?? ''} select={(id) => showRound?.(id, 2)} setupRoute={setupRoute} navigate={navigate} openHeadAccess={openHeadAccess} />;
   const actionable = data.status === 'active' ? reviewed.filter((r) => !r.standings?.approved && (data.role === 'head' || r.standings?.advancementTies?.some((t) => !t.complete && r.definition.judgeIds.includes(data.judgeId!) && !t.votes.some((v) => v.judgeId === data.judgeId)))) : [];
   const contextResults = reviewed.filter((r) => !actionable.includes(r));
   const completed = reviewed.filter((r) => r.standings?.approved);

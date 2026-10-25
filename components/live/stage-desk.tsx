@@ -3,7 +3,7 @@ import Recovery, { useRecovery } from './recovery';
 import { setupTasks } from '@/lib/live/setup-guidance';
 import { useRememberedPage } from './remembered-page';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LiveSetup, LiveView } from '@/lib/live/types';
 import { finalistLimitIssues, freezeRound, roundOpeningIssues } from '@/lib/live/validation';
 import { liveApi } from './client';
@@ -13,6 +13,7 @@ import SetupPage from './setup-page';
 import SetupSection, { revealSetupSection } from './setup-section';
 import FinalsPairings from './finals-pairings';
 import { PublicationPanel } from './publication';
+import { useNewCorrectionDraft } from './new-correction-draft';
 import { StageReview } from './stage-review';
 import RoundContext from './round-context';
 import ScoreProgress from './score-progress';
@@ -20,6 +21,9 @@ import LiveScores, { RoundScoreProgress } from './live-scores';
 
 type Props = { token: string; data: LiveView; error: string; refresh: () => Promise<LiveView | null>; setupIntro?: ReactNode; sampleHelp?: ReactNode; recoveryExtra?: ReactNode };
 export default function StageDesk({ token, data, error, refresh, setupIntro, sampleHelp, recoveryExtra }: Props) {
+  const correctionDraft = useNewCorrectionDraft();
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [page, rememberPage] = useRememberedPage(data.eventId), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   function setPage(next: number) { setNotice(''); rememberPage(next); window.scrollTo({ top: 0, behavior: 'instant' }); }
   const [setupRequest, setSetupRequest] = useState(0);
@@ -79,8 +83,8 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
   const recovery = useRecovery(token, true);
   async function action(input: Record<string, unknown>) {
     setBusy(true); setNotice('');
-    try { const current = await refresh(); if (!current) throw new Error('Reconnect before applying a shared action.'); await liveApi(token, { ...input, expectedVersion: current.version, requestId: crypto.randomUUID() }); await refresh(); if(input.action==='conclude-stage') reviewStage(block?.kind ?? 'prelims'); return true; }
-    catch (error) { setNotice((error as Error).message); await refresh(); return false; } finally { setBusy(false); }
+    try { const current = await refresh(); if (!alive.current) return false; if (!current || current.eventId !== data.eventId) throw new Error('Reconnect to this event before applying a shared action.'); await liveApi(token, { ...input, expectedVersion: current.version, requestId: crypto.randomUUID() }); if (!alive.current) return false; await refresh(); if (!alive.current) return false; if(input.action==='conclude-stage') reviewStage(block?.kind ?? 'prelims'); return true; }
+    catch (error) { if (alive.current) { setNotice((error as Error).message); await refresh(); } return false; } finally { if (alive.current) setBusy(false); }
   }
   async function saveSetup() {
     if (!draft) return false; setBusy(true);setSetupSaveError('');setNotice('');
@@ -175,7 +179,7 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
     <ScoreProgress data={data} error={error} />
       </div></details>
     </div>}
-    {page === 2 && <StageReview data={data} action={action} selectedRoundId={selectedRoundId} showRound={selectResultsRound} openHeadAccess={() => {setPage(1);setAccessRequested(true);}} setupRoute={setupRoute} navigate={setPage} />}
+    {page === 2 && <StageReview correctionDraft={correctionDraft} data={data} action={action} selectedRoundId={selectedRoundId} showRound={selectResultsRound} openHeadAccess={() => {setPage(1);setAccessRequested(true);}} setupRoute={setupRoute} navigate={setPage} />}
     {page === 3 && <PublicationPanel recovery={<Recovery {...recovery} disabled={busy} extra={recoveryExtra} history={data.restoredHistory}>{data.status==='archived' ? <button className="quiet-button" disabled={busy} onClick={()=>void action({action:'reactivate'})}>Return event to active</button> : <button className="quiet-button" disabled={!canAct} onClick={() => { if (window.confirm('Archive this event and make all links read only? Scores and history stay saved; it can be returned to active later.')) void action({ action: 'archive' }); }}>Archive event</button>}<button className="quiet-button" disabled={busy || data.status !== 'archived'} onClick={async () => { if (!window.confirm('Permanently delete this archived test/event and all history?')) return; try { await liveApi(token, { action: 'delete', expectedVersion: data.version, requestId: crypto.randomUUID() }); window.location.assign('/'); } catch (error) { setNotice((error as Error).message); } }}>Delete archived event</button></Recovery>} data={data} action={action} navigate={setPage} route={(competitionId, targetPage, target) => { const round = data.setup.rounds.find((r) => r.competitionId === competitionId && (target?.roundId ? r.id === target.roundId : (!target?.kind || r.kind === target.kind) && (targetPage === 2 ? !data.rounds.find((v) => v.id === r.id)?.standings?.approved : true))); if(targetPage === 0) setupRoute(round?.id,target?.section); else { if(round) selectRound(round.id); setPage(targetPage); } }} />}
 
 

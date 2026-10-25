@@ -38,7 +38,7 @@ export default function LiveDesk({ token, setupIntro, sampleHelp, recoveryExtra 
   if (data && data.role !== 'organizer') return <p role="alert">Organizer access required.</p>;
   if (!data) return <LiveShell navigationDisabled title="Shared event" identity="Organizer desk" status={error ? 'Unable to open event' : 'Connecting…'} items={['Set up', 'Score', 'Results', 'Publish']} current={0} navigate={setPage}><p role="status">{error || 'Loading the private event…'}</p>{error && <Link className="quiet-button" href="/#other-events" prefetch={false}>Open saved events</Link>}<button className="quiet-button" onClick={() => void refresh()}>Retry</button></LiveShell>;
   if (data.role !== 'organizer') return <p role="alert">Open the organizer link to use this desk.</p>;
-  if (data.setup.workflow === 'stage-v1') return <StageDesk token={token} data={data} error={error} refresh={refresh} setupIntro={setupIntro} sampleHelp={sampleHelp} recoveryExtra={recoveryExtra} />;
+  if (data.setup.workflow === 'stage-v1') return <StageDesk key={`${token}/${data.eventId}`} token={token} data={data} error={error} refresh={refresh} setupIntro={setupIntro} sampleHelp={sampleHelp} recoveryExtra={recoveryExtra} />;
   const activeRound = data.rounds.find((r) => r.definition.heats.some((h) => h.songs.some((p) => p.id === data.context.performanceId)));
   const activeHeat = activeRound?.definition.heats.find((h) => h.songs.some((p) => p.id === data.context.performanceId));
   const song = activeHeat?.songs.find((p) => p.id === data.context.performanceId);

@@ -5,12 +5,13 @@ import type { LiveView, ReviewRequest } from '@/lib/live/types';
 import { finalistCountIssues } from '@/lib/live/validation';
 import RoundContext, { RoundOverview } from './round-context';
 import SetupSection from './setup-section';
+import type { NewCorrectionDraft } from './new-correction-draft';
 import { NewCorrection, ReviewRequests } from './result-management';
 import { ResultHighlights, AllRoundScorecards, ResultDecisions, ResultAudit, revealResult } from './result-details';
 import ResultWithdrawals from './result-withdrawals';
 
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
-export default function OrganizerResults({ data, action, selected, select, setupRoute, navigate, openHeadAccess }: { data: LiveView; action: Action; selected: string; select: (id: string) => void; setupRoute?: (id?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
+export default function OrganizerResults({ data, action, selected, select, setupRoute, navigate, openHeadAccess, correctionDraft }: { correctionDraft: NewCorrectionDraft; data: LiveView; action: Action; selected: string; select: (id: string) => void; setupRoute?: (id?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
   const round = data.rounds.find((r) => r.id === selected), setup = data.setup.rounds.find((r) => r.id === selected), result = round?.standings;
   const competition = data.setup.competitions.find((c) => c.id === (setup?.competitionId ?? round?.definition.competitionId));
   const pending = (data.reviewRequests ?? []).filter((q) => !q.appliedAt && !q.cancelledAt);
@@ -50,7 +51,7 @@ export default function OrganizerResults({ data, action, selected, select, setup
     <ResultDecisions data={data} round={round} openHeadAccess={openHeadAccess} reviewFinalistCount={limits.length ? undefined : () => setupRoute?.(data.setup.rounds.find((r) => r.prelimRoundId === selected)?.id, 'Finalists & pairings')} />
     <SetupSection title="Corrections & withdrawals" caption="Manage results" summaryText={`${pending.length} pending requests · ${pending.filter((q) => !q.approvals.some((a) => a.role === 'organizer')).length} awaiting your approval`} detailsRef={(n) => { if (n) n.id = 'results-management'; }}><div className="form-body page-stack">
       <ReviewRequests data={data} action={action} embedded pendingOnly onReviseWithdrawal={(q) => { setRevision(q); revealResult('results-withdrawals'); }} />
-      <NewCorrection key={data.eventId} data={data} round={round} action={action} />
+      <NewCorrection draft={correctionDraft} key={data.eventId} data={data} round={round} action={action} />
       <ResultWithdrawals data={data} action={action} selected={selected} revision={revision} />
       <button className="quiet-button" onClick={() => revealResult('results-audit')}>View completed requests in Audit trail</button>
     </div></SetupSection>
