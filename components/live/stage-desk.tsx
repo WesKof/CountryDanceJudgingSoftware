@@ -123,6 +123,10 @@ export default function StageDesk({ token, data, error, refresh, setupIntro, sam
   const inlinePairing = pairingNeeded && data.context.automaticStages !== false;
   function finalDrawForms() { return data.setup.rounds.filter((f) => f.kind === 'finals' && data.setup.competitions.find((c) => c.id === f.competitionId)?.format === 'Jack & Jill' && data.rounds.find((r) => r.id === f.prelimRoundId)?.standings?.approved).map((f) => <FinalsPairings key={f.id} reviewSetup={setupRoute} setup={data.setup} round={f} draft={pairingDraft ? draft : null} version={data.version} sourceVersion={draftVersion} disabled={busy || Boolean(draft && !pairingDraft) || data.status !== 'active'} update={(next) => {if (!draft) setDraftVersion(data.version);setDraft(next);setPairingDraft(true);}} saveError={setupSaveError} save={saveSetup} discard={() => {setDraft(null);setPairingDraft(false);setSetupSaveError('');}} />); }
   function reviewSetup(kind: 'prelims' | 'finals') {
+    if (kind === 'prelims') {
+      const task = setupTasks(draft ?? data.setup).find(task => !task.complete);
+      if (task) { setupRoute(task.roundId, task.section); return; }
+    }
     const stage = data.setup.blocks.find((b) => b.kind === kind);
     const target = data.setup.rounds.find((r) => stage?.roundIds.includes(r.id) && roundOpeningIssues(data.setup, r).length);
     setupRoute(target?.id ?? stage?.roundIds[0], !data.setup.competitions.length ? 'Program & stages' : !data.setup.headJudgeId || !data.setup.separationAttested ? 'Judges' : 'Round setup');
