@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildPublicSnapshot,validatePublicSnapshot,snapshotFingerprint} from '../lib/live/publication.ts';
 import {stageFixture} from './stage-fixture.ts';
-import {freezeRound} from '../lib/live/validation.ts';
+import {freezeRound,roundOpeningIssues} from '../lib/live/validation.ts';
 import {deriveStageStandings} from '../lib/live/stage.ts';
 import {cellKey,type LiveView,type HeatSubmission} from '../lib/live/types.ts';
 async function fixture(){
@@ -31,15 +31,54 @@ test('withdrawn public identity retains observations but has no placement',async
 test('publication guidance distinguishes unfinished stages, missing head approval and changed finalists',async()=>{
  const {view,competitionId}=await fixture();assert.deepEqual(publicationPreparationIssues(view,competitionId),[]);
  const preOnly=structuredClone(view);preOnly.rounds.pop();preOnly.rounds[0].standings!.approved=false;
- assert.deepEqual(publicationPreparationIssues(preOnly,competitionId).map((i)=>i.page),[2,0]);
+ assert.deepEqual(publicationPreparationIssues(preOnly,competitionId).map((i)=>i.page),[2,2]);
  assert.match(publicationPreparationIssues(preOnly,competitionId)[0].message,/head judge.*Prelims/);
- assert.match(publicationPreparationIssues(preOnly,competitionId)[1].message,/automatically fill Finals.*complete Finals/);
+ assert.match(publicationPreparationIssues(preOnly,competitionId)[1].message,/Finals waits.*head judge.*Prelims/);
  await assert.rejects(buildPublicSnapshot(preOnly,competitionId,1,null,'now','blocked'));
  const pending=structuredClone(view);pending.rounds[1].standings!.complete=false;
- assert.match(publicationPreparationIssues(pending,competitionId)[0].message,/Finals heat submissions.*conclude/);
+ assert.match(publicationPreparationIssues(pending,competitionId)[0].message,/submit the Finals stage.*private judge pages/);
  const changed=structuredClone(view);changed.rounds[0].standings!.advancingIds=[];
  assert.match(publicationPreparationIssues(changed,competitionId)[0].message,/deferred replacement\/redance/);
  await assert.rejects(buildPublicSnapshot(changed,competitionId,1,null,'now','blocked'));
+});
+
+test('automatic Publish blockers target the current prerequisite stage without parsing message words', async () => {
+ const {view,competitionId}=await fixture();view.context.automaticStages=true;view.context.stageSubmission=true;
+ const preId=view.setup.rounds[0].id,finalId=view.setup.rounds[1].id;
+ const missing=structuredClone(view);missing.rounds=[];
+ let issues=publicationPreparationIssues(missing,competitionId);
+ assert.equal(issues.length,2);assert.deepEqual(issues.map(({page,kind,roundId})=>({page,kind,roundId})),[{page:0,kind:'prelims',roundId:preId},{page:0,kind:'prelims',roundId:preId}]);
+ assert.ok(issues.every(issue=>!issue.message.includes('Run')&&!issue.message.includes('Start')));
+ const scoring=structuredClone(view);scoring.rounds.pop();scoring.rounds[0].standings!.complete=false;
+ issues=publicationPreparationIssues(scoring,competitionId);assert.equal(issues.length,2);
+ assert.ok(issues.every(issue=>issue.page===1&&issue.kind==='prelims'&&issue.roundId===preId));
+ assert.match(issues[0].message,/judges.*submit.*stage/i);assert.doesNotMatch(issues[0].message,/conclude|Run/);
+ const review=structuredClone(view);review.rounds.pop();review.rounds[0].standings!.approved=false;
+ issues=publicationPreparationIssues(review,competitionId);assert.equal(issues.length,2);
+ assert.ok(issues.every(issue=>issue.page===2&&issue.kind==='prelims'&&issue.roundId===preId));
+ const waiting=structuredClone(view);waiting.rounds.pop();issues=publicationPreparationIssues(waiting,competitionId);
+ assert.equal(issues.length,1);assert.deepEqual({page:issues[0].page,kind:issues[0].kind,roundId:issues[0].roundId},{page:1,kind:'finals',roundId:finalId});
+ const unapproved=structuredClone(view);unapproved.rounds[1].standings!.approved=false;
+ issues=publicationPreparationIssues(unapproved,competitionId);assert.equal(issues.length,1);assert.equal(issues[0].kind,'finals');assert.equal(issues[0].roundId,finalId);assert.equal(issues[0].page,2);
+});
+
+test('Publish guidance identifies actual draw setup and preserves manual, legacy, mismatch and configured-stage requirements', async () => {
+ const {view,competitionId}=await fixture();const before=JSON.stringify(view),preId=view.setup.rounds[0].id,finalId=view.setup.rounds[1].id;
+ const draw=structuredClone(view);draw.context.automaticStages=true;draw.rounds.pop();draw.setup.competitions[0].format='Jack & Jill';draw.setup.rounds[1].subjects=[];
+ const drawBefore=JSON.stringify(draw);
+ let issues=publicationPreparationIssues(draw,competitionId);assert.equal(issues.length,1);
+ assert.deepEqual({page:issues[0].page,kind:issues[0].kind,roundId:issues[0].roundId,section:issues[0].section},{page:0,kind:'finals',roundId:finalId,section:'Roster'});assert.match(issues[0].message,/actual.*draw/);assert.equal(JSON.stringify(draw),drawBefore);
+ assert.ok(roundOpeningIssues(draw.setup,draw.setup.rounds[1]).some(issue=>issue.includes('Set up → Couples')));assert.equal(JSON.stringify(draw),drawBefore);
+ const manual=structuredClone(view);manual.context.automaticStages=false;manual.rounds=[];
+ issues=publicationPreparationIssues(manual,competitionId);assert.equal(issues.length,2);assert.equal(issues[0].page,1);assert.equal(issues[0].roundId,preId);assert.match(issues[0].message,/start Prelims.*Score/i);
+ const incomplete=structuredClone(view);incomplete.context.automaticStages=false;incomplete.rounds[1].standings!.complete=false;
+ issues=publicationPreparationIssues(incomplete,competitionId);assert.equal(issues.length,1);assert.match(issues[0].message,/heat submissions.*conclude.*Score/);
+ incomplete.context.stageSubmission=true;assert.match(publicationPreparationIssues(incomplete,competitionId)[0].message,/stage.*conclude.*Score/);
+ const noFinals=structuredClone(view);noFinals.setup.rounds.pop();noFinals.rounds.pop();issues=publicationPreparationIssues(noFinals,competitionId);assert.equal(issues.length,1);assert.equal(issues[0].page,0);assert.equal(issues[0].kind,'finals');
+ const mismatch=structuredClone(view);mismatch.rounds[0].standings!.advancingIds=[];issues=publicationPreparationIssues(mismatch,competitionId);assert.equal(issues.length,1);assert.equal(issues[0].page,2);assert.equal(issues[0].kind,'finals');assert.equal(issues[0].roundId,finalId);assert.match(issues[0].message,/deferred replacement\/redance/);
+ const extra=structuredClone(view);extra.rounds.push({...structuredClone(extra.rounds[0]),id:'retained-extra-round'});issues=publicationPreparationIssues(extra,competitionId);assert.equal(issues.length,1);assert.match(issues[0].message,/scheduled stages/);
+ const legacy=structuredClone(view);delete legacy.setup.workflow;issues=publicationPreparationIssues(legacy,competitionId);assert.equal(issues.length,1);assert.equal(issues[0].page,2);assert.match(issues[0].message,/legacy-only/);
+ assert.equal(publicationPreparationIssues(view,'unknown-competition').length,1);assert.deepEqual(publicationPreparationIssues(view,competitionId),[]);assert.equal(JSON.stringify(view),before);
 });
 
 

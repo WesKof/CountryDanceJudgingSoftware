@@ -128,7 +128,7 @@ export function roundOpeningIssues(setup: LiveSetup, round: LiveRound): string[]
   if (setup.workflow === 'stage-v1' && (!setup.organizerName?.trim() || !setup.organizerParticipantId || !setup.separationAttested || setup.judges.some((j) => !j.participantId))) issues.push('Enter distinct organizer/panel participant identifiers and confirm separation of duties.');
   if (setup.workflow === 'stage-v1' && round.judgeIds.length && !round.judgeIds.includes(setup.headJudgeId)) issues.push('Include the event head judge among this stage’s required judges.');
   const unpaired = unpairedFinalists(setup, round);
-  if (unpaired.length) issues.push(`Finalists are already selected. Enter their actual Finals draw in Set up → Finalists & pairings, then Save setup. Unpaired: ${unpaired.map((s) => `#${s.number} ${s.primary}`).join(', ')}.`);
+  if (unpaired.length) issues.push(`Finalists are already selected. Enter their actual Finals draw in Set up → Couples, then Save setup. Unpaired: ${unpaired.map((s) => `#${s.number} ${s.primary}`).join(', ')}.`);
   if (!round.subjects.length && !unpaired.length) issues.push('Add entrants to this round.');
   if (!round.heats.length) issues.push('Add a heat and its songs.');
   for (const heat of round.heats) {
