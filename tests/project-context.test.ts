@@ -41,11 +41,11 @@ function page(output: Buffer) {
 }
 
 test('context reader respects nesting, fences, closing hashes and source lines outside caller CWD', t => {
-  const text = '# Title\r\nintro\r\n## Parent ##\r\nbody\r\n```md\r\n## Fake\r\n```\r\n### Child\r\nchild\r\n~~~~\r\n## Also fake\r\n~~~\r\nstill fenced\r\n~~~~\r\n    ## Indented example\r\n## Next\r\nnext\r\n';
+  const text = '# Title\r\nintro\r\n## Parent ##\r\nbody\r\n```md\r\n## Fake\r\n```\r\n### Child\r\nchild\r\n~~~~\r\n## Also fake\r\n~~~\r\nstill fenced\r\n~~~~\r\n    ## Indented example\r\n## Next\r\nnext\r\n# ##\r\n## #\r\n###\t####\t\r\n####   \r\n##\t \t\r\n## name#\r\n## # #\r\n';
   const { run } = fixture(t, text);
   const list = run('spec', 'list');
   assert.equal(list.status, 0, list.stderr.toString());
-  assert.equal(page(list.stdout).payload.toString(), '1\tH1\tTitle\n3\tH2\tParent\n8\tH3\tChild\n16\tH2\tNext\n');
+  assert.equal(page(list.stdout).payload.toString(), '1\tH1\tTitle\n3\tH2\tParent\n8\tH3\tChild\n16\tH2\tNext\n18\tH1\t\n19\tH2\t\n20\tH3\t\n21\tH4\t\n22\tH2\t\n23\tH2\tname#\n24\tH2\t#\n');
   const section = run('spec', 'read', '--heading', 'Parent');
   assert.equal(section.status, 0, section.stderr.toString());
   assert.equal(page(section.stdout).payload.toString(), text.slice(text.indexOf('## Parent'), text.indexOf('## Next')));
@@ -53,6 +53,7 @@ test('context reader respects nesting, fences, closing hashes and source lines o
   const child = run('spec', 'read', '--line', '8');
   assert.equal(child.status, 0);
   assert.ok(page(child.stdout).payload.toString().startsWith('### Child\r\n'));
+  assert.ok(page(run('spec', 'read', '--line', '19').stdout).payload.toString().startsWith('## #\r\n'));
 });
 
 test('duplicate headings require a line selector and search stays bounded', t => {

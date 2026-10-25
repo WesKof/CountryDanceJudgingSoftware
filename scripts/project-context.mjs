@@ -39,7 +39,7 @@ function headings(source) {
       fence = { character: marker[1][0], length: marker[1].length };
     } else {
       const heading = /^ {0,3}(#{1,6})(?:[ \t]+(.*?)|[ \t]*)$/.exec(text);
-      if (heading) result.push({ line, byte, level: heading[1].length, text: (heading[2] ?? '').replace(/[ \t]+#+[ \t]*$/, '').trim() });
+      if (heading) result.push({ line, byte, level: heading[1].length, text: (heading[2] ?? '').replace(/(?:^|[ \t]+)#+[ \t]*$/, '').trim() });
     }
     byte += Buffer.byteLength(match[0]);
   }
