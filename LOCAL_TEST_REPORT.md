@@ -1,5 +1,19 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred admin sign-in continuity promotion PASS
+
+Master reviewed delivery f9d05d6/source 1bed1d6, the 14-line production diff and final completed-event phone image. Independent static comparison confirms identical session creation and complete action handler; the deliberate login redirect retains only encoded event context on literal /admin. Worker evidence remains seven adapter cases in 140ms, actual 7.0s failed/retry/event browser flow, targeted session/forged-approval API in 163ms, type/lint/build and unchanged fixture/public hashes. No broad cohort or audit repeated.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Source/recovery | Fresh clean preferred main 05f8237 and six affected mirror baselines verified before guarded fast-forward on codex/admin-signin-promotion-proof. All 10 retained recovery-file hashes match the consistent snapshot previously verified against current business contents. Existing snapshots remain; no redundant data copy or full restore claimed. Source checkpoints are not data backups. |
+| Build/runtime | Exact command/listener verified organizer 47392 and receiver 68888 stopped; only proved surviving owned workerd child handled. Quiescent hashes match. Preferred build passes without install. Bounded HTTP200 readiness succeeds before listener/manifest checks and browser use. New organizer 14644 and receiver 68708 are command/listener verified and recorded in the ignored preview manifest. |
+| Owner browser | Reloaded the existing /admin?event=p-7b1be816cc40c13049433b04 tab, entered the existing local code without logging it, and submitted one Sign in form. The resulting URL retains the same event query and opens October 21 Layout Walkthrough · Published directly, despite other pending events; no corrective GET/navigation was needed. Necessary switching, direct results link and collapsed optional history remain. No approval, retry, service or publication action was submitted. Only the private admin session is created. |
+| Preservation/closeout | Organizer, selected admin login, original/current publication and event search routes return 200. Original 4.5000/current 5.4167 remain. All 16 business-table logical contents, full publication JSON and private configuration hashes match before/quiescent/after/browser. Private work/owner-runtime-backups/admin-signin-event-continuity-20261024/transition.json records baseline/build/recovery/process/HTTP/browser proof. Final checkpoint is checkpoint/local-admin-signin-event-continuity-promotion-2026-10-24; remote/main/mirror/expected-tip cleanup verified at handoff. |
+
+The IAB screenshot proves actual owner-event return after sign-in; isolated completed/pending/stale/blank and failed-retry/special-literal cases supply the broader behavior proof. All prior review tabs remain available. No global edit, owner business-data change, live/hosted operation, real external publication, physical-device/venue/screen-reader or full restoration claim occurred. Next proposed bounded pass is the separate phone Version-column readability issue.
+
+
 ## October 24 — Isolated admin sign-in continuity PASS
 
 Master assigned sole isolated source/Git/docs/tests/runtime ownership from freshly fetched main 05f8237 to codex/admin-signin-event-continuity. Clean retained checkout and affected preferred/mirror byte parity were verified. Source 1bed1d6 changes only admin.ts, existing admin adapter tests and new admin-signin-browser.spec.ts; canonical references record current behavior/proof/queue. Preferred/mirror/operator integration remains master-owned.
