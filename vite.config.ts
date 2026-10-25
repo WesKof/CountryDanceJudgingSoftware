@@ -9,6 +9,10 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
 
 const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
+const dependencyBackupWatchIgnores = [
+  '**/work/owner-runtime-backups/**/node_modules-baseline',
+  '**/work/owner-runtime-backups/**/node_modules-baseline/**',
+];
 
 const localBindingConfig = {
   main: 'vinext/server/app-router-entry',
@@ -28,8 +32,8 @@ export default defineConfig(async () => {
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
     server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+      ? { watch: { useFsEvents: false, usePolling: true, ignored: dependencyBackupWatchIgnores } }
+      : { watch: { ignored: dependencyBackupWatchIgnores } },
     plugins: [
       vinext(),
       sites(),
