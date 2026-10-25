@@ -20,6 +20,7 @@ main:has(.admin-request)>.page-title{padding:20px 0 10px}main:has(.admin-request
 .card details[open] > summary { border-bottom-color: var(--accent); margin-bottom: 12px; }
 .admin-request > form { padding: 14px; border: 1px solid #c6d6c9; border-left: 4px solid var(--ink); background: #edf0e7; }
 .admin-request > [role='status'] { font-size: 14px; }
+.admin-request h2, .admin-request h3 { overflow-wrap: anywhere; }
 .admin-request > table th:first-child { width: 52%; }
 .admin-request > table th:nth-child(2) { width: 16%; }
 .admin-request > table th:last-child { width: 32%; }
