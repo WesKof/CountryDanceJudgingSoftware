@@ -1,5 +1,17 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred organizer judge-link promotion PASS
+
+Master reviewed delivery a8856b0/source f496652, the four scoped CSS rules, active phone/desktop and revoked phone images, matched geometry and actual access/progress evidence. Active long-name height friction is distinct from the revoked-label overflow. The accepted ordinary phone tradeoff is +6px; active desktop is unchanged, while revoked desktop wrapping is intentionally repaired. No production JavaScript, link management, permission or scoring behavior changes.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Preferred CSS serving | Clean preferred main e7d4880 and all181 tracked mirror baselines verified before exact fast-forward on codex/organizer-judge-links-promotion. Actual GET /app/globals.css?direct returns200 with formatted direct-strong wrapping and flexible name-width rules. Initial exact-whitespace marker assertion was corrected for Vite formatted CSS; this was an operator assertion issue, not a product failure. Organizer home and original/corrected result pages return200. Existing14644/68708 processes retain3000/3100 listeners; no build/restart for fresh-served CSS. |
+| Preservation | All16 owner business-table contents retain logical digest51ab165d5df547e56f682a42740225a73f8f15fd15fe5ff837827b5ed0a1c05f. Full publication JSON and private configuration hashes match the pre-review journal. No owner link, score, note, submission, approval, publication or browser-state mutation was needed. Logical equality does not imply physical SQLite/WAL identity. |
+| Closeout | Private work/owner-runtime-backups/organizer-judge-links-20261024/transition.json retains serving/data and guarded mirror proof. Historical SPEC tail from Judge stage review status and REPORT tail from Preferred judge-stage-review promotion remain unchanged. Final source checkpoint is checkpoint/local-organizer-judge-links-promotion-2026-10-24; normal remote/main/peeled-tag, tracked mirror and expected-tip merged-branch cleanup are checked at handoff. Existing recovery snapshots remain; no redundant full copy or restoration claim. Source checkpoints are not data backups. |
+
+The isolated final browser case below passes22.3s, plus TypeScript/focused lint/diff. No redundant framework build, broad workflow/audit, live/hosted action, global instruction edit, physical-device/venue/screen-reader result or owner approval dependency is claimed. Next is an actual organizer recovery inspection from an assigned revoked judge card to existing deliberate link-management controls; no automatic restoration or access-rule change is authorized by that investigation.
+
 ## October 24 — Organizer judge-link cards PASS
 
 Master assigned sole isolated source/Git/docs/test/runtime ownership on codex/organizer-judge-link-usability from fresh main e7d4880. Affected preferred/mirror content matched before edits. Source f496652 changes four scoped CSS rules and adds one focused ordinary browser case; all production JSX/JavaScript, private href generation and link-management/role/approval/scoring behavior remain unchanged. Master retains preferred/mirror/operator integration.
