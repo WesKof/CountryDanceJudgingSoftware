@@ -1081,7 +1081,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .event-card-title { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .event-card-title strong { font-size:16px; overflow-wrap:anywhere; }
 .event-card p { margin:6px 0 0; font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
-.event-card:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.event-card:focus-visible { outline:3px solid var(--forest); outline-offset:3px; }
 .event-badge { padding:3px 7px; font-size:11px; border-radius:20px; background:var(--sage); color:var(--forest); white-space:nowrap; }
 .event-badge.archived { background:#e3eaf3; color:#243c52; }
 .event-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
