@@ -1,5 +1,18 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred winner-card wrapping promotion PASS
+
+Master independently reviewed delivery d1627bf/source 7ae2cba: two scoped production CSS rules and one read-only regression. Retained before/after measurements confirm original 908/908/1632px overflow becomes 360/390/1440px; the long-name/division variant also has zero text/link bound violations, all 16 average tokens on one line and all 16 circles at 39px. The final 390px stress card was directly inspected. Worker TypeScript/focused lint and both actual receiver checks are the verification evidence; no repeated broad suite, audit, install or framework build is claimed.
+
+| Operator check | Verified result and limits |
+| --- | --- |
+| Source/runtime | Fresh clean preferred main 9622dd6 and five affected mirror baselines verified before guarded fast-forward on codex/public-winner-promotion-proof. GET /styles.css serves both exact new rules immediately. Existing organizer PID35212 and receiver PID28040 identities remain unchanged; neither service was restarted. Node reads CSS on each GET, unlike imported renderer/admin code. |
+| Owner preview/data | New background home review tab shows ordinary full event/podium names, bibs, places and corrected 5.4167. Prior organizer/original/current/search/selected-event tabs remain available. Read-only before/after digest verifies all 16 business-table contents; complete public store and private configuration hashes match. Original 4.5000 and corrected 5.4167 publications remain available. No score, note, approval, release, schema or owner data mutation is performed. |
+| Recovery/closeout | Prior source checkpoint and unchanged retained data snapshots remain available; no redundant full data copy was needed for CSS serving. Ignored work/owner-runtime-backups/public-winner-wrapping-20261024/transition.json records baseline hashes/claims, served CSS and preservation evidence. Final annotated source checkpoint is checkpoint/local-public-winner-wrapping-promotion-2026-10-24; exact remote/main/mirror/expected-tip cleanup results are verified at handoff. Source checkpoints do not restore data. |
+
+The owner browser image is a visible in-app panel capture, not responsive viewport measurement. The worker's isolated 360/390/1440 proof supplies that evidence. No native desktop input, Edge grouping, hosted/live operation, real publication or physical-device/venue/screen-reader verification occurred. Next bounded candidate remains the reproduced admin empty-state wording and unnecessary single-option selection review; implementation is pending separate assignment.
+
+
 ## October 24 — Isolated winner-card wrapping PASS
 
 Master assigned sole isolated source/Git/test/docs/receiver ownership from fresh main 9622dd6 to codex/public-winner-wrapping. Clean detached checkout and affected preferred/mirror parity were verified first. Source 7ae2cba contains only two production CSS rules plus tests/public-winner-browser.spec.ts; canonical documentation adds current behavior/evidence/queue routing. No renderer/markup, framework, dependency, schema, scoring, release, permission or session change is included.
