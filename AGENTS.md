@@ -4,6 +4,8 @@
 
 Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPORT.md](LOCAL_TEST_REPORT.md) evidence. Refresh these and Git/status/parity after compaction. Keep these three references; no competing timeline/branding/closeout/handoff files. Dated branches/limits/holds/no-push statements are history; current owner direction governs.
 
+Use `node scripts/project-context.mjs spec list --search "stage"` to find a task heading, then `node scripts/project-context.mjs spec read --line N` with its listed line number. Aliases: agents/spec/report. Output is bounded to12KiB; follow the emitted NEXT command to continue an unchanged selection. Exact `--heading` also works when unique. The reader resolves documents from its script location, includes nested subsections and ignores fenced ATX examples. Select the relevant task section; full history remains in the originals. See the [reader contract](PROJECT_SPEC.md#canonical-document-section-reader--october-25) or `--help` for payload/range/cursor details.
+
 | Task | Read in PROJECT_SPEC.md |
 | --- | --- |
 | Ownership, priorities, schedules | [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) |
