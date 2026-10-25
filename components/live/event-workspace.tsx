@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EventSummary } from '@/lib/live/types';
 import { liveApi } from './client';
+import { checkedEventSummary, eventChangeState } from '@/lib/live/event-summary';
 
-export type SavedEvent = { path: string; name: string; sample?: boolean; status?: 'active' | 'archived'; date?: string; venue?: string };
+export type SavedEvent = { path: string; name: string; sample?: boolean; status?: 'active' | 'archived'; date?: string; venue?: string; eventId?: string; summaryVersion?: number };
 type Entry = SavedEvent & { summary?: EventSummary; error?: string };
 export default function EventWorkspace({ events, current, busy, ready, create, remember }: { events: SavedEvent[]; current?: string; busy: boolean; ready: boolean; create: (source: 'sample' | 'blank') => void; remember: (events: SavedEvent[]) => void }) {
   const [entries, setEntries] = useState<Entry[]>(events), [loading, setLoading] = useState(false), [pending, setPending] = useState(''), [notice, setNotice] = useState('');
@@ -14,23 +15,28 @@ export default function EventWorkspace({ events, current, busy, ready, create, r
   const focusAfterChange = useRef<{ path: string; source: Element | null; current?: string; action: 'archive' | 'reactivate'; moved: boolean; ready: boolean } | null>(null);
   const stopFocusTracking = useRef<(() => void) | null>(null);
   useEffect(() => () => { stopFocusTracking.current?.(); focusAfterChange.current = null; }, []);
-  async function refresh() {
-    if (!ready || running.current) return; running.current = true; setLoading(true);
+  async function refresh(change?: { entry: Entry & { summary: EventSummary }; action: 'archive' | 'reactivate'; acknowledgement: unknown }) {
+    if (!ready || running.current) return; running.current = true; setLoading(true); if (!change) setNotice('');
     const next: Entry[] = [];
     // Limit concurrent reads and request only the organizer's lightweight summary.
     for (let start = 0; start < events.length; start += 4) {
       next.push(...await Promise.all(events.slice(start, start + 4).map(async (event): Promise<Entry> => {
+        const previous = { ...event, ...entries.find(checked => checked.path === event.path) };
         try {
           const response = await fetch('/api/live?summary=1', { cache: 'no-store', headers: { Authorization: 'Bearer ' + event.path.split('/').at(-1) } });
-          const summary = await response.json() as EventSummary & { error?: string };
-          if (!response.ok) throw new Error(summary.error ?? 'Event unavailable');
-          return { ...event, name: summary.name, status: summary.status, date: summary.date, venue: summary.venue, summary };
-        } catch { return { ...event, error: 'Link unavailable. Your saved link is retained.' }; }
+          const summary = response.ok ? checkedEventSummary(await response.json(), { eventId: previous.eventId, summaryVersion: Math.max(previous.summaryVersion ?? 0, event.summaryVersion ?? 0) }) : null;
+          if (!summary) throw new Error('Event summary unavailable');
+          if (change?.entry.path === event.path && eventChangeState(change.acknowledgement, change.entry.summary, summary, change.action) !== 'confirmed') {
+            return { ...previous, summary: undefined, error: eventChangeState(change.acknowledgement, change.entry.summary, summary, change.action) === 'changed-again' ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events before another change.' };
+          }
+          return { ...previous, name: summary.name, status: summary.status, date: summary.date, venue: summary.venue, eventId: summary.eventId, summaryVersion: summary.version, summary, error: undefined };
+        } catch { return { ...previous, summary: undefined, error: 'Link unavailable. Your saved link is retained.' }; }
       })));
     }
     setEntries(next); setLoading(false); running.current = false;
-    try { remember(next.map(({ path, name, sample, status, date, venue }) => ({ path, name, sample, status, date, venue }))); }
+    try { remember(next.map(({ path, name, sample, status, date, venue, eventId, summaryVersion }) => ({ path, name, sample, status, date, venue, eventId, summaryVersion }))); }
     catch { setNotice('The list could not be saved on this device. Event records are unchanged.'); }
+    return next;
   }
   async function change(entry: Entry, action: 'archive' | 'reactivate') {
     if (!ready || !entry.summary || pending) return;
@@ -42,10 +48,12 @@ export default function EventWorkspace({ events, current, busy, ready, create, r
     const stopTracking = () => document.removeEventListener('focusin', trackFocus); stopFocusTracking.current = stopTracking;
     setPending(entry.path); setNotice('');
     try {
-      await liveApi(entry.path.split('/').at(-1)!, { action, expectedVersion: entry.summary.version, requestId: crypto.randomUUID() });
+      const acknowledgement = await liveApi<unknown>(entry.path.split('/').at(-1)!, { action, expectedVersion: entry.summary.version, requestId: crypto.randomUUID() });
+      const checked = (await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement }))?.find(checked => checked.path === entry.path);
+      if (!checked?.summary) { focusAfterChange.current = null; setNotice(checked?.error?.includes('changed again') ? 'The event changed again. Refresh events to review its current status.' : 'The event change could not be confirmed. Refresh events to check its current status. Your saved link is retained.'); return; }
       if (entry.path === current) { window.location.reload(); return; }
-      await refresh(); request.ready = true; setNotice(action === 'archive' ? 'Event archived. Its records remain available below.' : 'Event returned to active. Submitted ballots and approvals are unchanged.');
-    } catch (error) { focusAfterChange.current = null; setNotice((error as Error).message); await refresh(); }
+      request.ready = true; setNotice(action === 'archive' ? 'Event archived. Its records remain available below.' : 'Event returned to active. Submitted ballots and approvals are unchanged.');
+    } catch (error) { focusAfterChange.current = null; await refresh({ entry: { ...entry, summary: entry.summary }, action, acknowledgement: null }); setNotice((error as Error).message + ' Refresh events to check its current status.'); }
     finally { stopTracking(); if (stopFocusTracking.current === stopTracking) stopFocusTracking.current = null; setPending(''); }
   }
   const matches = (entry: Entry) => [entry.name, entry.venue, entry.date, entry.sample ? 'sample' : ''].join(' ').toLowerCase().includes(query.trim().toLowerCase());
