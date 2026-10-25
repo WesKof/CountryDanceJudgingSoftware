@@ -8,7 +8,7 @@ export function NewCorrection({ data, round, action }: { data: LiveView; round?:
   const [target, setTarget] = useState<RoundView>();
   const [generation, setGeneration] = useState(0), [pending, setPending] = useState(false);
   const current = target ? data.rounds.find((item) => item.key === target.key) : round;
-  const retained = current ?? target;
+  const retained = current?.standings ? current : target ?? current;
   const available = Boolean(current?.standings && data.status === 'active');
   function discard() { if (pending) return; setTarget(undefined); setGeneration((value) => value + 1); }
   if (!retained?.standings) return <p>Score corrections are available after the selected stage concludes.</p>;
