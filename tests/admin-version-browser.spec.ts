@@ -6,6 +6,7 @@ import type {PublicationRecord} from '../lib/live/publication';
 
 test('admin overview keeps Version intact without changing desktop, nested tables or primary controls',async({browser})=>{
  const receiver=testEndpoint('receiver',true),config=process.env.ADMIN_VERSION_CONFIGURATION,fixture=process.env.ADMIN_VERSION_FIXTURE,store=process.env.LOCAL_TEST_RECEIVER_STORE;
+ test.skip(!config||!fixture,'Run this geometry fixture with the dedicated read-only authority manifest, not operational workflow services.');
  if(!config||!fixture||!store)throw Error('Set owned layout configuration, authority fixture and public store paths.');
  const key=readFileSync(config,'utf8').split(/\r?\n/).find(line=>line.startsWith('LOCAL_OWNER_KEY='))!.slice(16);
  const records=(JSON.parse(readFileSync(fixture,'utf8')) as {publications:PublicationRecord[]}).publications;
