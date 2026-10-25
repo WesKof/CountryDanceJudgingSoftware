@@ -11,7 +11,7 @@ Read relevant [PROJECT_SPEC.md](PROJECT_SPEC.md) contracts and [LOCAL_TEST_REPOR
 | Instruction audit | [Map](PROJECT_SPEC.md#operative-instructions-and-retention-map--october-24) |
 | Stage flow | [Automatic stages](PROJECT_SPEC.md#automatic-scoring-stages-and-judge-led-submission--october-21-local) |
 | Organizer Publish blockers | [Workflow guidance and exact destinations](PROJECT_SPEC.md#organizer-publish-readiness-guidance--october-24) |
-| Admin sign-in navigation | [Selected-event continuity](PROJECT_SPEC.md#admin-selected-event-sign-in-continuity--october-24) |
+| Admin navigation/layout | [Selected-event continuity](PROJECT_SPEC.md#admin-selected-event-sign-in-continuity--october-24), [Version column](PROJECT_SPEC.md#admin-overview-version-column--october-24) |
 | Scores/votes/Finals | [Stage](PROJECT_SPEC.md#stage-workflow-revision--implemented-locally), [legacy](PROJECT_SPEC.md#scoring-contract), [draw recovery](PROJECT_SPEC.md#finals-draw-blocker-guidance--october-24) |
 | Privacy/withdrawal/publication/recovery | [Access/release](PROJECT_SPEC.md#access-withdrawals-and-owner-publication--implemented-locally), [saves](PROJECT_SPEC.md#save-submission-and-approval-reliability), [recovery tasks](PROJECT_SPEC.md#backup-and-restore-task-recovery--october-24) |
 | Released-version comparison/navigation | [Public changes](PROJECT_SPEC.md#released-results-comparison--october-24), [result hierarchy](PROJECT_SPEC.md#public-correction-result-hierarchy--october-24), [selected event](PROJECT_SPEC.md#selected-event-results-navigation--october-24), [event search](PROJECT_SPEC.md#public-event-directory-search--october-24), [admin review](PROJECT_SPEC.md#website-admin-review-state-clarity--october-24) |
