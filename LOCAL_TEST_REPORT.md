@@ -1,5 +1,19 @@
 # Local implementation verification and handoff — 2026-10-24
 
+## October 24 — Preferred browser-fixture integration PASS
+
+Master reviewed delivery beb14c6/source ef524a3 and verified all seven affected files are tests/helpers or canonical documentation, with zero production files changed. Source inspection confirms store read/hash before event preparation, enabled/no-prior-queued baseline before contexts/writes, per-event latest groups, retained unrelated records/current pointers and full-absence-only special-profile skip. No ordinary workflow case is blanket-skipped. Existing runner supplies the store environment, public search already accepts nonempty results, and public winner is unchanged.
+
+| Integration evidence | Verified result and limits |
+| --- | --- |
+| Controlled tests | Worker reproduced late missing-store writes, the resulting retained-queue assertion failure and partial-profile silent skip. Focused seeded pair passes in 6.6s/6.4s, fresh pair with actual empty-state checks in 7.1s/6.7s, final grouping-refinement retained pair in 6.7s/6.5s. Missing/invalid paths, suspended service and newly owned prior queued fixture reject before writes/context with identical snapshots. Retained-state coverage is requested/released fixtures, not arbitrary concurrent/outbox states. |
+| Dedicated/discovery boundary | Actual Version receiver/read-only mocked authority case executes one pass/zero skips in 1.8s. Fully absent profile skips only the special case; partial/invalid configuration fails. Discovery lists 97 tests in 43 files; no full suite was executed or claimed. TypeScript/focused lint and whitespace pass. |
+| Preferred integration | Fresh clean main dbc62a3 and seven affected mirror baselines verified before guarded fast-forward on codex/browser-fixture-promotion-proof. Production change count is zero. No build/install, owner preview restart, navigation, form submission or operational action is necessary; organizer 14644 and receiver 68708 retain listener identities. |
+| Preservation/closeout | All 16 business-table logical contents, full publication JSON and private configuration hashes match before/after integration. Original/corrected publications, private notes, history, source/runtime recovery evidence and all seven review tabs remain. Private work/owner-runtime-backups/browser-fixture-audit-20261024/transition.json records baseline/mirror/data proof. Final checkpoint is checkpoint/local-browser-fixture-compatibility-promotion-2026-10-24; remote/main/mirror/expected-tip cleanup verified at handoff. Source checkpoints cannot restore data. |
+
+No product/scoring/authorization/approval/dependency change, global instruction edit, live/hosted operation, native desktop input, physical-device/venue/screen-reader or restoration claim occurred. Next is a bounded actual phone/long-ballot scoring-context investigation; the source observation is not yet a browser finding or implementation decision.
+
+
 ## October 24 — Browser fixture compatibility PASS
 
 Master assigned sole isolated source/Git/docs/test/runtime ownership from fresh main dbc62a3 to codex/browser-fixture-compatibility. Source ef524a3 changes only tests/publication-helpers.ts and admin clarity/sign-in/Version browser cases. Preferred/mirror test content matched before edits; sign-in worker bytes differed only by newline convention, with clean Git and identical normalized content. Master retains preferred/mirror/operator integration. No product change, source build, dependency install or owner runtime action.
