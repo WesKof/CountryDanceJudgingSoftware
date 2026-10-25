@@ -43,6 +43,46 @@ test('unknown selected events retain recovery with one event or an empty directo
   assert.match(renderIndex({ records: {}, current: {} }, true), /No released competitions yet/);
 });
 
+test('event search uses literal case-insensitive metadata terms and retains complete current event groups', () => {
+  const current = published(), olderCompetition = published('older'), other = published('other'), historical = published('historical'), privateRecord = published('private');
+  current.snapshot.event.name = 'Autumn Country Dance'; current.snapshot.event.venue = 'River Hall';
+  olderCompetition.snapshot.competitionId = 'second'; olderCompetition.snapshot.event.venue = 'Earlier North Texas Hall'; olderCompetition.releasedAt = '2026-10-23T10:00:00Z';
+  other.snapshot.eventId = 'other'; other.snapshot.event.name = 'Spring Festival';
+  historical.snapshot.event.name = 'HISTORICAL_ONLY'; privateRecord.snapshot.event.name = 'PRIVATE_ONLY'; privateRecord.releasedAt = undefined; privateRecord.status = 'requested';
+  const store: PublicStore = { records: Object.fromEntries([current, olderCompetition, other, historical, privateRecord].map(record => [record.id, record])), current: { 'public-event/public-competition': current.id, 'public-event/second': olderCompetition.id, 'other/public-competition': other.id, 'private/current': privateRecord.id } };
+  const before = JSON.stringify(store);
+  for (const query of ['  AUTUMN   country ', 'north TEXAS', '2026-10-24']) {
+    const html = renderIndex(store, true, '', query);
+    assert.match(html, /name="q"/); assert.match(html, /Autumn Country Dance/);
+    assert.match(html, /2 competitions/);
+    if (!query.includes('2026')) assert.doesNotMatch(html, /Spring Festival/);
+    assert.doesNotMatch(html, /<select|HISTORICAL_ONLY|PRIVATE_ONLY/);
+  }
+  assert.match(renderIndex(store, true, '', '.*'), /No events found/);
+  assert.match(renderIndex(store, true, '', 'HISTORICAL_ONLY'), /No events found/);
+  assert.match(renderIndex(store, true, '', 'PRIVATE_ONLY'), /No events found/);
+  assert.match(renderIndex(store, true, '', 'Dancer'), /No events found/);
+  assert.equal(JSON.stringify(store), before);
+});
+
+test('search query and return context are escaped and empty or stale selections recover honestly', () => {
+  const record = published(); record.snapshot.event.name = 'Dance <Friends> & "Family"';
+  const store: PublicStore = { records: { v1: record }, current: { 'public-event/public-competition': 'v1' } };
+  const query = '<Friends> & "Family"', html = renderIndex(store, true, '', query);
+  assert.match(html, /value="&lt;Friends&gt; &amp; &quot;Family&quot;"/);
+  assert.doesNotMatch(html, /<Friends>|<script/);
+  assert.match(html, /event=public-event&amp;q=%3CFriends%3E/);
+  const selected = renderIndex(store, true, 'public-event', query);
+  assert.match(selected, /Back to search/); assert.match(selected, /q=%3CFriends%3E/);
+  assert.doesNotMatch(selected, /<form/);
+  const stale = renderIndex(store, true, 'missing', query);
+  assert.match(stale, /No released competitions for this selection/); assert.match(stale, /Choose another event/);
+  assert.match(renderIndex(store, true, '', 'absent'), /No events found/);
+  assert.match(renderIndex({ records: {}, current: {} }, true, '', 'absent'), /No released competitions yet/);
+  assert.doesNotMatch(renderIndex({ records: {}, current: {} }, true, '', 'absent'), /<form|<input|<button/);
+  assert.doesNotMatch(renderIndex(store, false, '', query), /Search events|Back to search/);
+});
+
 test('released history chooses the highest valid preceding release across private gaps without trusting pointers or mutating inputs', () => {
   const first = published(), third = published('v3', 3), current = published('v5', 5), privateSecond = published('v2', 2), privateFourth = published('v4', 4), unrelated = published('other', 4);
   privateSecond.status = 'requested'; privateFourth.status = 'queued'; unrelated.snapshot.eventId = 'another-event'; current.snapshot.supersedes = unrelated.id;

@@ -111,6 +111,14 @@ button:disabled:hover { background: var(--ink); color: var(--white); }
 .selected-event-heading .filters { flex-direction: row; align-items: end; gap: 12px; margin: 16px 0 0; }
 .selected-event-heading .filters button { flex-shrink: 0; padding: 12px; }
 .selected-event-heading select { min-height: 46px; }
+.event-search-title { padding: 24px 0 4px; }
+.event-search-title h1 { margin: 10px 0 14px; }
+.event-search { flex-direction: row; align-items: end; gap: 12px; margin-bottom: 18px; }
+.event-search input { width: 100%; min-height: 46px; background: var(--white); color: var(--ink); }
+.event-search button { flex-shrink: 0; min-height: 46px; }
+.search-summary { font-size: 14px; overflow-wrap: anywhere; }
+.event-search-empty h2 { font-size: 26px; }
+.event-link > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 @media(max-width:760px) {
   .selected-event-heading { padding: 12px 0 18px; }
   .selected-event-context .eyebrow { font-size: 10px; letter-spacing: .08em; }

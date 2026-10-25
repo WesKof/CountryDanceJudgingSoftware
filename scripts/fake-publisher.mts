@@ -53,5 +53,5 @@ createServer(async(req,res)=>{
   const match=/^\/results\/([^/]+)(?:\/(entrant|judge)\/([^/]+))?$/.exec(url.pathname);
   if(match){const r=store.records[match[1]];if(!r){res.writeHead(404).end('Published revision unavailable');return;}res.setHeader('Content-Type','text/html;charset=utf-8');res.end(page(renderResults(r,store,match[2]==='entrant'?match[3]:undefined,match[2]==='judge'?match[3]:undefined)));return;}
   if(url.pathname!=='/'&&url.pathname!=='/leaderboard'){res.writeHead(404).end('Not found');return;}
-  res.setHeader('Content-Type','text/html;charset=utf-8');res.end(renderIndex(store,url.pathname==='/leaderboard',url.searchParams.get('event') ?? ''));
+  res.setHeader('Content-Type','text/html;charset=utf-8');res.end(renderIndex(store,url.pathname==='/leaderboard',url.searchParams.get('event') ?? '',url.searchParams.get('q') ?? ''));
 }).listen(port,'127.0.0.1',()=>console.log(`Synthetic public receiver: http://127.0.0.1:${port}`));
