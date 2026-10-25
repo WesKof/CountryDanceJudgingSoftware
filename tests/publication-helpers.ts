@@ -4,10 +4,22 @@ import assert from 'node:assert/strict';
 import {api,command,nonce,save,submitHeat} from './stage-helpers.ts';
 import {stageFixture} from './stage-fixture.ts';
 import type {LiveSetup,LiveView,RoundView} from '../lib/live/types.ts';
+import {latestPublications,type PublicationRecord} from '../lib/live/publication.ts';
 export function localKey(name:string){return readFileSync('.dev.vars','utf8').split(/\r?\n/).find((line)=>line.startsWith(name+'='))!.slice(name.length+1).trim();}
 export const receiver=testEndpoint('receiver');
 export async function owner(input:Record<string,unknown>,expected=200,key=localKey('LOCAL_OWNER_KEY')){testEndpoint('app',true);testEndpoint('receiver',true);const response=await testFetch('app','/api/publication-owner',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(input)});const raw=await response.text();let data:Record<string,unknown>;try{data=JSON.parse(raw);}catch{assert.fail(`Non-JSON owner API ${input.action} response (${response.status}): ${raw.slice(0,250).replace(/[a-f0-9]{64}/g,'[private identifier]')}`);}assert.equal(response.status,expected,String(data.error ?? response.status));return data;}
 export async function fault(unavailable:boolean){testEndpoint('receiver',true);const response=await testFetch('receiver','/test/fault',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify({unavailable})});assert.equal(response.status,200);}
+export async function publicationBaseline(){
+ const data=await owner({action:'list'}),publications=data.publications as PublicationRecord[];
+ assert.equal(data.serviceState,'enabled','Use an owned enabled fixture service before publication workflow tests.');
+ assert.ok(!publications.some(record=>record.status==='queued'),'Use a fixture without prior queued deliveries; release/retry drains the shared outbox.');
+ const events=new Map<string,PublicationRecord[]>();
+ for(const record of publications){const records=events.get(record.snapshot.eventId)??[];records.push(record);events.set(record.snapshot.eventId,records);}
+ const pendingEventIds=[...events].filter(([,records])=>latestPublications(records).some(record=>['requested','queued'].includes(record.status))).map(([id])=>id);
+ const response=await testFetch('receiver','/api/public');assert.equal(response.status,200);
+ const publicData=await response.json() as {records:PublicationRecord[];current:Record<string,string>};
+ return{publications,publicData,pendingEventIds};
+}
 export function limitedStage(count=2,couples=4):LiveSetup{const setup=stageFixture(undefined,couples),ids=setup.competitions.slice(0,count).map((c)=>c.id);setup.competitions=setup.competitions.filter((c)=>ids.includes(c.id));setup.rounds=setup.rounds.filter((r)=>ids.includes(r.competitionId));setup.blocks=setup.blocks.map((b)=>({...b,roundIds:b.roundIds.filter((id)=>setup.rounds.some((r)=>r.id===id))}));for(const r of setup.rounds)r.heats=[{...r.heats[0],subjectIds:r.subjects.map((s)=>s.id),songs:r.heats[0].songs.slice(0,2)}];return setup;}
 export async function createStage(setup:LiveSetup){const c=await api<{path:string}>('',{action:'create',requestId:nonce(),name:setup.name,venue:'Synthetic local publication',date:''}),organizer=c.path.split('/').at(-1)!;await command(organizer,{action:'setup',setup});const view=await api<LiveView>(organizer),tokens=view.judgeLinks!.map((l)=>l.path.split('/').at(-1)!);return {organizer,tokens,head:tokens[2],path:c.path};}
 export async function exact(token:string,roundId:string,action:string,extra:Record<string,unknown>={},expected=200){testEndpoint('app',true);const v=await api<LiveView>(token),r=v.rounds.find((r)=>r.id===roundId)!;return command(token,{action,roundKey:r.key,roundVersion:r.version,fingerprint:r.standings!.fingerprint,...extra},expected);}
