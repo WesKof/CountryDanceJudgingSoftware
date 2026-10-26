@@ -33,7 +33,7 @@ Master Country Dancer `01a1568c-2c3b-7160-9978-d5ec5748d38f` is the owner-design
 
 Complete authorized work without minor/major approval stops. For substantial work communicate scope, benefit, tradeoffs, dependencies, staging, verification/rollback, then proceed within owner/system/tool boundaries. Incorporate owner steering; ask only for real dependencies. Improve purposefully; no invented limits, manufactured changes or prolonged finished work.
 
-MASTER MASTER CHATTER `01a16f4a-d0f4-71b1-a3bf-9d4832b2b717` owns global guidance coordination. Send global claims/findings there, project claims here; follow global edit/notice rules. Existing chats may need to reload guidance.
+MASTER MASTER CHATTER `01a16f4a-d0f4-71b1-a3bf-9d4832b2b717` owns global guidance coordination and, by owner order October 26, is the single destination for owner-facing questions/action prompts. Route real owner dependencies there with exact evidence/choices; it asks and relays the answer. Project implementation, claims, queue and consolidated progress remain with Master Country Dancer. Delivery is not an owner answer. Follow global edit/notice rules; existing chats may need to reload guidance.
 
 ## Checkout, owner data and runtime boundaries
 
@@ -43,7 +43,7 @@ Preserve ignored private/configuration/runtime/stores, browser storage/links, le
 
 Regressions use isolated fictional events/stores/roles on **3001/3110**. Test mutations and browser launch require explicit `LIVE_TEST_URL=http://127.0.0.1:3001` and `LOCAL_TEST_RECEIVER_URL=http://127.0.0.1:3110`; use shared `tests/test-endpoints.ts`, never owner-port fallbacks or unguarded test writes. URL validation does not prove process/store ownership: check manifests/configuration first. Retain stores; stop only proved task-owned processes. `public-site/render.ts`/`admin.ts` changes require owned receiver restart plus Worker rebuild/restart; Node does not reload imports. Maintenance cannot restart owner services. Vinext uses `--hostname`, not `--host`.
 
-Enhancement scope is **local only**. Git publication does not authorize hosted sync/deployment/provisioning, real publication, purchases or unrelated messaging. October 19 v4 is historical evidence; its separate hosted results publisher was unconfigured at that check. Local receiver success is not hosted readiness. Exclude keys/private links from source/logs/responses/bundles/backups; never expose the receiver/localhost keys publicly. Inspect permission discrepancies read-only; never remove denials or bypass a browser gate via another surface/API.
+Routine enhancement scope is **local only**. The owner's October 26 milestone instruction separately authorized the exact source45c9682 live judging upgrade, now Sites v5; see the [release record](PROJECT_SPEC.md#milestone-live-judging-release--october-26). This release does not authorize recurring automatic deployments, uploading local event/private data or exposing the local public/admin receiver. Git publication alone does not authorize hosted changes, real results publication, purchases or unrelated messaging. The separate production results publisher remains unconfigured. Exclude keys/private links from source/logs/responses/bundles/backups; never expose receiver/localhost keys publicly. Inspect permission discrepancies read-only; never remove denials or retry a blocked lifecycle operation through equivalent commands or another surface.
 
 ## Contracts every change must preserve
 
