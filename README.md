@@ -38,6 +38,15 @@ pnpm dev --hostname 127.0.0.1 --port 3000
 
 Use the preferred uncompressed checkout named in AGENTS.md. Preserve ignored local stores and environment files. Follow the specification for local D1 preparation and use isolated synthetic stores for testing.
 
+Check local preview availability without starting or stopping it:
+
+```sh
+pnpm local:status
+pnpm local:status --json
+```
+
+The fixed owner profile checks organizer3000 and results receiver3100. HTTP and current Windows command/listener evidence are reported separately; the existing PID-only runtime record cannot verify an exact saved process instance. CWD, data/store identity, browser state and restart survival are not established. Exit codes0/1/2 mean matching readiness evidence, not ready/mismatched, or incomplete process evidence;64 means invalid arguments/incomplete command. The command reads no environment file or private store and makes no service/data changes. See the [status contract and recovery limits](PROJECT_SPEC.md#read-only-local-preview-status--october-26). The fixed --profile test is reserved for fictional status fixtures on3001/3110.
+
 ```sh
 pnpm test
 pnpm lint
