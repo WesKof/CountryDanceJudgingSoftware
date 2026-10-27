@@ -5,34 +5,37 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { adminRoute } from '../public-site/admin.ts';
 import type { PublicationRecord } from '../lib/live/publication.ts';
 import type { PublicStore } from '../public-site/render.ts';
+import {adminAcknowledgement} from '../lib/live/admin-ack.ts';
 
 function publication(event = 'event-a', competition = 'competition-a', status: PublicationRecord['status'] = 'requested'): PublicationRecord {
   const id = event + '-' + competition;
   return { id, revision: 1, competitionId: competition, sourceFingerprint: 'fingerprint-' + id, status,
-    ...(status === 'released' ? { releasedAt: '2026-10-24T12:00:00Z' } : {}),
+    ...(['requested','queued','released'].includes(status)?{organizerApprovedAt:'2026-10-24T11:30:00Z'}:{}),...(['queued','released'].includes(status)?{ownerApprovedAt:'2026-10-24T11:45:00Z'}:{}),...(status === 'released' ? { releasedAt: '2026-10-24T12:00:00Z' } : {}),
     snapshot: { schemaVersion: 1, scoringVersion: 'equal-judge-stage-v1', id, revision: 1, supersedes: null,
       eventId: event, competitionId: competition, event: { name: 'Synthetic ' + event, venue: 'Local hall', date: '2026-10-24' },
       competition: { format: 'Strictly', division: 'Beginner' }, sourceFingerprint: 'fingerprint-' + id,
       preparedAt: '2026-10-24T11:00:00Z', headApproval: [], changeSummary: 'Synthetic adapter fixture', stages: [] } };
 }
 
-type Authority = { publications: PublicationRecord[]; serviceState: string; events: Record<string, { competitionIds: string[]; active: boolean }>; pending?: number };
+type Authority = { publications: PublicationRecord[]; serviceState: string; enabled:boolean; events: Record<string, { competitionIds: string[]; active: boolean }>; pending?: number };
 function authority(records: PublicationRecord[] = [], service = 'enabled'): Authority {
   const events: Authority['events'] = {};
   for (const record of records) {
     const scope = events[record.snapshot.eventId] ??= { competitionIds: [], active: true };
     scope.competitionIds.push(record.competitionId);
   }
-  return { publications: records, serviceState: service, events };
+  return { publications: records, serviceState: service, enabled:service==='enabled', events };
 }
 
 async function harness(state: Authority, run: (session: { get: (query?: string) => Promise<{ html: string; status: number }>; request: typeof request; cookie: string; csrf: () => string; calls: Record<string, unknown>[] }) => Promise<void>) {
   const original = globalThis.fetch, calls: Record<string, unknown>[] = [], store: PublicStore = { records: {}, current: {} };
   const origin = 'http://127.0.0.1:3110';
   globalThis.fetch = async (_input, init) => {
-    calls.push(JSON.parse(String(init?.body)));
+    const message=JSON.parse(String(init?.body)),operation={...message};delete operation.adminRequest;
+    calls.push(operation);
     if(new Headers(init?.headers).get('Authorization')!=='Bearer synthetic-adapter-only')return Response.json({error:'Synthetic sign-in rejected'},{status:403});
-    return Response.json(state);
+    const data=operation.action==='list'?{publications:state.publications,events:state.events,enabled:state.enabled,serviceState:state.serviceState}:operation.action==='service'?{ok:true,state:operation.state}:{ok:true,delivered:0,pending:state.pending??0};
+    return Response.json({...data,adminAcknowledgement:await adminAcknowledgement(message)});
   };
   async function request(path: string, method = 'GET', body = '', cookie = '', requestOrigin = origin) {
     const req = Readable.from(body ? [body] : []) as IncomingMessage;
@@ -166,10 +169,10 @@ test('admin session, CSRF, origin and exact action forwarding stay independent o
     assert.equal(calls.length, count);
     const publications = [{ publicationId: record.id, sourceFingerprint: record.sourceFingerprint }];
     const response = await request('/admin/action', 'POST', new URLSearchParams({ action: 'release-event', csrf: csrf(), event: 'event-a', publications: JSON.stringify(publications) }).toString(), cookie);
-    assert.equal(response.status, 303); assert.deepEqual(calls.at(-1), { action: 'release-event', publications });
+    assert.equal(response.status, 303); assert.deepEqual(calls.at(-2), { action: 'release-event', publications, eventId:'event-a' }); assert.deepEqual(calls.at(-1),{action:'list'});
     for (const [action, state] of [['retry', ''], ['service', 'suspended']]) {
       assert.equal((await request('/admin/action', 'POST', new URLSearchParams({ action, state, csrf: csrf() }).toString(), cookie)).status, 303);
-      assert.deepEqual(calls.at(-1), { action, state });
+      assert.deepEqual(calls.at(-1), action==='service'?{ action, state }:{action});
     }
   });
 });
@@ -214,4 +217,52 @@ test('failed admin sign-in retains event for retry without retaining or reflecti
     const cookie=blank.headers.get('set-cookie')!.split(';')[0],view=await request('/admin','GET','',cookie),csrf=/name="csrf" value="([^"]+)"/.exec(view.html)![1];
     has(view.html,'data-event-id="pending-a"');await request('/admin/action','POST',new URLSearchParams({action:'logout',csrf}).toString(),cookie);
   });
+});
+
+test('malformed successful list replies never create a session or render a false empty queue',async()=>{
+  await harness(authority(),async({get,request,cookie})=>{
+    await get();const valid=globalThis.fetch;
+    try{
+      for(const change of [()=>({}), (v:Record<string,unknown>)=>({...v,constructor:true}), (v:Record<string,unknown>)=>({...v,serviceState:['enabled']}), (v:Record<string,unknown>)=>({...v,adminAcknowledgement:{}})]){
+        globalThis.fetch=async(input,init)=>{const response=await valid(input,init);return Response.json(change(await response.json() as Record<string,unknown>));};
+        const login=await request('/admin/login','POST',new URLSearchParams({credential:'synthetic-adapter-only',event:'event-a'}).toString());assert.equal(login.status,403);assert.equal(login.headers.has('set-cookie'),false);has(login.html,'name="event" value="event-a"');
+        const page=await request('/admin?event=event-a','GET','',cookie);assert.equal(page.status,409);has(page.html,'Website status was not confirmed');lacks(page.html,'No results to review');lacks(page.html,'An action may already have been saved');has(page.html,'href="/admin?event=event-a"');
+      }
+    }finally{globalThis.fetch=valid;}
+  });
+});
+
+test('wrong action acknowledgement or failed post-release check preserves event and reports uncertainty',async()=>{
+  const p=publication(),state=authority([p]);
+  await harness(state,async({get,request,cookie,csrf})=>{
+    await get();const valid=globalThis.fetch;const body=(action:string)=>new URLSearchParams({action,event:'event-a',state:'suspended',publications:JSON.stringify([{publicationId:p.id,sourceFingerprint:p.sourceFingerprint}]),csrf:csrf()}).toString();
+    try{
+      for(const mode of ['empty','wrong-state','wrong-ack','post-list']){
+        let acted=false;globalThis.fetch=async(input,init)=>{const operation=JSON.parse(String(init?.body));const response=await valid(input,init);const data=await response.json() as Record<string,unknown>;if(operation.action!=='list'){acted=true;if(mode==='empty')return Response.json({});if(mode==='wrong-state')return Response.json({...data,state:'enabled'});if(mode==='wrong-ack')return Response.json({...data,adminAcknowledgement:{}});}else if(acted&&mode==='post-list')return Response.json({});return Response.json(data);};
+        const result=await request('/admin/action','POST',body(mode==='post-list'?'release-event':'service'),cookie);assert.equal(result.status,409);assert.equal(result.headers.has('location'),false);assert.equal(result.headers.has('set-cookie'),false);has(result.html,'href="/admin?event=event-a"');lacks(result.html,'Results were not published');has(result.html,'Check the current status');
+      }
+    }finally{globalThis.fetch=valid;}
+  });
+});
+
+test('fresh selected-event confirmation uses genuine different competition IDs and ignores global pending',async()=>{
+  const p=publication(),state=authority([p]);p.snapshot.competitionId='hashed-public-competition';
+  await harness(state,async({get,request,cookie,csrf})=>{
+    await get();const valid=globalThis.fetch;
+    try{globalThis.fetch=async(input,init)=>{const operation=JSON.parse(String(init?.body));if(operation.action==='release-event'){p.status='released';p.organizerApprovedAt='2026-10-27T12:00:00Z';p.ownerApprovedAt='2026-10-27T12:01:00Z';p.releasedAt='2026-10-27T12:02:00Z';state.pending=7;}return valid(input,init);};
+      const result=await request('/admin/action','POST',new URLSearchParams({action:'release-event',event:'event-a',csrf:csrf(),publications:JSON.stringify([{publicationId:p.id,sourceFingerprint:p.sourceFingerprint}])}).toString(),cookie);
+      assert.equal(result.status,303);const destination=new URL(result.headers.get('location')!,'http://127.0.0.1:3110');assert.equal(destination.searchParams.get('event'),'event-a');assert.match(destination.searchParams.get('notice')!,/Confirmed: this event/);
+    }finally{globalThis.fetch=valid;}
+  });
+});
+
+test('expired session still rejects actions before authority calls',async()=>{
+  await harness(authority(),async({get,request,cookie,csrf,calls})=>{await get();const now=Date.now,count=calls.length;try{const later=now()+8*60*60*1000+1;Date.now=()=>later;assert.equal((await request('/admin/action','POST',new URLSearchParams({action:'retry',csrf:csrf()}).toString(),cookie)).status,403);assert.equal(calls.length,count);}finally{Date.now=now;}});
+});
+
+test('current admin view does not call incomplete, under-review or archived history a completed publication',async()=>{
+  for(const mode of ['incomplete','review','archived']){
+    const p=publication('event-a','competition-a','released'),state=authority([p]);if(mode==='incomplete')state.events['event-a'].competitionIds.push('new-competition');if(mode==='review')p.underReview=true;if(mode==='archived')state.events['event-a'].active=false;
+    await harness(state,async({get})=>{const view=await get('?event=event-a&notice='+encodeURIComponent('Confirmed: this event’s results are published.'));assert.equal(view.status,200);lacks(view.html,'<h1>Results published</h1>');lacks(view.html,'Results for this event are published.');lacks(view.html,'Confirmed: this event’s results are published.');has(view.html,'The event changed since the last check.');});
+  }
 });

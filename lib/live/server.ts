@@ -1,4 +1,5 @@
 import { deliveryAcknowledgement, confirmsDelivery, readDeliveryReceipt, type DeliveryEnvelope } from './delivery-ack.ts';
+import { adminAcknowledgement } from './admin-ack.ts';
 import { resultAudit } from './result-audit.ts';
 import { cellKey, roundKey, type Cells, type EventSummary, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
 import { deriveStandings, missingCells, requiredCells, LIVE_MARKS } from './scoring.ts';
@@ -856,20 +857,23 @@ async function reconcileDelivery(db:D1Database,item:DeliveryRow,config:LocalPubl
 }
 export async function ownerPublication(db: D1Database, input: Record<string,unknown>, config: LocalPublisherConfig) {
   requireRule(config.receiverUrl.startsWith('http://127.0.0.1:') || config.receiverUrl.startsWith('http://localhost:'), 'The local fake publisher requires a loopback URL.');
+  let acknowledgement:Awaited<ReturnType<typeof adminAcknowledgement>>|undefined;
+  try{if(input.adminRequest!==undefined)acknowledgement=await adminAcknowledgement(input);}catch{throw new LiveError(400,'Invalid admin confirmation request.');}
+  const reply=(data:Record<string,unknown>)=>acknowledgement?{...data,adminAcknowledgement:acknowledgement}:data;
   await stmt(db,"INSERT OR IGNORE INTO live_publication_service (id,state,updated_at) VALUES ('owner','enabled',?)",now()).run();
   const service = await stmt(db,"SELECT state FROM live_publication_service WHERE id = 'owner'").first<{state:string}>();
   config = {...config,enabled:config.enabled && service?.state!=='suspended' && service?.state!=='shutdown'};
   if (input.action === 'service') {
     requireRule(['enabled','suspended','shutdown'].includes(String(input.state)), 'Choose a service state.');
     await stmt(db,"INSERT INTO live_publication_service (id,state,updated_at) VALUES ('owner',?,?) ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",String(input.state),now()).run();
-    return {ok:true,state:input.state};
+    return reply({ok:true,state:input.state});
   }
   if (input.action === 'list') {
     const publications=(await stmt(db,'SELECT data FROM live_publication_snapshots').all<{data:string}>()).results.map((r)=>parse<PublicationRecord>(r.data));
     const rows=(await stmt(db,'SELECT id,setup,status FROM live_events WHERE id IN (SELECT event_id FROM live_publication_snapshots)').all<{id:string;setup:string;status:string}>()).results;
     const events:Record<string,{competitionIds:string[];active:boolean}>={};
     for(const row of rows)events[await publicId(row.id,row.id)]={competitionIds:parse<LiveSetup>(row.setup).competitions.map((c)=>c.id),active:row.status==='active'};
-    return {publications,events,enabled:config.enabled,serviceState:service?.state??'enabled'};
+    return reply({publications,events,enabled:config.enabled,serviceState:service?.state??'enabled'});
   }
   if (input.action === 'release-event') {
     requireRule(config.enabled, 'Publication is paused. Judging remains available.');
@@ -881,6 +885,7 @@ export async function ownerPublication(db: D1Database, input: Record<string,unkn
     requireRule(link,'Organizer access unavailable.');
     const s=await load(db,link.code_hash);active(s);
     const records=exactPublicationSet(s,input.publications), currentView=await view(db,s);
+    if(acknowledgement)requireRule(input.eventId===records[0].snapshot.eventId,'The selected event changed. Review its current results.');
     requireRule(records.every((p)=>['requested','released'].includes(p.status) && p.organizerApprovedAt && !p.underReview),'The organizer must send the current results for every competition first.');
     const queued:PublicationRecord[]=[];
     const statements=[...guard(db,stmt(db,"UPDATE live_publication_service SET updated_at = updated_at WHERE id = 'owner' AND state = 'enabled'")),...eventGuard(db,s,link.code_hash,s.event.version)];
@@ -953,7 +958,7 @@ export async function ownerPublication(db: D1Database, input: Record<string,unkn
       await batch(db,statements); delivered++;
     } catch { /* Durable pending outbox; judging does not depend on receiver availability. */ }
   }
-  return {ok:true,delivered,pending:(await stmt(db,"SELECT COUNT(*) AS count FROM live_publication_outbox WHERE status = 'pending' OR (status = 'stale' AND kind IN ('release','release-set'))").first<{count:number}>())?.count ?? 0};
+  return reply({ok:true,delivered,pending:(await stmt(db,"SELECT COUNT(*) AS count FROM live_publication_outbox WHERE status = 'pending' OR (status = 'stale' AND kind IN ('release','release-set'))").first<{count:number}>())?.count ?? 0});
 }
 
 // Receiver-only current-source attestation discloses no drafts, notes or operational credentials.

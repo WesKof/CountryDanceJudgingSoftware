@@ -3,14 +3,16 @@ import type {IncomingMessage,ServerResponse} from 'node:http';
 import {randomBytes} from 'node:crypto';
 import {page,publicationDate,renderResults,type PublicStore} from './render.ts';
 import {latestPublications,type PublicationRecord} from '../lib/live/publication.ts';
+import {adminAcknowledgement,readAdminReply,releaseNotice,type AdminReply} from '../lib/live/admin-ack.ts';
 type EventScopes=Record<string,{competitionIds:string[];active:boolean}>;
 type Session={key:string;csrf:string;expires:number};
 const sessions=new Map<string,Session>();
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-async function authority(key:string,input:Record<string,unknown>){
-  const response=await fetch((process.env.LOCAL_OPERATIONAL_URL??'http://127.0.0.1:3000')+'/api/publication-owner',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(input),signal:AbortSignal.timeout(30000)});
-  const data=await response.json() as {error?:string;publications?:PublicationRecord[];serviceState?:string;pending?:number;events?:EventScopes};
-  if(!response.ok)throw new Error(data.error??'The judging app is unavailable. Try again.');return data;
+async function authority(key:string,input:Record<string,unknown>,onAttempt?:()=>void){
+  const message={...input,adminRequest:{version:1,id:randomBytes(32).toString('hex')}},expected=await adminAcknowledgement(message);
+  onAttempt?.();
+  const response=await fetch((process.env.LOCAL_OPERATIONAL_URL??'http://127.0.0.1:3000')+'/api/publication-owner',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(message),signal:AbortSignal.timeout(30000)});
+  return readAdminReply(response,message,expected);
 }
 function hidden(name:string,value:unknown){return `<input type="hidden" name="${name}" value="${escape(value)}">`;}
 function form(session:Session,action:string,body:string,extra=''){return `<form method="post" action="/admin/action">${hidden('csrf',session.csrf)}${hidden('action',action)}${extra}${body}</form>`;}
@@ -21,7 +23,9 @@ function renderAdmin(records:PublicationRecord[],session:Session,service:string,
   const pending=[...events.values()].map(latestPublications).filter((items)=>items.some((p)=>p.status==='requested'||p.status==='queued')).sort((a,b)=>b.reduce((at,p)=>p.snapshot.preparedAt>at?p.snapshot.preparedAt:at,'').localeCompare(a.reduce((at,p)=>p.snapshot.preparedAt>at?p.snapshot.preparedAt:at,'')));
   const selected=event||pending[0]?.[0].snapshot.eventId;
   const selectedRecords=latestPublications(records.filter((p)=>p.snapshot.eventId===selected));
-  const completed=selectedRecords.length&&selectedRecords.every((p)=>p.status==='released')?`<section class="card admin-complete"><p class="eyebrow">Published</p><h2>${escape(selectedRecords[0].snapshot.event.name)}</h2><p>Results for this event are published.</p><a class="button" href="/leaderboard?event=${escape(selected)}">View published results</a></section>`:'';
+  const selectedScope=scopes[selected],confirmed=selectedRecords.length>0&&selectedScope?.active&&selectedScope.competitionIds.length===selectedRecords.length&&selectedRecords.every((p)=>selectedScope.competitionIds.includes(p.competitionId)&&p.status==='released'&&!p.underReview&&p.organizerApprovedAt&&p.ownerApprovedAt&&p.releasedAt);
+  const completed=confirmed?`<section class="card admin-complete"><p class="eyebrow">Published</p><h2>${escape(selectedRecords[0].snapshot.event.name)}</h2><p>Results for this event are published.</p><a class="button" href="/leaderboard?event=${escape(selected)}">View published results</a></section>`:'';
+  if(!confirmed&&notice==='Confirmed: this event’s results are published.')notice='The event changed since the last check. Review its current publication status.';
   const selectedPending=pending.find((items)=>items[0].snapshot.eventId===selected);
   const pausedReview=service==='suspended'&&Boolean(selectedPending);
   const filter=pending.length&&(pending.length>1||!selectedPending)?`<form class="filters" action="/admin"><label>Event to review<select name="event" required>${completed?`<option value="${escape(selected)}" selected>${escape(selectedRecords[0].snapshot.event.name)} · Published</option>`:!selectedPending?'<option value="" disabled selected>Choose an event</option>':''}${pending.map((items)=>`<option value="${escape(items[0].snapshot.eventId)}"${selected===items[0].snapshot.eventId?' selected':''}>${escape(items[0].snapshot.event.name)}</option>`).join('')}</select></label><button>View event</button></form>`:'';
@@ -51,19 +55,22 @@ export async function adminRoute(req:IncomingMessage,res:ServerResponse,url:URL,
   for(const [id,session]of sessions)if(session.expires<Date.now())sessions.delete(id);
   const token=req.headers.cookie?.split(';').map((c)=>c.trim()).find((c)=>c.startsWith('cdj_admin='))?.slice(10),session=token?sessions.get(token):undefined;
   const send=(html:string,status=200)=>{res.writeHead(status).end(html);};
+  let recoveryEvent=url.searchParams.get('event')??'';
+  let mutationAttempted=false;
   try{
     if(req.method==='GET'&&url.pathname==='/admin'){
       if(!session){send(login('',url.searchParams.get('event')??''));return true;}
-      const data=await authority(session.key,{action:'list'});send(renderAdmin(data.publications??[],session,data.serviceState??'enabled',url.searchParams.get('notice')??'',store,url.searchParams.get('event')??'',data.events??{}));return true;
+      const data=await authority(session.key,{action:'list'});send(renderAdmin(data.publications!,session,data.serviceState!,url.searchParams.get('notice')??'',store,url.searchParams.get('event')??'',data.events!));return true;
     }
     if(req.method!=='POST'||!['/admin/login','/admin/action'].includes(url.pathname)){send('Not found',404);return true;}
     let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>20000)throw new Error('Request too large.');}
     if(req.headers.origin!==url.origin || req.headers['content-type']?.split(';')[0]!=='application/x-www-form-urlencoded'){send('Use this website’s admin controls.',403);return true;}
     const fields=new URLSearchParams(raw);
+    recoveryEvent=fields.get('event')??recoveryEvent;
     if(url.pathname==='/admin/login'){
       const key=fields.get('credential')??'',event=fields.get('event')??'';
       if(key.length>300){send(login('Check your admin credential.',event),403);return true;}
-      try{await authority(key,{action:'list'});}catch{send(login('Sign-in failed. Check your credential and that the judging app is running.',event),403);return true;}
+      try{await authority(key,{action:'list'});}catch{send(login('Sign-in was not confirmed. Check the access code and that both local services are updated and running.',event),403);return true;}
       if(sessions.size>=50){send(login('Too many active admin sessions. Try later.',event),429);return true;}
       const id=randomBytes(32).toString('hex');sessions.set(id,{key,csrf:randomBytes(32).toString('hex'),expires:Date.now()+8*60*60*1000});
       if(token)sessions.delete(token);
@@ -73,9 +80,14 @@ export async function adminRoute(req:IncomingMessage,res:ServerResponse,url:URL,
     const action=fields.get('action');
     if(action==='logout'){sessions.delete(token!);res.setHeader('Set-Cookie','cdj_admin=; HttpOnly; SameSite=Strict; Path=/admin; Max-Age=0');res.writeHead(303,{Location:'/admin'}).end();return true;}
     if(!['release-event','retry','service'].includes(action??'')){send('Unknown action.',400);return true;}
-    const data=await authority(session.key,{action,...(action==='release-event'?{publications:JSON.parse(fields.get('publications')??'null')}:{state:fields.get('state')})});
-    const notice=data.pending?'Approval saved. Sending is pending; use Retry sending.':action==='release-event'?'Approved and published. The results are now on this website.':action==='retry'?'Sending checked.':'Website setting saved.';
+    const event=fields.get('event')??'',publications=action==='release-event'?JSON.parse(fields.get('publications')??'null'):undefined;
+    const data=await authority(session.key,{action,...(action==='release-event'?{publications,eventId:event}:action==='service'?{state:fields.get('state')}:{})},()=>{mutationAttempted=true;});
+    let notice:string;
+    if(action==='release-event'){
+      const fresh:AdminReply=await authority(session.key,{action:'list'});
+      notice=releaseNotice(fresh,event,publications);
+    }else notice=action==='retry'?(data.pending!>0?'Sending is still pending. Open review to check the current status, then use Retry sending.':'Delivery check complete. Open the event to see its current publication status.'):'Website setting confirmed.';
     res.writeHead(303,{Location:'/admin?notice='+encodeURIComponent(notice)+'&event='+encodeURIComponent(fields.get('event')??'')}).end();
-  }catch(error){send(page(`<div class="page-title"><h1>Results were not published</h1><p role="alert">${escape(error instanceof Error?error.message:'Try again.')}</p><a href="/admin">Return to admin review</a></div>`,'Admin'),409);}
+  }catch{send(page(`<div class="page-title"><h1>Website status was not confirmed</h1><p role="alert">${mutationAttempted?'An action may already have been saved. Check the current status before trying again.':'The current website status could not be checked. Return to review and try the check again.'}</p><a href="/admin${recoveryEvent?'?event='+encodeURIComponent(recoveryEvent):''}">Return to admin review</a></div>`,'Admin'),409);}
   return true;
 }
