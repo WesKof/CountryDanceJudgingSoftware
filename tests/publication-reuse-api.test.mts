@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createStage,limitedStage,finish,owner,fault} from './publication-helpers.ts';
+import {api,command} from './stage-helpers.ts';
+import {testFetch} from './test-endpoints.ts';
+import {latestPublications,type PublicationRecord} from '../lib/live/publication.ts';
+import type {LiveView} from '../lib/live/types.ts';
+const manifest=(records:PublicationRecord[])=>records.map(p=>({publicationId:p.id,sourceFingerprint:p.sourceFingerprint}));
+const current=(view:LiveView)=>latestPublications(view.publications!)[0];
+const publicBytes=async()=>{const response=await testFetch('receiver','/api/public');assert.equal(response.status,200);return response.text();};
+async function prepared(){const setup=limitedStage(1,3),session=await createStage(setup);await finish(setup,session.organizer,session.tokens,session.head,false);await command(session.organizer,{action:'prepare-event-publication'});return session;}
+async function noOp(organizer:string,expected:PublicationRecord){
+ const before=await api<LiveView>(organizer),publicBefore=await publicBytes(),rounds=before.rounds.map(r=>({key:r.key,version:r.version,standings:r.standings,definition:r.definition}));
+ // Saving settings still advances the existing event CAS, including context-only choices.
+ await command(organizer,{action:'setup',setup:before.setup,automaticStages:true});
+ await command(organizer,{action:'prepare-event-publication'});
+ const after=await api<LiveView>(organizer);assert.equal(current(after).id,expected.id);assert.equal(current(after).status,expected.status);assert.deepEqual(current(after),expected);assert.equal(after.publications!.length,before.publications!.length);assert.deepEqual(after.rounds.map(r=>({key:r.key,version:r.version,standings:r.standings,definition:r.definition})),rounds);assert.equal(await publicBytes(),publicBefore);assert.equal(after.context.automaticStages,true);
+ await api(organizer,{action:'setup',setup:before.setup,expectedVersion:before.version,requestId:crypto.randomUUID()},409);
+}
+
+test('identical validated setup preserves exact prepared/requested/queued/released publications and approvals under existing guards',async()=>{
+ await owner({action:'service',state:'enabled'});await fault(false);const {organizer,head}=await prepared();let view=await api<LiveView>(organizer),record=current(view);
+ await command(head,{action:'setup',setup:view.setup},403);const changed=structuredClone(view.setup);changed.judges[0].name+=' changed';await command(organizer,{action:'setup',setup:changed},423);
+ await noOp(organizer,record);await command(organizer,{action:'approve-event-publication',publications:manifest([record])});view=await api<LiveView>(organizer);record=current(view);assert.equal(record.status,'requested');await noOp(organizer,record);
+ try{await fault(true);await owner({action:'release-event',publications:manifest([record])});record=current(await api<LiveView>(organizer));assert.equal(record.status,'queued');await noOp(organizer,record);}
+ finally{await fault(false);await owner({action:'retry'});}
+ record=current(await api<LiveView>(organizer));assert.equal(record.status,'released');assert.ok(record.organizerApprovedAt&&record.ownerApprovedAt&&record.releasedAt);assert.ok(!record.underReview);await noOp(organizer,record);await command(organizer,{action:'approve-event-publication',publications:manifest([record])},400);
+});
+
+for(const field of ['name','venue','date'] as const)test(`public ${field} edit then restore prepares a fresh revision without reviving historical approvals`,async()=>{
+ await fault(false);await owner({action:'service',state:'enabled'});const {organizer}=await prepared();let view=await api<LiveView>(organizer),record=current(view);await command(organizer,{action:'approve-event-publication',publications:manifest([record])});await owner({action:'release-event',publications:manifest([record])});view=await api<LiveView>(organizer);const original=current(view),setup=structuredClone(view.setup),oldSnapshot=JSON.stringify(original.snapshot),publicBefore=await publicBytes();
+ const changed=structuredClone(setup);changed[field]=field==='date'?'2026-10-28':changed[field]+' revised';await command(organizer,{action:'setup',setup:changed});await command(organizer,{action:'prepare-event-publication'});view=await api<LiveView>(organizer);record=current(view);assert.equal(record.status,'prepared');assert.equal(record.revision,original.revision+1);assert.equal(record.snapshot.supersedes,original.id);assert.equal(record.snapshot.event[field],changed[field]);assert.equal(record.organizerApprovedAt,undefined);assert.equal(record.ownerApprovedAt,undefined);assert.deepEqual(record.snapshot.headApproval,original.snapshot.headApproval);await command(organizer,{action:'approve-event-publication',publications:manifest([record])});const changedId=record.id;
+ await command(organizer,{action:'setup',setup});await command(organizer,{action:'prepare-event-publication'});view=await api<LiveView>(organizer);record=current(view);assert.equal(record.status,'prepared');assert.notEqual(record.id,original.id);assert.notEqual(record.id,changedId);assert.equal(record.revision,original.revision+1);assert.equal(record.snapshot.supersedes,original.id);assert.deepEqual(record.snapshot.event,original.snapshot.event);assert.equal(record.organizerApprovedAt,undefined);assert.equal(record.ownerApprovedAt,undefined);assert.equal(record.releasedAt,undefined);assert.ok(!record.underReview);assert.equal(view.publications!.find(p=>p.id===changedId)!.status,'stale');assert.equal(view.publications!.find(p=>p.id===original.id)!.underReview,true);assert.equal(JSON.stringify(view.publications!.find(p=>p.id===original.id)!.snapshot),oldSnapshot);assert.deepEqual(record.snapshot.headApproval,original.snapshot.headApproval);
+ await command(organizer,{action:'prepare-event-publication'});assert.equal(current(await api<LiveView>(organizer)).id,record.id);await owner({action:'release-event',publications:manifest([record])},400);await command(organizer,{action:'approve-event-publication',publications:manifest([original])},400);
+ const publicReview=JSON.parse(await publicBytes()),priorPublic=JSON.parse(publicBefore);assert.deepEqual(publicReview.current,priorPublic.current);assert.ok(!JSON.stringify(publicReview).includes(record.id));assert.ok(!JSON.stringify(publicReview).includes('PUBLICATION_PRIVATE_NOTE_SENTINEL'));
+ await command(organizer,{action:'approve-event-publication',publications:manifest([record])});assert.equal(current(await api<LiveView>(organizer)).status,'requested');await owner({action:'release-event',publications:manifest([record])});view=await api<LiveView>(organizer);assert.equal(current(view).status,'released');assert.equal(JSON.stringify(view.publications!.find(p=>p.id===original.id)!.snapshot),oldSnapshot);const afterPublic=JSON.parse(await publicBytes());assert.deepEqual(afterPublic.records.find((p:{snapshot:PublicationRecord['snapshot']})=>p.snapshot.id===original.id).snapshot,original.snapshot);assert.equal(afterPublic.current[record.snapshot.eventId+'/'+record.snapshot.competitionId],record.id);
+});
+
+test('setup no-op cannot bypass stale delivery receipt barrier and recovery still requires fresh organizer and admin approval',async()=>{
+ await owner({action:'service',state:'enabled'});await fault(false);const {organizer}=await prepared();let view=await api<LiveView>(organizer);const original=current(view);await command(organizer,{action:'approve-event-publication',publications:manifest([original])});
+ try{await fault(true);await owner({action:'release-event',publications:manifest([original])});view=await api<LiveView>(organizer);const changed=structuredClone(view.setup);changed.name+=' receipt revision';await command(organizer,{action:'setup',setup:changed});view=await api<LiveView>(organizer);assert.equal(current(view).status,'stale');await command(organizer,{action:'setup',setup:view.setup});await command(organizer,{action:'prepare-event-publication'},400);assert.equal(current(await api<LiveView>(organizer)).id,original.id);}
+ finally{await fault(false);await owner({action:'retry'});}
+ await command(organizer,{action:'prepare-event-publication'});view=await api<LiveView>(organizer);const fresh=current(view);assert.equal(fresh.status,'prepared');assert.notEqual(fresh.id,original.id);assert.equal(fresh.revision,1);assert.equal(fresh.snapshot.supersedes,null);assert.equal(fresh.organizerApprovedAt,undefined);assert.equal(fresh.ownerApprovedAt,undefined);await owner({action:'release-event',publications:manifest([fresh])},400);await command(organizer,{action:'approve-event-publication',publications:manifest([fresh])});await owner({action:'release-event',publications:manifest([fresh])});assert.equal(current(await api<LiveView>(organizer)).status,'released');
+});

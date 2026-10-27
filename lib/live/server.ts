@@ -640,7 +640,8 @@ export async function mutateLive(db: D1Database, code: string, unknownInput: unk
       }
       statements.push(stmt(db, 'UPDATE live_events SET setup = ? WHERE id = ?', json(setup), s.event.id));
       if (setup.workflow === 'stage-v1' && (input.automaticStages !== undefined || s.context.automaticStages === undefined)) statements.push(stmt(db, "UPDATE live_events SET context = json_set(context, '$.automaticStages', json(?)) WHERE id = ?", json(input.automaticStages !== false), s.event.id));
-      statements.push(...await invalidatePublication(db, s));
+      // Saving the same validated setup does not change the reviewed publication source.
+      if (json(setup) !== json(s.setup)) statements.push(...await invalidatePublication(db, s));
       if (setup.workflow === 'stage-v1') for (const oldFinals of s.setup.rounds.filter((r) => r.kind === 'finals')) {
         const nextFinals = setup.rounds.find((r) => r.id === oldFinals.id);
         const pre = s.rounds.find((r) => r.id === oldFinals.prelimRoundId);
@@ -797,7 +798,8 @@ async function publicationMutation(db: D1Database, s: Snapshot, input: Record<st
     requireRule(!unresolved,'Delivery status is unconfirmed. Ask the website admin to use Retry sending before preparing updated results.');
     const competitionId = id(input.competitionId), released = s.publications.filter((p) => p.competitionId === competitionId && p.status === 'released').sort((a,b)=>b.revision-a.revision)[0];
     const snapshot = await buildPublicSnapshot(await view(db,s),competitionId,(released?.revision ?? 0)+1,released?.id ?? null,now(),uid());
-    for(const existing of s.publications.filter((p)=>p.competitionId===competitionId && p.status!=='stale')) { const check=await buildPublicSnapshot(await view(db,s),competitionId,existing.revision,existing.snapshot.supersedes,existing.snapshot.preparedAt,existing.id); if(check.sourceFingerprint===existing.sourceFingerprint) return {statements,response:{publicationId:existing.id}}; }
+    // A reviewed historical release must not regain approvals when edited content returns.
+    for(const existing of s.publications.filter((p)=>p.competitionId===competitionId && p.status!=='stale' && !p.underReview)) { const check=await buildPublicSnapshot(await view(db,s),competitionId,existing.revision,existing.snapshot.supersedes,existing.snapshot.preparedAt,existing.id); if(check.sourceFingerprint===existing.sourceFingerprint) return {statements,response:{publicationId:existing.id}}; }
     const record: PublicationRecord = { id: snapshot.id, competitionId, revision: snapshot.revision, sourceFingerprint: snapshot.sourceFingerprint, snapshot, status: 'prepared' };
     statements.push(publicationWrite(db,s,record)); return { statements,response: { publicationId: record.id } };
   }
