@@ -4,8 +4,11 @@ packages:
 overrides:
   # Remove/reassess when Vinext no longer pins the affected parser.
   'vinext@1.0.0-beta.3>image-size': 2.0.3
-  # External Miniflare host transport only; remove/reassess when this parent supports fixed Undici.
-  'miniflare@4.20260515.0>undici': 7.30.1
+  # Bounded maintained-v4 cohort; remove/reassess when these parents declare it.
+  '@cloudflare/vite-plugin@1.37.1>miniflare': 4.20260730.0
+  'wrangler@4.92.0>miniflare': 4.20260730.0
+  'miniflare@4.20260730.0>sharp': 0.35.5
+  'miniflare@4.20260730.0>undici': 7.30.1
 
 allowBuilds:
   esbuild: true
