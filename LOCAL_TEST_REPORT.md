@@ -1,5 +1,13 @@
 # Local implementation verification and handoff — 2026-10-25
 
+## October 27 — Preferred delivery-check integration PASS
+
+Master independently reviews sealed source d13c0956ba72b18cf59726b9a11fe6ba8454a5c3 and delivery eb51ef29334fe43c92571213c302e0176829076f, exact remote before/source/delivery checkpoints, opt-in compatibility, selected-event notice consistency, active/paused/archive task priority and source-seal proof. Actual runtime TAP confirms all3 isolated API scenarios pass in3.279seconds; final22 admin groups plus1 public presentation group, types, lint0errors/3existingwarnings and build pass. Preferred checkout independently repeats5 pure protocol groups, all pass in189.347ms. No additional API/build/browser cohort is run.
+
+Guarded promotion checks all213 tracked preferred/mirror files byte-for-byte,327 document links/anchors, all5 protected private/store/runtime/build file hashes and the16-table owner logical digest585fccfa6dd4d8986f40cecc05680fe1df219d116f16cf9b8faa6a35c73b643b. Owner compiled build, configuration and scores/history stay unchanged. Logical digests and source checkpoints are not restorable database-backup evidence. Prior report body is retained byte-exact. Normal integration uses checkpoint/local-admin-delivery-checks-integration-2026-10-27; final remote ref checks, expected-tip merged-branch cleanup and released claims are recorded in ignored work/delivery-action-visibility-20261027. The retained maintenance checkout is clean and detached at its delivery.
+
+This is a local source integration, not owner-service activation or a hosted release. No3000/3100 health/lifecycle action, owner sample mutation, native/browser interaction, environment/permission/global/schedule change or denied-action retry occurs. Last authorized hosted judging release remains v5/source45c9682. Next61 is a separate read-only-first fictional reproduction of setup-save/publication preparation reuse; no speculative61 fix is included here.
+
 ## October 27 — Admin unresolved-delivery task visibility PASS
 
 Bounded60 source d13c0956ba72b18cf59726b9a11fe6ba8454a5c3 on codex/admin-delivery-checks implements opt-in read-only uncertain-release counts and an actionable selected-event admin header. Rollback base ee591f987ef52eb1f5c09157d5312d61deccf220 is preserved under checkpoint/before-admin-delivery-checks-2026-10-27; source under checkpoint/local-admin-delivery-checks-source-2026-10-27, delivery under checkpoint/local-admin-delivery-checks-2026-10-27. Preferred and Documents mirror are master-owned and remain at the213-file raw-byte-equal baseline pending review/promotion. No worker merge/serving claim is made.
