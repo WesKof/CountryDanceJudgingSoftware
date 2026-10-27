@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixture, harness, tie } from './organizer-review-render-harness.mjs';
+import { fixture, finalsFixture, harness, tie } from './organizer-review-render-harness.mjs';
 
 test('missing panel votes name the current duty and expose the required judge links', async () => {
   const data = fixture(), round = data.rounds[0]; round.standings.advancementTies = [tie(round)];
@@ -27,7 +27,7 @@ test('polling deduplicates actual pending voters and returns to head-only review
     h.render(); assert.equal(h.cards().length, 3); assert.equal(h.cards().filter(c => h.text(c).includes('Advancement vote needed')).length, 2);
     assert.match(h.text(h.cards().find(c => h.text(c).includes('Head Judge'))), /Waiting for panel votes/);
     const next = structuredClone(data); next.rounds.forEach(r => r.standings.advancementTies.forEach(t => { t.votes = tie(r, [first, second, head]).votes; t.deadlocked = true; }));
-    h.setView(next); h.render(); assert.equal(h.cards().length, 1); assert.match(h.text(h.hero()), /Head approval needed/); assert.match(h.text(h.cards()[0]), /Head approval needed/);
+    h.setView(next); h.render(); assert.equal(h.cards().length, 1); assert.match(h.text(h.hero()), /Head tie decision needed/); assert.match(h.text(h.cards()[0]), /Head tie decision needed/);
     assert.deepEqual(h.env.posts, []);
   } finally { h.restore(); }
 });
@@ -37,7 +37,7 @@ test('mixed competitions keep both panel voting and currently available head rev
   data.rounds[0].standings.advancementTies = [tie(data.rounds[0], [head])];
   const ready = data.rounds[1]; ready.standings.advancementTies = [tie(ready, ready.definition.judgeIds)]; ready.standings.advancementTies[0].deadlocked = true;
   const h = await harness(data);
-  try { h.render(); assert.match(h.text(h.hero()), /Panel votes and head review needed/); assert.match(h.text(h.hero()), /Head review can continue/); assert.equal(h.cards().length, 3); assert.match(h.text(h.cards().find(c => h.text(c).includes('Head Judge'))), /Head approval needed/); }
+  try { h.render(); assert.match(h.text(h.hero()), /Panel votes and head review needed/); assert.match(h.text(h.hero()), /Head tie decisions can be recorded now/); assert.equal(h.cards().length, 3); assert.match(h.text(h.cards().find(c => h.text(c).includes('Head Judge'))), /Head tie decision needed/); }
   finally { h.restore(); }
 });
 
@@ -99,4 +99,58 @@ test('head voting duty stays explicit when another competition is already ready 
   const h = await harness(data);
   try { h.render(); assert.match(h.text(h.hero()), /Panel votes and head review needed/); const card = h.cards().find(c => h.text(c).includes('Head Judge'))!; assert.match(h.text(card), /Advancement vote needed/); assert.ok(h.nodes(card).some(n => n.type === 'a' && n.props.href === data.judgeLinks.find(j => j.id === data.setup.headJudgeId)!.path)); }
   finally { h.restore(); }
+});
+
+test('complete-panel deadlock identifies a head decision and returns to approval after resolution', async () => {
+  const data = fixture(); data.rounds.forEach(r => { const t = tie(r, r.definition.judgeIds); t.deadlocked = true; r.standings.advancementTies = [t]; r.standings.ties = [{ key: t.key, group: t.group, subjectIds: t.subjectIds }]; });
+  const original = structuredClone(data), h = await harness(data);
+  try {
+    h.render(); assert.match(h.text(h.hero()), /Waiting for head decision/); assert.match(h.text(h.hero()), /Head tie decision needed/); assert.match(h.text(h.hero()), /Review each competition’s approval separately/);
+    assert.equal(h.cards().length, 1); assert.match(h.text(h.cards()[0]), /Head tie decision needed/); assert.match(h.cards()[0].props.className, /is-pending/);
+    const beforeLink = h.nodes(h.cards()[0]).find(n => n.type === 'a')!.props.href;
+    assert.deepEqual(data, original); const next = structuredClone(data); next.rounds.forEach(r => { r.standings.advancementTies[0].complete = true; });
+    h.setView(next); h.render(); assert.match(h.text(h.hero()), /Head approval needed/); assert.doesNotMatch(h.text(h.hero()), /Head tie decision needed/); assert.equal(h.nodes(h.cards()[0]).find(n => n.type === 'a')!.props.href, beforeLink); assert.deepEqual(h.env.posts, []);
+  } finally { h.restore(); }
+});
+
+test('a ready deadlock in one group remains actionable while another group in the same round awaits votes', async () => {
+  const data = fixture(), r = data.rounds[0], ready = tie(r, r.definition.judgeIds, 'ready-group'), pending = tie(r, [r.definition.judgeIds[0]], 'pending-group'); ready.deadlocked = true;
+  r.standings.advancementTies = [ready, pending]; data.rounds[1].standings.approved = true;
+  const h = await harness(data);
+  try { h.render(); assert.match(h.text(h.hero()), /Panel votes and head review needed/); assert.match(h.text(h.hero()), /Head tie decisions can be recorded now/); const head = h.cards().find(c => h.text(c).includes('Head Judge'))!; assert.match(h.text(head), /Advancement vote needed/); assert.ok(h.nodes(head).some(n => n.type === 'a')); assert.deepEqual(h.env.posts, []); }
+  finally { h.restore(); }
+});
+
+test('missing or non-panel votes and incomplete results do not invent a ready head decision', async () => {
+  for (const mode of ['missing', 'non-panel', 'extra-vote', 'incomplete']) {
+    const data = fixture(); data.rounds.forEach(r => { const voters = mode === 'non-panel' ? [...r.definition.judgeIds.slice(0, -1), 'outsider'] : mode === 'missing' ? r.definition.judgeIds.slice(0, -1) : mode === 'extra-vote' ? [...r.definition.judgeIds, 'outsider'] : r.definition.judgeIds; const t = tie(r, voters); t.deadlocked = true; r.standings.advancementTies = [t]; if (mode === 'incomplete') r.standings.complete = false; });
+    const h = await harness(data); try { h.render(); assert.doesNotMatch(h.text(h.hero()), /Head tie decision needed|Head tie decisions can be recorded now/); if (mode === 'missing' || mode === 'non-panel') assert.match(h.text(h.hero()), /Panel votes needed/); } finally { h.restore(); }
+  }
+});
+
+test('Finals placement ties use existing unresolved-place semantics without changing No zero scores', async () => {
+  const data = finalsFixture(), finals = data.rounds.filter(r => r.definition.kind === 'finals');
+  assert.ok(finals.every(r => r.standings.complete && r.standings.rows.some(row => !row.decided)));
+  assert.ok(finals.flatMap(r => r.standings.rows).every(row => row.average === 0));
+  const original = structuredClone(data), h = await harness(data);
+  try { h.render(); assert.match(h.text(h.hero()), /Head tie decision needed/); assert.match(h.text(h.cards()[0]), /Head tie decision needed/); assert.deepEqual(data, original);
+    const next = structuredClone(data); next.rounds.filter(r => r.definition.kind === 'finals').forEach(r => r.standings.rows.forEach(row => { row.decided = true; }));
+    h.setView(next); h.render(); assert.match(h.text(h.hero()), /Head approval needed/); assert.ok(next.rounds.filter(r => r.definition.kind === 'finals').flatMap(r => r.standings.rows).every(row => row.average === 0)); assert.deepEqual(h.env.posts, []);
+  } finally { h.restore(); }
+});
+
+test('approved, other-stage and scoring deadlocks do not replace current review guidance', async () => {
+  for (const mode of ['approved', 'other-stage', 'scoring']) {
+    const data = fixture(), r = data.rounds[0], t = tie(r, r.definition.judgeIds); t.deadlocked = true; r.standings.advancementTies = [t];
+    if (mode === 'approved') { r.standings.approved = true; r.phase = 'approved'; }
+    else if (mode === 'other-stage') data.setup.blocks[0].roundIds = data.setup.blocks[0].roundIds.filter(id => id !== r.id);
+    else data.rounds.forEach(r => { r.phase = 'dancing'; });
+    const h = await harness(data); try { h.render(); assert.doesNotMatch(h.text(h.hero()), /Head tie decision needed|Waiting for head decision/); } finally { h.restore(); }
+  }
+});
+
+test('revoked head decision card preserves the exact existing recovery control and accessible name', async () => {
+  const data = fixture(); data.rounds.forEach(r => { const t = tie(r, r.definition.judgeIds); t.deadlocked = true; r.standings.advancementTies = [t]; });
+  const head = data.judgeLinks.find(j => j.id === data.setup.headJudgeId)!; head.revoked = true;
+  const h = await harness(data); try { h.render(); const card = h.cards()[0]; assert.match(h.text(card), /Head tie decision needed/); assert.equal(h.nodes(card).filter(n => n.type === 'a').length, 0); const manage = h.nodes(card).find(n => n.type === 'button')!; assert.equal(manage.props['aria-label'], 'Manage link for ' + head.name); assert.equal(manage.props['aria-controls'], 'judge-link-controls-' + head.id); assert.deepEqual(h.env.posts, []); } finally { h.restore(); }
 });
