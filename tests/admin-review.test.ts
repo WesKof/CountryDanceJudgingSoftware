@@ -266,3 +266,13 @@ test('current admin view does not call incomplete, under-review or archived hist
     await harness(state,async({get})=>{const view=await get('?event=event-a&notice='+encodeURIComponent('Confirmed: this event’s results are published.'));assert.equal(view.status,200);lacks(view.html,'<h1>Results published</h1>');lacks(view.html,'Results for this event are published.');lacks(view.html,'Confirmed: this event’s results are published.');has(view.html,'The event changed since the last check.');});
   }
 });
+
+test('unknown and legacy query notices cannot inject publication success, while known notices remain contextual',async()=>{
+  await harness(authority([publication()]),async({get})=>{
+    for(const notice of ['Approved and published. The results are now on this website.','FORGED_STATUS_SENTINEL','Confirmed: this event\'s results are published.']){
+      const view=await get('?event=event-a&notice='+encodeURIComponent(notice));assert.equal(view.status,200);lacks(view.html,notice);lacks(view.html,'<h1>Results published</h1>');
+    }
+    const pending=await get('?event=event-a&notice='+encodeURIComponent('This event’s approval is confirmed. Sending is pending; use Retry sending.'));lacks(pending.html,'This event’s approval is confirmed.');has(pending.html,'The event changed since the last check.');
+    const valid=await get('?event=event-a&notice='+encodeURIComponent('Website setting confirmed.'));has(valid.html,'Website setting confirmed.');
+  });
+});

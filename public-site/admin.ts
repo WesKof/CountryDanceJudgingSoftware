@@ -7,6 +7,16 @@ import {adminAcknowledgement,readAdminReply,releaseNotice,type AdminReply} from 
 type EventScopes=Record<string,{competitionIds:string[];active:boolean}>;
 type Session={key:string;csrf:string;expires:number};
 const sessions=new Map<string,Session>();
+const notices=new Set([
+  'Publication is unconfirmed. Open review to check its current status.',
+  'The event changed or its publication is unconfirmed. Open review to check its current status.',
+  'Confirmed: this event’s results are published.',
+  'This event’s approval is confirmed. Sending is pending; use Retry sending.',
+  'Publication is not yet confirmed. Open review to check delivery before approving again.',
+  'Sending is still pending. Open review to check the current status, then use Retry sending.',
+  'Delivery check complete. Open the event to see its current publication status.',
+  'Website setting confirmed.',
+]);
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 async function authority(key:string,input:Record<string,unknown>,onAttempt?:()=>void){
   const message={...input,adminRequest:{version:1,id:randomBytes(32).toString('hex')}},expected=await adminAcknowledgement(message);
@@ -18,14 +28,16 @@ function hidden(name:string,value:unknown){return `<input type="hidden" name="${
 function form(session:Session,action:string,body:string,extra=''){return `<form method="post" action="/admin/action">${hidden('csrf',session.csrf)}${hidden('action',action)}${extra}${body}</form>`;}
 function login(notice='',event=''){return page(`<div class="page-title"><p class="eyebrow">Website admin</p><h1>Approve competition results</h1><p>Organizers send the results. You review and publish them here.</p></div><section class="card admin-login">${notice?`<p role="alert">${escape(notice)}</p>`:''}<form method="post" action="/admin/login">${event?hidden('event',event):''}<label>Admin access code<input type="password" name="credential" autocomplete="current-password" required></label><button>Sign in</button></form><details><summary>About this local preview</summary><p>Use the local admin code for this preview. Connecting the hosted website’s admin sign-in is a separate step.</p></details></section>`,'Admin');}
 function renderAdmin(records:PublicationRecord[],session:Session,service:string,notice:string,store:PublicStore,event:string,scopes:EventScopes){
+  if(!notices.has(notice))notice='';
   const events=new Map<string,PublicationRecord[]>();
   for(const item of records){const list=events.get(item.snapshot.eventId)??[];list.push(item);events.set(item.snapshot.eventId,list);}
   const pending=[...events.values()].map(latestPublications).filter((items)=>items.some((p)=>p.status==='requested'||p.status==='queued')).sort((a,b)=>b.reduce((at,p)=>p.snapshot.preparedAt>at?p.snapshot.preparedAt:at,'').localeCompare(a.reduce((at,p)=>p.snapshot.preparedAt>at?p.snapshot.preparedAt:at,'')));
   const selected=event||pending[0]?.[0].snapshot.eventId;
   const selectedRecords=latestPublications(records.filter((p)=>p.snapshot.eventId===selected));
-  const selectedScope=scopes[selected],confirmed=selectedRecords.length>0&&selectedScope?.active&&selectedScope.competitionIds.length===selectedRecords.length&&selectedRecords.every((p)=>selectedScope.competitionIds.includes(p.competitionId)&&p.status==='released'&&!p.underReview&&p.organizerApprovedAt&&p.ownerApprovedAt&&p.releasedAt);
+  const selectedScope=scopes[selected],approved=selectedRecords.length>0&&selectedScope?.active&&selectedScope.competitionIds.length===selectedRecords.length&&selectedRecords.every((p)=>selectedScope.competitionIds.includes(p.competitionId)&&['released','queued'].includes(p.status)&&!p.underReview&&p.organizerApprovedAt&&p.ownerApprovedAt),confirmed=approved&&selectedRecords.every((p)=>p.status==='released'&&p.releasedAt);
   const completed=confirmed?`<section class="card admin-complete"><p class="eyebrow">Published</p><h2>${escape(selectedRecords[0].snapshot.event.name)}</h2><p>Results for this event are published.</p><a class="button" href="/leaderboard?event=${escape(selected)}">View published results</a></section>`:'';
   if(!confirmed&&notice==='Confirmed: this event’s results are published.')notice='The event changed since the last check. Review its current publication status.';
+  if(notice==='This event’s approval is confirmed. Sending is pending; use Retry sending.')notice=confirmed?'Confirmed: this event’s results are published.':approved?notice:'The event changed since the last check. Review its current publication status.';
   const selectedPending=pending.find((items)=>items[0].snapshot.eventId===selected);
   const pausedReview=service==='suspended'&&Boolean(selectedPending);
   const filter=pending.length&&(pending.length>1||!selectedPending)?`<form class="filters" action="/admin"><label>Event to review<select name="event" required>${completed?`<option value="${escape(selected)}" selected>${escape(selectedRecords[0].snapshot.event.name)} · Published</option>`:!selectedPending?'<option value="" disabled selected>Choose an event</option>':''}${pending.map((items)=>`<option value="${escape(items[0].snapshot.eventId)}"${selected===items[0].snapshot.eventId?' selected':''}>${escape(items[0].snapshot.event.name)}</option>`).join('')}</select></label><button>View event</button></form>`:'';
