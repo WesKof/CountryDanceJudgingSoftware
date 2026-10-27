@@ -450,6 +450,8 @@ Preservation checks224 unchanged baseline tracked files,4026 prior78 artifact se
 
 Master owns review,guarded preferred/main/mirror integration,checkpoint/expected-tip cleanup and next direction. Source rollback restores presentation code,not data/dependencies or external effects. Owner walkthrough original/corrected records,services3000/3100,live site,private/browser/form state and denied restart/old cleanup remain untouched. No global/config/permission/model/schedule change or worker self-continuation follows this delivery.
 
+79 source c1473f9e5d6b9d60bfeea34a8fca53e19410f9bc; branch codex/action-first-usability-review; annotated checkpoints checkpoint/before-organizer-panel-vote-guidance-2026-10-27, checkpoint/local-organizer-panel-vote-guidance-source-2026-10-27, checkpoint/local-organizer-panel-vote-guidance-2026-10-27. Master review/main/mirror integration and expected-tip cleanup are pending this dated worker delivery. No runtime claim exists; five-file/source/Git claims release at clean detached handoff. No worker self-continuation or owner/live activation follows.
+
 ## Organizer judge-link cards — October 24
 
 At widths up to 600px, organizer Score judge cards use natural flex wrapping. Names keep the available card width, and their existing progress status moves below when both items cannot fit on one row. No name-length heuristic, truncation, ellipsis, hidden text or JavaScript behavior is introduced. Active names already wrapped safely; the improvement reduces excessive scrolling from a narrow name column. Full 160-character ordinary/head names remain readable. Revoked direct strong labels now receive overflow-wrap:anywhere at every width, repairing their separate overflow while remaining non-clickable.
