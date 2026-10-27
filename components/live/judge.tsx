@@ -160,7 +160,8 @@ export default function JudgeBallot({ token }: { token: string }) {
     const stopTracking = () => { active = false; if (frame !== undefined) cancelAnimationFrame(frame); document.removeEventListener('focusin', trackFocus); if (submissionFocusCleanup.current === stopTracking) submissionFocusCleanup.current = null; };
     submissionFocusCleanup.current = stopTracking;
     document.addEventListener('focusin', trackFocus);
-    const current = await refresh(); if (!current) { stopTracking(); return; }
+    const current = await refresh(); if (!active || !current) { stopTracking(); return; }
+    if (inFlight.current || Object.keys(queueRef.current).length) { stopTracking(); setNotice('Wait for every pending edit to be acknowledged before submitting.'); return; }
     if (current.context.stageSubmission) {
       if (acknowledgedSignature !== stageReviewSignature(current) || stageCoverage(current).some((h) => h.missing.length)) { stopTracking(); setAcknowledgedSignature(''); setNotice('Saved marks or assignments changed. Review and acknowledge the stage again.'); return; }
       setSubmitting(true);
