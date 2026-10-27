@@ -1,3 +1,4 @@
+import { deliveryAcknowledgement } from '../lib/live/delivery-ack.ts';
 // Local-only receiver: separate origin and persistent public store, no operational DB access.
 import {createServer} from 'node:http';
 import {adminRoute} from '../public-site/admin.ts';
@@ -10,6 +11,16 @@ if(!key)throw new Error('Use a local synthetic receiver credential.');
 const file=resolve(process.env.FAKE_PUBLISHER_STORE ?? 'work/public-receiver.json');mkdirSync(dirname(file),{recursive:true});
 type Store={receipts:Record<string,string>;records:Record<string,PublicationRecord>;current:Record<string,string>;notices?:Record<string,{eventId:string;competitionId:string;revision:number}>};
 let unavailable=false;
+let acknowledgementMode='normal';
+let deliveryHold:Promise<void>|undefined,releaseHold:(()=>void)|undefined,held=0;
+const heldResponses:{res:import('node:http').ServerResponse;ack:Awaited<ReturnType<typeof deliveryAcknowledgement>>}[]=[];
+function acknowledge(res:import('node:http').ServerResponse, acknowledgement:Awaited<ReturnType<typeof deliveryAcknowledgement>>){
+  if(acknowledgementMode==='drop'){res.destroy();return;}
+  if(acknowledgementMode==='late'){heldResponses.push({res,ack:acknowledgement});return;}
+  res.setHeader('Content-Type','application/json');
+  const value=acknowledgementMode==='missing'?{}:acknowledgementMode==='wrong'?{...acknowledgement,envelopeDigest:'0'.repeat(64)}:acknowledgement;
+  res.writeHead(200).end(JSON.stringify(value));
+}
 let deliveryQueue=Promise.resolve();
 let store:Store=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):{receipts:{},records:{},current:{}};
 function persist(next:Store){writeFileSync(file+'.tmp',JSON.stringify(next));renameSync(file+'.tmp',file);store=next;}
@@ -17,15 +28,21 @@ createServer(async(req,res)=>{
   res.setHeader('Content-Security-Policy',"default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Cache-Control','no-store');
   const url=new URL(req.url ?? '/',`http://127.0.0.1:${port}`);
   if(await adminRoute(req,res,url,store))return;
-  if(req.method==='POST'&&url.pathname==='/test/fault' && req.headers.authorization===`Bearer ${key}`) {let raw='';for await(const chunk of req)raw+=chunk;unavailable=JSON.parse(raw).unavailable===true;res.writeHead(200).end('{}');return;}
+  if(req.method==='POST'&&url.pathname==='/test/fault' && req.headers.authorization===`Bearer ${key}`) {let raw='';for await(const chunk of req)raw+=chunk;const fault=JSON.parse(raw);if(fault.inspect!==true){unavailable=fault.unavailable===true;acknowledgementMode=['missing','wrong','drop','late'].includes(fault.acknowledgement)?fault.acknowledgement:'normal';if(fault.hold===true){deliveryHold??=new Promise<void>((resolve)=>{releaseHold=resolve;});}else{releaseHold?.();deliveryHold=undefined;releaseHold=undefined;}if(fault.flush!==false){for(const pending of heldResponses.splice(0)){if(!pending.res.destroyed){pending.res.setHeader('Content-Type','application/json');pending.res.writeHead(200).end(JSON.stringify(pending.ack));}}}}res.setHeader('Content-Type','application/json');res.writeHead(200).end(JSON.stringify({held,heldResponses:heldResponses.length}));return;}
   if(req.method==='GET'&&url.pathname==='/community-logo.jpg'){res.setHeader('Content-Type','image/jpeg');res.end(readFileSync(resolve('public/kickinit-community-logo.jpg')));return;}
   if(req.method==='GET' && ['/styles.css','/assets/community-night.jpg','/assets/community-friends.jpg'].includes(url.pathname)){res.setHeader('Content-Type',url.pathname.endsWith('.css')?'text/css;charset=utf-8':'image/jpeg');res.end(readFileSync(resolve('public-site'+url.pathname)));return;}
   if(req.method==='POST'&&url.pathname==='/receive'){
     if(unavailable){res.writeHead(503).end('{}');return;}
     if(req.headers.authorization!==`Bearer ${key}`){res.writeHead(403).end();return;}
     const previous=deliveryQueue;let unlock!:()=>void;deliveryQueue=new Promise<void>((resolve)=>{unlock=resolve;});await previous;
-    try{let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1500000)throw new Error('Oversized');}const message=JSON.parse(raw),signature=JSON.stringify(message);
-      if(store.receipts[message.deliveryId]){if(store.receipts[message.deliveryId]!==signature)throw new Error('Retry differs');res.writeHead(200).end('{}');return;}
+    try{let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1500000)throw new Error('Oversized');}const message=JSON.parse(raw),signature=JSON.stringify(message),acknowledgement=await deliveryAcknowledgement(message);
+      if(deliveryHold){held++;try{await deliveryHold;}finally{held--;}}
+      if(req.headers['x-publication-receipt-only']==='1'){
+        const prior=store.receipts[message.deliveryId];
+        if(prior && prior!==signature)throw new Error('Retry differs');
+        acknowledge(res,{...acknowledgement,accepted:Boolean(prior)});return;
+      }
+      if(store.receipts[message.deliveryId]){if(store.receipts[message.deliveryId]!==signature)throw new Error('Retry differs');acknowledge(res,acknowledgement);return;}
       const next=structuredClone(store);
       if(message.kind==='release'||message.kind==='release-set'){
         const records:PublicationRecord[]=message.kind==='release-set'?message.payload:[message.payload];
@@ -42,7 +59,7 @@ createServer(async(req,res)=>{
       }else if(message.kind==='status'){
         const p=message.payload,r=next.records[p.id];if(r&&(r.revision!==p.revision||r.snapshot.eventId!==p.eventId||r.snapshot.competitionId!==p.competitionId))throw new Error('Unknown status source');next.notices ??= {};next.notices[p.id]={eventId:p.eventId,competitionId:p.competitionId,revision:p.revision};if(r)next.records[p.id]={...r,underReview:true,lastSynchronizedAt:new Date().toISOString()};
       }else throw new Error('Unknown delivery');
-      next.receipts[message.deliveryId]=signature;persist(next);res.writeHead(200).end('{}');
+      next.receipts[message.deliveryId]=signature;persist(next);acknowledge(res,acknowledgement);
     }catch{res.writeHead(409).end('{"error":"Invalid or stale local delivery"}');}finally{unlock();}return;
   }
   if(req.method!=='GET'){res.writeHead(405).end();return;}

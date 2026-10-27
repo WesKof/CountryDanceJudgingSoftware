@@ -1,3 +1,4 @@
+import { deliveryAcknowledgement, confirmsDelivery, readDeliveryReceipt, type DeliveryEnvelope } from './delivery-ack.ts';
 import { resultAudit } from './result-audit.ts';
 import { cellKey, roundKey, type Cells, type EventSummary, type FrozenRound, type HeatSubmission, type LiveBallot, type LiveContext, type LiveSetup, type LiveSubmission, type LiveView, type ReviewRequest, type RoundView, type StageVote, type TieDecision } from './types.ts';
 import { deriveStandings, missingCells, requiredCells, LIVE_MARKS } from './scoring.ts';
@@ -760,9 +761,9 @@ async function invalidatePublication(db: D1Database, s: Snapshot, competitionId?
   const statements: D1PreparedStatement[] = [];
   const bundled=(await stmt(db,"SELECT id,payload FROM live_publication_outbox WHERE event_id = ? AND kind = 'release-set' AND status = 'pending'",s.event.id).all<{id:string;payload:string}>()).results;
   const ids=new Set(s.publications.filter((p)=>!competitionId||p.competitionId===competitionId).map((p)=>p.id));
-  for(const item of bundled){const members=parse<PublicationRecord[]>(item.payload);for(const member of members)ids.add(member.id);statements.push(stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id));}
+  for(const item of bundled){const members=parse<PublicationRecord[]>(item.payload);for(const member of members)ids.add(member.id);statements.push(stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ? AND status = 'pending' AND payload = ?",item.id,item.payload));}
   for (const record of s.publications.filter((p) => ids.has(p.id))) {
-    statements.push(publicationWrite(db,s,{ ...record, status: record.status === 'released' ? 'released' : 'stale', underReview: record.status === 'released' ? true : record.underReview }));
+    statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json({ ...record, status: record.status === 'released' ? 'released' : 'stale', underReview: record.status === 'released' ? true : record.underReview }),record.id,json(record))));
     statements.push(stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE event_id = ? AND kind = 'release' AND json_extract(payload,'$.id') = ? AND status = 'pending'",s.event.id,record.id));
     if (record.status === 'released' || record.status === 'queued') statements.push(outboxWrite(db,s,'status',{ id: record.id, eventId: await publicId(s.event.id,s.event.id), competitionId: await publicId(s.event.id,record.competitionId), revision: record.revision, status: 'Under review' }));
   }
@@ -791,6 +792,8 @@ async function publicationMutation(db: D1Database, s: Snapshot, input: Record<st
     return {statements,response:{ok:true}};
   }
   if (input.action === 'prepare-publication') {
+    const unresolved=await stmt(db,"SELECT id FROM live_publication_outbox WHERE event_id = ? AND kind IN ('release','release-set') AND status = 'stale' LIMIT 1",s.event.id).first();
+    requireRule(!unresolved,'Delivery status is unconfirmed. Ask the website admin to use Retry sending before preparing updated results.');
     const competitionId = id(input.competitionId), released = s.publications.filter((p) => p.competitionId === competitionId && p.status === 'released').sort((a,b)=>b.revision-a.revision)[0];
     const snapshot = await buildPublicSnapshot(await view(db,s),competitionId,(released?.revision ?? 0)+1,released?.id ?? null,now(),uid());
     for(const existing of s.publications.filter((p)=>p.competitionId===competitionId && p.status!=='stale')) { const check=await buildPublicSnapshot(await view(db,s),competitionId,existing.revision,existing.snapshot.supersedes,existing.snapshot.preparedAt,existing.id); if(check.sourceFingerprint===existing.sourceFingerprint) return {statements,response:{publicationId:existing.id}}; }
@@ -820,6 +823,37 @@ async function currentPublication(currentView:LiveView, item:PublicationRecord) 
   if(current.sourceFingerprint!==item.sourceFingerprint) throw new LiveError(409,'Results changed. Renew the required approvals and review the new results.');
 }
 export type LocalPublisherConfig = { enabled: boolean; receiverUrl: string; receiverKey: string };
+type DeliveryRow = {id:string;event_id:string;kind:string;payload:string;status:string};
+async function reconcileDelivery(db:D1Database,item:DeliveryRow,config:LocalPublisherConfig) {
+  try {
+    const message={deliveryId:item.id,kind:item.kind,payload:parse(item.payload)} as DeliveryEnvelope;
+    const expected=await deliveryAcknowledgement(message);
+    const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json','X-Publication-Receipt-Only':'1'},body:json(message),signal:AbortSignal.timeout(5000)});
+    const present=await readDeliveryReceipt(response,expected);
+    if(present===null)return null;
+    const link=await stmt(db,"SELECT code_hash FROM live_links WHERE event_id = ? AND role = 'organizer' AND revoked = 0",item.event_id).first<{code_hash:string}>();
+    if(!link)return null;
+    const s=await load(db,link.code_hash);
+    const statements=[...eventGuard(db,s,link.code_hash,s.event.version),...guard(db,stmt(db,"UPDATE live_publication_outbox SET status = ? WHERE id = ? AND event_id = ? AND kind = ? AND status = 'stale' AND payload = ?",present?'delivered':'cancelled',item.id,item.event_id,item.kind,item.payload))];
+    if(present){
+      const members=item.kind==='release-set'?parse<PublicationRecord[]>(item.payload):[parse<PublicationRecord>(item.payload)];
+      const invalidDrafts=new Set<string>();
+      for(const member of members){
+        const original=s.publications.find((p)=>p.id===member.id);
+        requireRule(original&&original.revision===member.revision&&original.sourceFingerprint===member.sourceFingerprint,'Stored publication identity changed.');
+        const restored={...original,status:'released' as const,releasedAt:original.releasedAt??now(),underReview:true};
+        statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(restored),original.id,json(original))));
+        const notice=await stmt(db,"SELECT id FROM live_publication_outbox WHERE event_id = ? AND kind = 'status' AND status = 'pending' AND json_extract(payload,'$.id') = ?",s.event.id,original.id).first();
+        if(!notice)statements.push(outboxWrite(db,s,'status',{id:original.id,eventId:original.snapshot.eventId,competitionId:original.snapshot.competitionId,revision:original.revision,status:'Under review'}));
+        for(const draft of s.publications.filter((p)=>p.id!==original.id&&p.competitionId===original.competitionId&&p.revision<=original.revision&&p.status!=='released'))invalidDrafts.add(draft.id);
+      }
+      for(const draft of s.publications.filter((p)=>invalidDrafts.has(p.id)))statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json({...draft,status:'stale'}),draft.id,json(draft))));
+      const pending=(await stmt(db,"SELECT id,kind,payload FROM live_publication_outbox WHERE event_id = ? AND kind IN ('release','release-set') AND status = 'pending'",item.event_id).all<{id:string;kind:string;payload:string}>()).results;
+      for(const delivery of pending){const records=delivery.kind==='release-set'?parse<PublicationRecord[]>(delivery.payload):[parse<PublicationRecord>(delivery.payload)];if(records.some((p)=>invalidDrafts.has(p.id)))statements.push(...guard(db,stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ? AND status = 'pending' AND payload = ?",delivery.id,delivery.payload)));}
+    }
+    await batch(db,statements);return present;
+  }catch{return null; /* Unknown receipt/changed source remains blocked; never re-release stale content. */}
+}
 export async function ownerPublication(db: D1Database, input: Record<string,unknown>, config: LocalPublisherConfig) {
   requireRule(config.receiverUrl.startsWith('http://127.0.0.1:') || config.receiverUrl.startsWith('http://localhost:'), 'The local fake publisher requires a loopback URL.');
   await stmt(db,"INSERT OR IGNORE INTO live_publication_service (id,state,updated_at) VALUES ('owner','enabled',?)",now()).run();
@@ -872,24 +906,26 @@ export async function ownerPublication(db: D1Database, input: Record<string,unkn
     const next={...record,status:'queued' as const,ownerApprovedAt:now()};
     await batch(db,[...guard(db,stmt(db,"UPDATE live_publication_service SET updated_at = updated_at WHERE id = 'owner' AND state = 'enabled'")),...eventGuard(db,s,link.code_hash,s.event.version),...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(next),record.id,row.data)),outboxWrite(db,s,'release',next)]);
   } else requireRule(input.action === 'retry','Unknown owner publication action.');
-  const pending=(await stmt(db,"SELECT * FROM live_publication_outbox WHERE status = 'pending' ORDER BY rowid").all<{id:string;event_id:string;kind:string;payload:string}>()).results;
+  const pending=(await stmt(db,"SELECT * FROM live_publication_outbox WHERE status = 'pending' OR (status = 'stale' AND kind IN ('release','release-set')) ORDER BY rowid").all<DeliveryRow>()).results;
   let delivered=0;
   for(const item of pending) {
+    if(item.status==='stale'){if(await reconcileDelivery(db,item,config))delivered++;continue;}
     if(['release','release-set'].includes(item.kind) && !config.enabled) continue;
     const payload=parse<PublicationRecord>(item.payload);
     if(item.kind==='release-set') {
       const members=parse<PublicationRecord[]>(item.payload);
       let valid=members.length>0;
       for(const member of members){const current=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',member.id).first<{data:string}>();if(!current || parse<PublicationRecord>(current.data).status!=='queued')valid=false;}
-      if(!valid){await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id).run();continue;}
+      if(!valid){await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ? AND status = 'pending' AND payload = ?",item.id,item.payload).run();continue;}
       try{
-        const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json({deliveryId:item.id,kind:item.kind,payload:members}),signal:AbortSignal.timeout(15000)});
-        if(!response.ok)continue;
-        const synchronizedAt=now(),statements=[stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ?",item.id)];
+        const message={deliveryId:item.id,kind:item.kind,payload:members} as DeliveryEnvelope, expected=await deliveryAcknowledgement(message);
+        const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json(message),signal:AbortSignal.timeout(15000)});
+        if(!await confirmsDelivery(response,expected))continue;
+        const synchronizedAt=now(),statements=[...guard(db,stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ? AND status = 'pending' AND payload = ?",item.id,item.payload))];
         for(const member of members){
           const fresh=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',member.id).first<{data:string}>();
           if(!fresh)continue;
-          const record=parse<PublicationRecord>(fresh.data),released={...record,status:'released' as const,releasedAt:record.releasedAt??synchronizedAt,underReview:record.status==='stale',lastSynchronizedAt:synchronizedAt};
+          const record=parse<PublicationRecord>(fresh.data),released={...record,status:'released' as const,releasedAt:record.releasedAt??synchronizedAt,underReview:record.underReview===true||record.status==='stale',lastSynchronizedAt:synchronizedAt};
           statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(released),record.id,fresh.data)));
           if(record.status==='stale')statements.push(stmt(db,'INSERT INTO live_publication_outbox (id,event_id,kind,payload,created_at) VALUES (?,?,?,?,?)',uid(),item.event_id,'status',json({id:record.id,eventId:record.snapshot.eventId,competitionId:record.snapshot.competitionId,revision:record.revision,status:'Under review'}),synchronizedAt));
         }
@@ -899,24 +935,25 @@ export async function ownerPublication(db: D1Database, input: Record<string,unkn
     }
     if(item.kind==='release') {
       const current=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',payload.id).first<{data:string}>();
-      if(!current || parse<PublicationRecord>(current.data).status!=='queued') { await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ?",item.id).run(); continue; }
+      if(!current || parse<PublicationRecord>(current.data).status!=='queued') { await stmt(db,"UPDATE live_publication_outbox SET status = 'stale' WHERE id = ? AND status = 'pending' AND payload = ?",item.id,item.payload).run(); continue; }
     }
     try {
-      const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json({deliveryId:item.id,kind:item.kind,payload}),signal:AbortSignal.timeout(5000)});
-      if(!response.ok) continue;
+      const message={deliveryId:item.id,kind:item.kind,payload} as DeliveryEnvelope, expected=await deliveryAcknowledgement(message);
+      const response=await fetch(config.receiverUrl+'/receive',{method:'POST',headers:{Authorization:`Bearer ${config.receiverKey}`,'Content-Type':'application/json'},body:json(message),signal:AbortSignal.timeout(5000)});
+      if(!await confirmsDelivery(response,expected))continue;
       // The receiver may succeed just before a source correction. Preserve its release and queue Under review.
       const fresh=await stmt(db,'SELECT data FROM live_publication_snapshots WHERE id = ?',payload.id).first<{data:string}>();
-      const statements=[stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ?",item.id)];
+      const statements=[...guard(db,stmt(db,"UPDATE live_publication_outbox SET status = 'delivered' WHERE id = ? AND status = 'pending' AND payload = ?",item.id,item.payload))];
       if(fresh) {
         const record=parse<PublicationRecord>(fresh.data), synchronizedAt=now();
-        const released=item.kind==='release' ? {...record,status:'released' as const,releasedAt:record.releasedAt ?? synchronizedAt,underReview:record.status==='stale',lastSynchronizedAt:synchronizedAt} : {...record,lastSynchronizedAt:synchronizedAt};
+        const released=item.kind==='release' ? {...record,status:'released' as const,releasedAt:record.releasedAt ?? synchronizedAt,underReview:record.underReview===true||record.status==='stale',lastSynchronizedAt:synchronizedAt} : {...record,lastSynchronizedAt:synchronizedAt};
         statements.push(...guard(db,stmt(db,'UPDATE live_publication_snapshots SET data = ? WHERE id = ? AND data = ?',json(released),record.id,fresh.data)));
         if(item.kind==='release' && record.status==='stale') statements.push(stmt(db,'INSERT INTO live_publication_outbox (id,event_id,kind,payload,created_at) VALUES (?,?,?,?,?)',uid(),item.event_id,'status',json({id:record.id,eventId:record.snapshot.eventId,competitionId:record.snapshot.competitionId,revision:record.revision,status:'Under review'}),synchronizedAt));
       }
       await batch(db,statements); delivered++;
     } catch { /* Durable pending outbox; judging does not depend on receiver availability. */ }
   }
-  return {ok:true,delivered,pending:(await stmt(db,"SELECT COUNT(*) AS count FROM live_publication_outbox WHERE status = 'pending'").first<{count:number}>())?.count ?? 0};
+  return {ok:true,delivered,pending:(await stmt(db,"SELECT COUNT(*) AS count FROM live_publication_outbox WHERE status = 'pending' OR (status = 'stale' AND kind IN ('release','release-set'))").first<{count:number}>())?.count ?? 0};
 }
 
 // Receiver-only current-source attestation discloses no drafts, notes or operational credentials.

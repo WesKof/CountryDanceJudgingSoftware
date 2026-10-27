@@ -1,11 +1,13 @@
 import { testFetch } from './test-endpoints.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {writeFileSync,mkdirSync,readFileSync} from 'node:fs';
+import {writeFileSync,mkdirSync,readFileSync,existsSync} from 'node:fs';
 import {api,command,save,submitHeat} from './stage-helpers.ts';
 import {createStage,limitedStage,finish,exact,owner,fault,receiver,localKey} from './publication-helpers.ts';
 import {snapshotFingerprint} from '../lib/live/publication.ts';
 import type {LiveView} from '../lib/live/types.ts';
+const restartFixture=process.env.PUBLICATION_RESTART_FIXTURE_FILE ?? 'work/publication-restart-fixture.json';
+assert.ok(!existsSync(restartFixture),'Preserve existing restart fixture. Set PUBLICATION_RESTART_FIXTURE_FILE to a fresh task-owned path before this cohort.');
 
 test('local publication protocol: independent approvals, immutable revision, under-review, suspension, failure retry and privacy', {timeout:180000},async(t)=>{
  await fault(false);await owner({action:'service',state:'enabled'});
@@ -52,7 +54,7 @@ test('local publication protocol: independent approvals, immutable revision, und
    const forged={deliveryId:crypto.randomUUID(),kind:'release',payload:{...revision,status:'queued',organizerApprovedAt:'now',ownerApprovedAt:'now'}};const duplicate=await testFetch('receiver','/receive',{method:'POST',headers:{Authorization:'Bearer '+localKey('LOCAL_RECEIVER_KEY'),'Content-Type':'application/json'},body:JSON.stringify(forged)});assert.equal(duplicate.status,409);
    await owner({action:'service',state:'shutdown'});assert.equal((await api<LiveView>(organizer)).status,'active');assert.ok((await api(organizer,{action:'backup',requestId:crypto.randomUUID()})).history);await owner({action:'service',state:'enabled'});
  });
- mkdirSync('work',{recursive:true});writeFileSync('work/publication-restart-fixture.json',JSON.stringify({organizer,tokens,path,eventId:view.eventId,publicationIds:view.publications!.filter((p)=>p.status==='released').map((p)=>p.id)}));
+ mkdirSync('work',{recursive:true});writeFileSync(restartFixture,JSON.stringify({organizer,tokens,path,eventId:view.eventId,publicationIds:view.publications!.filter((p)=>p.status==='released').map((p)=>p.id)}),{flag:'wx'});
 });
 
 test('entrant withdrawal: organizer-only exact version, cancellation, ack race, all-withdrawn heat and immutable history',async()=>{
