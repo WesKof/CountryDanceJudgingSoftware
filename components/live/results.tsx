@@ -1,10 +1,29 @@
 'use client';
 
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { finalistCountIssues } from '@/lib/live/validation';
 import type { LiveView, RoundView, LiveStandings } from '@/lib/live/types';
 
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
+function ExactApproval({ eventId, round, blocked, advancing, action }: { eventId: string; round: RoundView; blocked: boolean; advancing: boolean; action: Action }) {
+  const [attempt, setAttempt] = useState<{ target: string; pending: boolean } | null>(null);
+  const pending = useRef(false);
+  const target = JSON.stringify([eventId, round.key, round.version, round.standings!.fingerprint]);
+  const waiting = attempt?.pending === true, changed = Boolean(attempt && attempt.target !== target);
+  async function approve() {
+    if (pending.current || blocked) return;
+    const input = { action: 'approve', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint };
+    pending.current = true; setAttempt({ target, pending: true });
+    try { await action(input); }
+    catch { /* The current authoritative results, not a callback outcome, confirm approval. */ }
+    finally { pending.current = false; setAttempt({ target, pending: false }); }
+  }
+  return <>
+    <p className="review-step-label">{waiting ? changed ? 'Checking previous approval' : 'Approving these submissions…' : blocked ? 'Before approving' : attempt ? changed ? 'Review updated results' : 'Review approval status' : 'Ready for your review'}</p>
+    <button className="primary-button" disabled={blocked || waiting} aria-busy={waiting} onClick={() => void approve()}>{waiting ? changed ? 'Checking previous approval…' : 'Approving…' : 'Approve these exact submissions'}</button>
+    {(waiting || !blocked) && <p role="status">{waiting ? changed ? 'The results changed while the previous approval was pending. Wait for the current status, then review these submissions.' : 'Approval is in progress for these exact submitted scores.' : attempt ? changed ? 'Results changed. Review the current submissions before approving.' : 'Approval is not confirmed in these results yet. Check the current status before trying again.' : <>Check the places below. Approval confirms this competition’s submitted scores{advancing ? ' and advancing entrants' : ''}.</>}</p>}
+  </>;
+}
 export function TieEditor({ round, tie, action, allowShared = true, focusId }: { round: RoundView; tie: LiveStandings['ties'][number]; action: Action; allowShared?: boolean; focusId?: string }) {
   const saved = round.standings!.decisions.find((d) => d.key === tie.key);
   const [order, setOrder] = useState(saved?.order ?? tie.subjectIds);
@@ -29,9 +48,7 @@ export function LiveResults({ data, action, head = false, roundControls, selecte
     const blocked = countIssues.length > 0 || pendingCorrections.length > 0 || unresolvedVotes || unresolvedPlaces;
     return <section className="result-sheet" id={`round-result-${round.id}`} aria-labelledby={`round-result-context-${round.id} round-result-title-${round.id}`} tabIndex={-1} key={round.key}><div className="result-letterhead"><span id={`round-result-context-${round.id}`}>{round.definition.format} · {round.definition.division} · {round.definition.kind}</span><h2 id={`round-result-title-${round.id}`}>{result.approved ? 'Head-approved results' : 'Provisional results'}</h2><p>{result.submitted} / {result.required} {data.setup.workflow ? 'heat submissions acknowledged' : 'judges submitted'}{result.approvedAt ? ` · approved ${new Date(result.approvedAt).toLocaleString()}` : ''}</p></div>
       {canReview && <div className="review-next-step">
-        <p className="review-step-label">{blocked ? 'Before approving' : 'Ready for your review'}</p>
-        <button className="primary-button" disabled={Boolean(blocked)} onClick={() => void action({ action: 'approve', roundKey: round.key, roundVersion: round.version, fingerprint: result.fingerprint })}>Approve these exact submissions</button>
-        {!blocked && <p>Check the places below. Approval confirms this competition’s submitted scores{data.setup.workflow && round.definition.kind === 'prelims' ? ' and advancing entrants' : ''}.</p>}
+        <ExactApproval eventId={data.eventId} round={round} blocked={Boolean(blocked)} advancing={Boolean(data.setup.workflow && round.definition.kind === 'prelims')} action={action} />
         {countIssues.map((issue) => <p role="status" key={issue}>{issue} Ask the organizer to fix the finalist count in Set up.</p>)}
         {pendingCorrections.length > 0 && <><p role="status">Resolve the pending recording-error correction{pendingCorrections.length === 1 ? '' : 's'} before approving these results. The organizer and head must both approve each exact request, or the organizer can cancel it.</p><button className="quiet-button" onClick={() => { const request = document.getElementById(`review-request-${pendingCorrections[0].id}`); for (let parent = request?.parentElement; parent; parent = parent.parentElement) if(parent instanceof HTMLDetailsElement) parent.open = true; request?.scrollIntoView({ block: 'center' }); request?.focus({ preventScroll: true }); }}>Review pending corrections</button></>}
         {unresolvedVotes && (!headTies.length || awaitingPanelVotes) && <p role="status">Every assigned judge must vote below. A remaining vote tie needs the head judge’s decision before approval.</p>}
