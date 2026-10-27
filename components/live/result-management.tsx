@@ -23,12 +23,14 @@ export function NewCorrection({ data, round, action, draft }: { data: LiveView; 
 
 export function Correction({ data, round, action, revise, draft }: { data: LiveView; round: RoundView; action: Action; revise?: ReviewRequest; draft?: NewCorrectionDraft }) {
   const [localNotice, setLocalNotice] = useState('');
-  const notice = draft?.notice ?? localNotice, setNotice = draft?.setNotice ?? setLocalNotice;
+  const [revisionAttempt, setRevisionAttempt] = useState<{ target: string; pending: boolean } | null>(null);
+  const revisionOwner = useRef<{ target: string; owner: symbol } | null>(null);
+  const revision = Boolean(revise && !draft);
   const [localReason, setLocalReason] = useState(revise?.reason ?? '');
   const sourceHelpId = useId(), feedbackId = useId();
   const mounted = useRef(true);
-  const pending = draft?.pending ?? false;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  function canEditRevision() { return !revision || mounted.current && latestRevision.current.target === revisionTarget && latestRevision.current.eligible && revisionOwner.current?.target !== revisionTarget; }
   const subs = data.heatSubmissions?.filter((s) => s.roundKey === round.key && (data.role === 'organizer' || s.judgeId === data.judgeId)) ?? [];
   const [localSource, setLocalSource] = useState(revise?.payload.submissionId ?? subs[0]?.id ?? '');
   const source = draft?.fields?.source ?? localSource;
@@ -39,12 +41,29 @@ export function Correction({ data, round, action, revise, draft }: { data: LiveV
   const [localIntended, setLocalIntended] = useState(revise?.payload.changes?.[1]?.subjectId ?? '');
   const values: CorrectionFields = draft?.fields ?? { source, songId: localSong, subjectId: localSubject, mark: localMark, intended: localIntended, reason: localReason };
   const { songId, subjectId, mark, intended, reason } = values;
-  const setSong = (songId: string) => draft ? draft.change(round, values, { songId }) : setLocalSong(songId);
-  const setSubject = (subjectId: string) => draft ? draft.change(round, values, { subjectId }) : setLocalSubject(subjectId);
-  const setMark = (mark: CorrectionFields['mark']) => draft ? draft.change(round, values, { mark }) : setLocalMark(mark);
-  const setIntended = (intended: string) => draft ? draft.change(round, values, { intended }) : setLocalIntended(intended);
-  const setReason = (reason: string) => draft ? draft.change(round, values, { reason }) : setLocalReason(reason);
+  const participant = data.role === 'organizer' ? data.setup.organizerParticipantId : data.setup.judges.find((judge) => judge.id === data.judgeId)?.participantId;
+  const revisionContextKey = JSON.stringify([data.eventId, data.role, data.judgeId, participant, round.key, revise?.id, revise?.version, source, sub?.id, sub?.version]);
+  const [revisionContext, setRevisionContext] = useState({ key: revisionContextKey, generation: 0 });
+  const revisionGeneration = revisionContext.generation + Number(revisionContext.key !== revisionContextKey);
+  // A returned target starts a new lifetime; old handlers cannot become current again.
+  if (revision && revisionContext.key !== revisionContextKey) setRevisionContext({ key: revisionContextKey, generation: revisionGeneration });
+  const revisionTarget = JSON.stringify([revisionContextKey, revisionGeneration]);
+  const currentRequest = data.reviewRequests?.find((request) => request.id === revise?.id);
+  const revisionEligible = revision && data.role === 'organizer' && data.status === 'active' && currentRequest?.version === revise?.version && !currentRequest?.appliedAt && !currentRequest?.cancelledAt;
+  const latestRevision = useRef({ target: revisionTarget, eligible: revisionEligible });
+  useEffect(() => { latestRevision.current = { target: revisionTarget, eligible: revisionEligible }; }, [revisionTarget, revisionEligible]);
+  const attempt = revisionAttempt?.target === revisionTarget ? revisionAttempt : null;
+  const revisionPending = Boolean(revisionEligible && attempt?.pending);
+  const revisionNotice = revisionPending ? 'Submitting this revised correction. Its fields are held until the request finishes.' : attempt ? 'Revision is not confirmed in the current request yet. Check its status before trying again. Your edits are retained.' : '';
+  const notice = draft?.notice ?? (revision ? revisionNotice || localNotice : localNotice), setNotice = draft?.setNotice ?? setLocalNotice;
+  const pending = draft?.pending ?? revisionPending;
+  const setSong = (songId: string) => { if (canEditRevision()) { if (draft) draft.change(round, values, { songId }); else setLocalSong(songId); } };
+  const setSubject = (subjectId: string) => { if (canEditRevision()) { if (draft) draft.change(round, values, { subjectId }); else setLocalSubject(subjectId); } };
+  const setMark = (mark: CorrectionFields['mark']) => { if (canEditRevision()) { if (draft) draft.change(round, values, { mark }); else setLocalMark(mark); } };
+  const setIntended = (intended: string) => { if (canEditRevision()) { if (draft) draft.change(round, values, { intended }); else setLocalIntended(intended); } };
+  const setReason = (reason: string) => { if (canEditRevision()) { if (draft) draft.change(round, values, { reason }); else setLocalReason(reason); } };
   function setSource(source: string) {
+    if (!canEditRevision()) return;
     const next = round.definition.heats.find((h) => h.id === subs.find((s) => s.id === source)?.heatId);
     const patch = { source, songId: next?.songs[0]?.id ?? '', subjectId: next?.subjectIds[0] ?? '', intended: '' };
     if (draft) draft.change(round, values, patch);
@@ -55,18 +74,32 @@ export function Correction({ data, round, action, revise, draft }: { data: LiveV
   const label = (id: string) => { const s = round.definition.subjects.find((s) => s.id === id); return `#${s?.number} ${s?.primary} ${s?.secondary ?? ''}`; };
   async function request(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!sub || !heat) return;
+    if (revision && !canEditRevision()) return;
     const f = new FormData(e.currentTarget);
     if (draft && (pending || data.status !== 'active' || !data.rounds.some((item) => item.key === round.key && item.standings))) return;
     if (intended === subjectId) { setNotice('Wrong and intended bibs must be distinct.'); return; }
     const changes = [{ performanceId: songId, subjectId, after: mark }, ...(intended ? [{ performanceId: songId, subjectId: intended, after: recorded }] : [])];
     const input = { action: 'request-correction', roundKey: round.key, heatId: sub.heatId, judgeId: sub.judgeId, submissionId: sub.id, changes, reason: String(f.get('reason')), ...(revise ? { reviewRequestId: revise.id } : {}) };
     if (draft) await draft.request(round, values, input, action);
+    else if (revision) {
+      const owner = Symbol();
+      revisionOwner.current = { target: revisionTarget, owner };
+      setLocalNotice(''); setRevisionAttempt({ target: revisionTarget, pending: true });
+      try { await action(input); }
+      catch { /* Only the current request establishes a saved revision. */ }
+      finally {
+        if (revisionOwner.current?.owner === owner) {
+          revisionOwner.current = null;
+          if (mounted.current && latestRevision.current.target === revisionTarget && latestRevision.current.eligible) setRevisionAttempt({ target: revisionTarget, pending: false });
+        }
+      }
+    }
     else if (await action(input) && mounted.current) setNotice('Correction requested. Neither approval alone changes a score.');
   }
-  return <details data-correction-editor={draft ? '' : undefined}><summary>{revise ? 'Revise this pending correction' : 'Request a score correction'}</summary><p>{draft ? 'Recording errors only. Organizer and head approval required.' : 'For a genuine recording error in submitted marks. Both organizer and head must approve this exact request. This does not unlock the ballot.'}</p>{notice && !draft && <p role="status">{notice}</p>}<form className="form-body" onSubmit={(e) => void request(e)}><label><span>Submitted heat / judge</span><select aria-label="Submitted heat / judge" value={sub ? source : ''} disabled={!subs.length} aria-invalid={!sub || undefined} aria-describedby={!sub ? sourceHelpId : undefined} onChange={(e) => setSource(e.target.value)}>{!sub && <option value="" disabled>{subs.length ? 'Choose a current submitted heat' : 'No submitted heats available'}</option>}{subs.map((s) => <option key={s.id} value={s.id}>{round.definition.heats.find((h) => h.id === s.heatId)?.name} · {round.definition.judges.find((j) => j.id === s.judgeId)?.name} · version {s.version}</option>)}</select></label>{heat ? <><label><span>Correction song</span><select name="song" aria-label="Correction song" value={songId} onChange={(e) => setSong(e.target.value)}>{heat.songs.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></label><label><span>Wrong or affected bib</span><select name="bib" aria-label="Wrong or affected bib" value={subjectId} onChange={(e) => setSubject(e.target.value)}>{round.definition.subjects.filter((s) => heat.subjectIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{label(s.id)}</option>)}</select></label><label><span>Corrected mark for affected bib</span><select name="mark" aria-label="Corrected mark for affected bib" value={mark} onChange={(e) => setMark(e.target.value as typeof mark)}><option value="">Blank</option>{['Yes', 'A1', 'A2', 'No'].map((m) => <option key={m}>{m}</option>)}</select></label>
-    <details data-correction-transfer={draft ? '' : undefined} open={Boolean(revise?.payload.changes?.[1]) || Boolean(draft && intended)}><summary>Mark entered against the wrong bib</summary><p>Identify the intended entry. The recorded mark transfers to that entry; the affected entry gets the corrected mark selected above.</p><label><span>Intended bib for mistaken-bib transfer (optional)</span><select name="intended" aria-label="Intended bib for mistaken-bib transfer (optional)" value={intended} onChange={(e) => setIntended(e.target.value)}><option value="">No transfer</option>{round.definition.subjects.filter((s) => heat.subjectIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{label(s.id)}</option>)}</select></label></details>
+  return <details data-correction-editor={draft ? '' : undefined}><summary>{revise ? 'Revise this pending correction' : 'Request a score correction'}</summary><p>{draft ? 'Recording errors only. Organizer and head approval required.' : 'For a genuine recording error in submitted marks. Both organizer and head must approve this exact request. This does not unlock the ballot.'}</p>{notice && !draft && <p id={revision ? feedbackId : undefined} role="status">{notice}</p>}<form className="form-body" onSubmit={(e) => void request(e)}><label><span>Submitted heat / judge</span><select aria-label="Submitted heat / judge" value={sub ? source : ''} disabled={!subs.length || revision && (pending || !revisionEligible)} aria-invalid={!sub || undefined} aria-describedby={!sub ? sourceHelpId : undefined} onChange={(e) => setSource(e.target.value)}>{!sub && <option value="" disabled>{subs.length ? 'Choose a current submitted heat' : 'No submitted heats available'}</option>}{subs.map((s) => <option key={s.id} value={s.id}>{round.definition.heats.find((h) => h.id === s.heatId)?.name} · {round.definition.judges.find((j) => j.id === s.judgeId)?.name} · version {s.version}</option>)}</select></label>{heat ? <><label><span>Correction song</span><select disabled={revision ? pending || !revisionEligible : undefined} name="song" aria-label="Correction song" value={songId} onChange={(e) => setSong(e.target.value)}>{heat.songs.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></label><label><span>Wrong or affected bib</span><select disabled={revision ? pending || !revisionEligible : undefined} name="bib" aria-label="Wrong or affected bib" value={subjectId} onChange={(e) => setSubject(e.target.value)}>{round.definition.subjects.filter((s) => heat.subjectIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{label(s.id)}</option>)}</select></label><label><span>Corrected mark for affected bib</span><select disabled={revision ? pending || !revisionEligible : undefined} name="mark" aria-label="Corrected mark for affected bib" value={mark} onChange={(e) => setMark(e.target.value as typeof mark)}><option value="">Blank</option>{['Yes', 'A1', 'A2', 'No'].map((m) => <option key={m}>{m}</option>)}</select></label>
+    <details data-correction-transfer={draft ? '' : undefined} open={Boolean(revise?.payload.changes?.[1]) || Boolean(draft && intended)}><summary>Mark entered against the wrong bib</summary><p>Identify the intended entry. The recorded mark transfers to that entry; the affected entry gets the corrected mark selected above.</p><label><span>Intended bib for mistaken-bib transfer (optional)</span><select disabled={revision ? pending || !revisionEligible : undefined} name="intended" aria-label="Intended bib for mistaken-bib transfer (optional)" value={intended} onChange={(e) => setIntended(e.target.value)}><option value="">No transfer</option>{round.definition.subjects.filter((s) => heat.subjectIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{label(s.id)}</option>)}</select></label></details>
     <div className="correction-preview" aria-label="Correction preview"><strong>Requested change</strong><p>{label(subjectId)}: {recorded || 'Blank'} → {mark || 'Blank'}</p>{intended && <p>{label(intended)}: {targetMark || 'Blank'} → {recorded || 'Blank'}</p>}<p>Scores remain unchanged until both approvals apply this request.</p></div>
-    <label><span>Correction reason</span><input name="reason" required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></label>{draft && notice && <p id={feedbackId} role="status">{notice}</p>}<button className="quiet-button" aria-describedby={draft && notice ? feedbackId : undefined} disabled={Boolean(draft && pending)}>{draft && pending ? 'Requesting correction…' : revise ? 'Submit revised correction' : 'Request correction'}</button></> : <p id={sourceHelpId} role="status">{source ? 'The selected submitted heat was replaced. Choose a current version above and review the correction again. Your draft reason is retained.' : subs.length ? 'Choose a current submitted heat above to review a correction.' : 'No submitted heat is available for a correction yet.'}</p>}{draft && !heat && reason && <p><strong>Draft reason:</strong> {reason}</p>}</form>{draft && <details data-correction-help><summary>Correction rules &amp; draft recovery</summary><p>For a genuine recording error in submitted marks. Both organizer and head must approve this exact request. This does not unlock the ballot.</p><p>This draft stays with this round across Score, Results and Publish. Reloading or leaving this event ends the draft. Discarding it returns the editor to the selected round.</p></details>}</details>;
+    <label><span>Correction reason</span><input disabled={revision ? pending || !revisionEligible : undefined} name="reason" required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></label>{draft && notice && <p id={feedbackId} role="status">{notice}</p>}<button className="quiet-button" aria-busy={revision ? pending : undefined} aria-describedby={(draft || revision) && notice ? feedbackId : undefined} disabled={Boolean((draft || revision) && pending || revision && !revisionEligible)}>{revision && pending ? 'Submitting revised correction…' : draft && pending ? 'Requesting correction…' : revise ? 'Submit revised correction' : 'Request correction'}</button></> : <p id={sourceHelpId} role="status">{source ? 'The selected submitted heat was replaced. Choose a current version above and review the correction again. Your draft reason is retained.' : subs.length ? 'Choose a current submitted heat above to review a correction.' : 'No submitted heat is available for a correction yet.'}</p>}{draft && !heat && reason && <p><strong>Draft reason:</strong> {reason}</p>}</form>{draft && <details data-correction-help><summary>Correction rules &amp; draft recovery</summary><p>For a genuine recording error in submitted marks. Both organizer and head must approve this exact request. This does not unlock the ballot.</p><p>This draft stays with this round across Score, Results and Publish. Reloading or leaving this event ends the draft. Discarding it returns the editor to the selected round.</p></details>}</details>;
 }
 
 function RequestApproval({ data, request, target, action }: { data: LiveView; request: ReviewRequest; target: string; action: Action }) {
