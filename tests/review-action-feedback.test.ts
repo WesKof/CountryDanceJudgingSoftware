@@ -130,14 +130,14 @@ test('head decision respects full-panel deadlock, role and shared-place controls
   const legacy = await harness('legacyDecision'); legacy.render(); assert.equal(checks(legacy).length, 1);
 });
 
-test('independent tie controls own pending state and do not block the neighboring approval action', async () => {
+test('independent tie controls own pending state while same-round approval remains blocked', async () => {
   const first = deferred<boolean>(), second = deferred<boolean>(); let count = 0;
   const h = await harness('legacyDecision', () => ++count === 1 ? first.promise : second.promise); const r = h.data.rounds[0];
   r.standings.ties.push({ ...r.standings.ties[0], key: 'second-tie' }); h.render();
   h.buttons(/^Save head/)[0].props.onClick(); h.render(); assert.equal(h.button(/^Save head/)!.props.disabled, false);
   h.button(/^Save head/)!.props.onClick(); h.render(); assert.equal(h.buttons(/^Saving decision/).length, 2);
   first.resolve(false); await flush(); h.render(); assert.equal(h.buttons(/^Saving decision/).length, 1);
-  assert.equal(h.button(/^Approve these exact/)!.props.disabled, true); // Existing unresolved-place blocker, not waiting state.
+  assert.equal(h.button(/^Approve these exact/)!.props.disabled, true); // Existing unresolved places and unconfirmed same-round intent both block approval.
   second.resolve(true); await flush(); h.render(); assert.equal(h.calls.length, 2); assert.notEqual(h.calls[0].tieKey, h.calls[1].tieKey);
 });
 
