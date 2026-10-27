@@ -145,6 +145,7 @@ async function view(db: D1Database, s: Snapshot): Promise<LiveView> {
   if (isOrganizer) {
     if (s.setup.workflow === 'stage-v1') payload.resultAudit = resultAudit({ ...s, rounds });
     payload.publications = s.publications;
+    payload.publicationDeliveryUnconfirmed = Boolean(await stmt(db,"SELECT id FROM live_publication_outbox WHERE event_id = ? AND kind IN ('release','release-set') AND status = 'stale' LIMIT 1",s.event.id).first());
     const links = await stmt(db, 'SELECT judge_id, code, slug, revoked FROM live_links WHERE event_id = ? AND role = ? ORDER BY rowid', s.event.id, 'judge').all<{ judge_id: string; code: string; slug: string; revoked: number }>();
     payload.judgeLinks = s.setup.judges.map((j) => { const l = links.results.filter((l) => l.judge_id === j.id).at(-1); return { id: j.id, name: j.name, path: l ? `/judge/${l.slug}/${l.code}` : '', revoked: !l || Boolean(l.revoked) }; });
     if (s.event.restored_history) payload.restoredHistory = parse(s.event.restored_history);

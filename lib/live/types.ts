@@ -41,6 +41,7 @@ export type LiveView = {
   judgeLinks?: { id: string; name: string; path: string; revoked: boolean }[];
   restoredHistory?: unknown; resultAudit?: ResultAuditEntry[];
   heatSubmissions?: Omit<HeatSubmission, 'cells'>[]; reviewRequests?: ReviewRequest[]; publications?: import('./publication.ts').PublicationRecord[];
+  publicationDeliveryUnconfirmed?: boolean;
 };
 export const cellKey = (performanceId: string, subjectId: string) => `${performanceId}:${subjectId}`;
 export const roundKey = (id: string, generation: number) => `${id}:${generation}`;
