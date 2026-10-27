@@ -17,24 +17,24 @@ function publication(event = 'event-a', competition = 'competition-a', status: P
       preparedAt: '2026-10-24T11:00:00Z', headApproval: [], changeSummary: 'Synthetic adapter fixture', stages: [] } };
 }
 
-type Authority = { publications: PublicationRecord[]; serviceState: string; enabled:boolean; events: Record<string, { competitionIds: string[]; active: boolean }>; pending?: number };
+type Authority = { publications: PublicationRecord[]; serviceState: string; enabled:boolean; events: Record<string, { competitionIds: string[]; active: boolean }>; unconfirmedDeliveries:Record<string,number>; pending?: number };
 function authority(records: PublicationRecord[] = [], service = 'enabled'): Authority {
   const events: Authority['events'] = {};
   for (const record of records) {
     const scope = events[record.snapshot.eventId] ??= { competitionIds: [], active: true };
     scope.competitionIds.push(record.competitionId);
   }
-  return { publications: records, serviceState: service, enabled:service==='enabled', events };
+  return { publications: records, serviceState: service, enabled:service==='enabled', events,unconfirmedDeliveries:{} };
 }
 
 async function harness(state: Authority, run: (session: { get: (query?: string) => Promise<{ html: string; status: number }>; request: typeof request; cookie: string; csrf: () => string; calls: Record<string, unknown>[] }) => Promise<void>) {
   const original = globalThis.fetch, calls: Record<string, unknown>[] = [], store: PublicStore = { records: {}, current: {} };
   const origin = 'http://127.0.0.1:3110';
   globalThis.fetch = async (_input, init) => {
-    const message=JSON.parse(String(init?.body)),operation={...message};delete operation.adminRequest;
+    const message=JSON.parse(String(init?.body)),operation={...message};delete operation.adminRequest;delete operation.includeDeliveryChecks;
     calls.push(operation);
     if(new Headers(init?.headers).get('Authorization')!=='Bearer synthetic-adapter-only')return Response.json({error:'Synthetic sign-in rejected'},{status:403});
-    const data=operation.action==='list'?{publications:state.publications,events:state.events,enabled:state.enabled,serviceState:state.serviceState}:operation.action==='service'?{ok:true,state:operation.state}:{ok:true,delivered:0,pending:state.pending??0};
+    const data=operation.action==='list'?{publications:state.publications,events:state.events,enabled:state.enabled,serviceState:state.serviceState,...(message.includeDeliveryChecks===true?{unconfirmedDeliveries:state.unconfirmedDeliveries}:{})}:operation.action==='service'?{ok:true,state:operation.state}:{ok:true,delivered:0,pending:state.pending??0};
     return Response.json({...data,adminAcknowledgement:await adminAcknowledgement(message)});
   };
   async function request(path: string, method = 'GET', body = '', cookie = '', requestOrigin = origin) {
@@ -274,5 +274,35 @@ test('unknown and legacy query notices cannot inject publication success, while 
     }
     const pending=await get('?event=event-a&notice='+encodeURIComponent('This event’s approval is confirmed. Sending is pending; use Retry sending.'));lacks(pending.html,'This event’s approval is confirmed.');has(pending.html,'The event changed since the last check.');
     const valid=await get('?event=event-a&notice='+encodeURIComponent('Website setting confirmed.'));has(valid.html,'Website setting confirmed.');
+  });
+});
+
+test('unconfirmed active and paused events put exactly one receipt check above history without competing approval',async()=>{
+  const event='p-'+'a'.repeat(24);
+  for(const service of ['enabled','suspended']){
+    const p=publication(event,'operational-a','stale'),state=authority([p],service);state.unconfirmedDeliveries[event]=1;
+    await harness(state,async({get,request,cookie,csrf,calls})=>{
+      const view=await get();assert.equal(heading(view.html),'Check previous delivery');has(view.html,p.snapshot.event.name);assert.equal(view.html.split('<button>Check previous delivery</button>').length-1,1);assert.ok(view.html.indexOf('<button>Check previous delivery</button>')<view.html.indexOf('Publication history &amp; website tools'));
+      lacks(view.html,'Approve &amp; publish results');lacks(view.html,'<h1>No results');lacks(view.html,'class="card admin-supporting" open');lacks(view.html,'<button>Resume website publication</button>');
+      const result=await request('/admin/action','POST',new URLSearchParams({action:'retry',event,csrf:csrf()}).toString(),cookie);assert.equal(result.status,303);assert.deepEqual(calls.at(-1),{action:'retry'});assert.equal(new URL(result.headers.get('location')!,'http://127.0.0.1:3110').searchParams.get('event'),event);
+      state.unconfirmedDeliveries={};const resolved=await get('?event='+event+'&notice='+encodeURIComponent('Last delivery check left items pending. Review the current status below.'));assert.equal(heading(resolved.html),'Waiting for updated results');has(resolved.html,'Waiting for the organizer to send updated results.');lacks(resolved.html,'<button>Check previous delivery</button>');lacks(resolved.html,'Sending is still pending.');
+    });
+  }
+});
+
+test('archived unresolved events show organizer dependency while active tasks retain default priority and explicit selection',async()=>{
+  const archived='p-'+'a'.repeat(24),active='p-'+'b'.repeat(24),completed='p-'+'c'.repeat(24),state=authority([publication(archived,'archived-competition','stale'),publication(active,'active-competition'),publication(completed,'completed-competition','released')]);state.events[archived].active=false;state.unconfirmedDeliveries[archived]=1;
+  await harness(state,async({get})=>{
+    const normal=await get();assert.equal(heading(normal.html),'Results ready for review');has(normal.html,'data-event-id="'+active+'"');
+    const past=await get('?event='+archived);assert.equal(heading(past.html),'Organizer action needed');has(past.html,'Ask the organizer to unarchive');lacks(past.html,'<button>Check previous delivery</button>');lacks(past.html,'<button>Retry sending</button>');lacks(past.html,'Approve &amp; publish results');
+    state.unconfirmedDeliveries[active]=1;assert.equal(heading((await get()).html),'Check previous delivery');
+    const selected=await get('?event='+completed);assert.equal(heading(selected.html),'Results published');has(selected.html,'name="event"');
+  });
+});
+
+test('missing or malformed opted delivery metadata fails closed before admin cookie or empty queue',async()=>{
+  await harness(authority(),async({get,request,cookie})=>{
+    await get();const valid=globalThis.fetch;
+    try{for(const mode of ['missing','malformed','cross-scope']){globalThis.fetch=async(input,init)=>{const reply=await valid(input,init),data=await reply.json() as Record<string,unknown>;if(mode==='missing')delete data.unconfirmedDeliveries;else data.unconfirmedDeliveries=mode==='malformed'?[]:{['p-'+'a'.repeat(24)]:1};return Response.json(data);};const sign=await request('/admin/login','POST',new URLSearchParams({credential:'synthetic-adapter-only'}).toString());assert.equal(sign.status,403);assert.equal(sign.headers.has('set-cookie'),false);const page=await request('/admin','GET','',cookie);assert.equal(page.status,409);lacks(page.html,'No results to review');}}finally{globalThis.fetch=valid;}
   });
 });

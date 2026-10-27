@@ -49,3 +49,17 @@ test('selected-event notice ignores unrelated global pending and never publishes
   for(const status of ['prepared','released'] as const){const historical=structuredClone(reply),next=structuredClone(p);next.id='new-version';next.snapshot.id=next.id;next.revision=2;next.snapshot.revision=2;next.snapshot.preparedAt='2026-10-27T14:00:00Z';next.status=status;historical.publications!.push(next);assert.doesNotMatch(releaseNotice(historical,p.snapshot.eventId,manifest),/Confirmed/);}
   const queued=structuredClone(reply);queued.publications![0].status='queued';assert.match(releaseNotice(queued,p.snapshot.eventId,manifest),/Sending is pending/);
 });
+
+test('delivery checks are a nonce-bound opt-in with bounded public event counts and exact old reply compatibility',async()=>{
+  const event='p-'+'a'.repeat(24),p=record();p.snapshot.eventId=event;
+  const old=request('list'),oldAck=await adminAcknowledgement(old),oldBody={...listing([p]),adminAcknowledgement:oldAck};assert.equal(Object.hasOwn(validateAdminReply(oldBody,old,oldAck),'unconfirmedDeliveries'),false);
+  const input=request('list',{includeDeliveryChecks:true}),ack=await adminAcknowledgement(input);assert.notEqual(ack.requestDigest,oldAck.requestDigest);
+  const body={...listing([p]),adminAcknowledgement:ack,unconfirmedDeliveries:{[event]:2}};assert.equal(validateAdminReply(body,input,ack).unconfirmedDeliveries![event],2);
+  const manifest=[{publicationId:p.id,sourceFingerprint:p.sourceFingerprint}];assert.doesNotMatch(releaseNotice(validateAdminReply(body,input,ack),event,manifest),/Confirmed/);
+  const other=record(1);other.snapshot.eventId='p-'+'b'.repeat(24);const unrelated={...listing([p,other]),adminAcknowledgement:ack,unconfirmedDeliveries:{[other.snapshot.eventId]:1}};assert.match(releaseNotice(validateAdminReply(unrelated,input,ack),event,manifest),/Confirmed/);
+  assert.throws(()=>validateAdminReply({...oldBody,unconfirmedDeliveries:{}},old,oldAck));assert.throws(()=>validateAdminReply({...body,unconfirmedDeliveries:undefined},input,ack));
+  for(const counts of [[],{[event]:-1},{[event]:0.5},{[event]:Number.MAX_SAFE_INTEGER+1},{[event]:['1']},{['p-'+'b'.repeat(24)]:1},{[event+'\n']:1},{constructor:1},{'raw-event-uuid':1}])assert.throws(()=>validateAdminReply({...body,unconfirmedDeliveries:counts},input,ack));
+  assert.throws(()=>validateAdminReply({...body,unconfirmedDeliveries:Object.fromEntries(Array.from({length:4097},(_,n)=>['p-'+n.toString(16).padStart(24,'0'),0]))},input,ack));
+  for(const includeDeliveryChecks of [false,'true',[],null])await assert.rejects(adminAcknowledgement(request('list',{includeDeliveryChecks})));
+  await assert.rejects(adminAcknowledgement(request('retry',{includeDeliveryChecks:true})));
+});

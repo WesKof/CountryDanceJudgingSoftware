@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {adminAcknowledgement,validateAdminReply} from '../lib/live/admin-ack.ts';
-import {owner,localKey,createStage,limitedStage,finish} from './publication-helpers.ts';
+import {owner,localKey,createStage,limitedStage,finish,fault} from './publication-helpers.ts';
 import {api,command} from './stage-helpers.ts';
 import {testFetch,testEndpoint} from './test-endpoints.ts';
 import type {LiveView} from '../lib/live/types.ts';
@@ -36,7 +36,36 @@ test('real local admin release confirms the selected public event through fresh 
     const confirmed=await testFetch('receiver',destination.pathname+destination.search,{headers:{Cookie:cookie}});assert.match(await confirmed.text(),/Confirmed: this event/);
     const forged=await testFetch('receiver','/admin?event='+event+'&notice='+encodeURIComponent('Approved and published. FORGED_STATUS_SENTINEL'),{headers:{Cookie:cookie}});assert.ok(!(await forged.text()).includes('FORGED_STATUS_SENTINEL'));
     const paused=await post('/admin/action',new URLSearchParams({action:'service',state:'suspended',event,csrf}),cookie);assert.equal(paused.status,303);assert.match(decodeURIComponent(paused.headers.get('location')!),/Website setting confirmed/);assert.equal((await owner({action:'list'})).serviceState,'suspended');
-    const checked=await post('/admin/action',new URLSearchParams({action:'retry',event,csrf}),cookie);assert.equal(checked.status,303);assert.match(decodeURIComponent(checked.headers.get('location')!),/Delivery check complete/);
+    const checked=await post('/admin/action',new URLSearchParams({action:'retry',event,csrf}),cookie);assert.equal(checked.status,303);assert.match(decodeURIComponent(checked.headers.get('location')!),/Delivery check finished/);
   }finally{await owner({action:'service',state:'enabled'});await post('/admin/action',new URLSearchParams({action:'logout',csrf}),cookie);}
   const anonymous=await testFetch('receiver','/admin?event='+event,{headers:{Cookie:cookie}});assert.match(await anonymous.text(),/Admin access code/);
+});
+
+test('opted public delivery counts reveal the active receipt check, preserve archive guards and clear only after existing retry',async()=>{
+  await owner({action:'service',state:'enabled'});await fault(false);
+  const setup=limitedStage(1,3),{organizer,tokens,head}=await createStage(setup);await finish(setup,organizer,tokens,head,false);await command(organizer,{action:'prepare-event-publication'});
+  let view=await api<LiveView>(organizer);const original=view.publications![0],event=original.snapshot.eventId,manifest=[{publicationId:original.id,sourceFingerprint:original.sourceFingerprint}];await command(organizer,{action:'approve-event-publication',publications:manifest});
+  const readChecks=async()=>{const request=input('list',{includeDeliveryChecks:true}),reply=validateAdminReply(await owner(request),request,await adminAcknowledgement(request));return reply.unconfirmedDeliveries!;};
+  const post=(path:string,body:URLSearchParams,cookie='')=>testFetch('receiver',path,{method:'POST',headers:{Origin:testEndpoint('receiver'),'Content-Type':'application/x-www-form-urlencoded',...(cookie?{Cookie:cookie}:{})},body,redirect:'manual'});
+  let cookie='',csrf='';
+  try{
+    await fault(true);await owner({action:'release-event',publications:manifest});view=await api<LiveView>(organizer);
+    const round=view.rounds.find(r=>r.definition.kind==='finals')!,heat=round.definition.heats[0],sub=view.heatSubmissions!.find(s=>s.roundKey===round.key&&s.judgeId===setup.judges[0].id)!;
+    const q=await command(organizer,{action:'request-correction',roundKey:round.key,heatId:heat.id,judgeId:sub.judgeId,submissionId:sub.id,changes:[{performanceId:heat.songs[0].id,subjectId:heat.subjectIds[0],after:'A1'}],reason:'Fictional delivery action visibility'}) as {reviewRequestId:string};await command(organizer,{action:'approve-request',reviewRequestId:q.reviewRequestId,requestVersion:1});await command(head,{action:'approve-request',reviewRequestId:q.reviewRequestId,requestVersion:1});
+    const checks=await readChecks();assert.equal(checks[event],1);assert.ok(!Object.hasOwn(checks,view.eventId));assert.deepEqual(Object.keys(checks),[event]);
+    const legacy=await owner({action:'list',includeDeliveryChecks:true});assert.equal(Object.hasOwn(legacy,'unconfirmedDeliveries'),false);
+    const previous=input('list'),oldReply=await owner(previous);validateAdminReply(oldReply,previous,await adminAcknowledgement(previous));assert.equal(Object.hasOwn(oldReply,'unconfirmedDeliveries'),false);
+    await owner(input('list',{includeDeliveryChecks:false}),400);
+    await owner(input('list',{includeDeliveryChecks:true}),403,organizer);
+    await owner({action:'service',state:'suspended'});
+    const signed=await post('/admin/login',new URLSearchParams({credential:localKey('LOCAL_OWNER_KEY'),event}));assert.equal(signed.status,303);cookie=signed.headers.get('set-cookie')!.split(';')[0];
+    const page=await testFetch('receiver','/admin',{headers:{Cookie:cookie}}),html=await page.text();assert.equal(page.status,200);assert.match(html,/<h1>Check previous delivery<\/h1>/);csrf=/name="csrf" value="([^"]+)"/.exec(html)![1];assert.ok(html.indexOf('<button>Check previous delivery</button>')<html.indexOf('Publication history &amp; website tools'));assert.ok(!html.includes('Approve &amp; publish results'));assert.ok(!html.includes('<button>Resume website publication</button>'));
+    assert.equal((await readChecks())[event],1,'List and rendering cannot resolve the delivery.');
+    await command(organizer,{action:'archive'});const archived=await(await testFetch('receiver','/admin?event='+event,{headers:{Cookie:cookie}})).text();assert.match(archived,/<h1>Organizer action needed<\/h1>/);assert.ok(archived.includes('Ask the organizer to unarchive'));assert.ok(!archived.includes('<button>Check previous delivery</button>'));assert.ok(!archived.includes('<button>Retry sending</button>'));
+    await fault(false);const publicBefore=await(await testFetch('receiver','/api/public')).text();await post('/admin/action',new URLSearchParams({action:'retry',event,csrf}),cookie);assert.equal((await readChecks())[event],1,'Global retry cannot bypass the archived event guard.');
+    await command(organizer,{action:'reactivate'});const active=await(await testFetch('receiver','/admin?event='+event,{headers:{Cookie:cookie}})).text();assert.match(active,/<h1>Check previous delivery<\/h1>/);
+    const checked=await post('/admin/action',new URLSearchParams({action:'retry',event,csrf}),cookie);assert.equal(checked.status,303);assert.equal((await readChecks())[event]??0,0);assert.equal((await owner({action:'list'})).serviceState,'suspended');
+    const result=await(await testFetch('receiver',checked.headers.get('location')!,{headers:{Cookie:cookie}})).text();assert.match(result,/<h1>Waiting for updated results<\/h1>/);assert.ok(result.includes('Waiting for the organizer to send updated results'));assert.ok(!result.includes('<button>Check previous delivery</button>'));assert.equal(await(await testFetch('receiver','/api/public')).text(),publicBefore);
+    assert.equal((await api<LiveView>(organizer)).publications![0].status,'stale');
+  }finally{await fault(false);await owner({action:'service',state:'enabled'});if(cookie&&csrf)await post('/admin/action',new URLSearchParams({action:'logout',csrf}),cookie);}
 });

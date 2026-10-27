@@ -873,6 +873,12 @@ export async function ownerPublication(db: D1Database, input: Record<string,unkn
     const rows=(await stmt(db,'SELECT id,setup,status FROM live_events WHERE id IN (SELECT event_id FROM live_publication_snapshots)').all<{id:string;setup:string;status:string}>()).results;
     const events:Record<string,{competitionIds:string[];active:boolean}>={};
     for(const row of rows)events[await publicId(row.id,row.id)]={competitionIds:parse<LiveSetup>(row.setup).competitions.map((c)=>c.id),active:row.status==='active'};
+    if(acknowledgement&&input.includeDeliveryChecks===true){
+      const counts=(await stmt(db,"SELECT event_id,COUNT(*) AS count FROM live_publication_outbox WHERE status = 'stale' AND kind IN ('release','release-set') GROUP BY event_id").all<{event_id:string;count:number}>()).results;
+      const unconfirmedDeliveries:Record<string,number>={};
+      for(const row of counts)unconfirmedDeliveries[await publicId(row.event_id,row.event_id)]=row.count;
+      return reply({publications,events,enabled:config.enabled,serviceState:service?.state??'enabled',unconfirmedDeliveries});
+    }
     return reply({publications,events,enabled:config.enabled,serviceState:service?.state??'enabled'});
   }
   if (input.action === 'release-event') {

@@ -26,7 +26,7 @@ const snapshot = shape({ schemaVersion: (v) => v === 1, scoringVersion: (v) => v
 const publication: Check = (v) => shape({ id, competitionId: id, revision: (n) => count(n) && Number(n) > 0, sourceFingerprint: id, snapshot, status: (s) => typeof s === 'string' && ['prepared', 'requested', 'queued', 'released', 'stale'].includes(s) }, { organizerApprovedAt: string, ownerApprovedAt: string, releasedAt: string, underReview: boolean, lastSynchronizedAt: string })(v) && object(v) && object(v.snapshot) && v.id === v.snapshot.id && v.revision === v.snapshot.revision && v.sourceFingerprint === v.snapshot.sourceFingerprint;
 
 export type AdminAcknowledgement = { version: 1; accepted: true; requestId: string; action: string; requestDigest: string };
-export type AdminReply = { adminAcknowledgement: AdminAcknowledgement; publications?: PublicationRecord[]; events?: Record<string, { competitionIds: string[]; active: boolean }>; enabled?: boolean; serviceState?: string; ok?: true; state?: string; delivered?: number; pending?: number };
+export type AdminReply = { adminAcknowledgement: AdminAcknowledgement; publications?: PublicationRecord[]; events?: Record<string, { competitionIds: string[]; active: boolean }>; unconfirmedDeliveries?:Record<string,number>; enabled?: boolean; serviceState?: string; ok?: true; state?: string; delivered?: number; pending?: number };
 export const ADMIN_CONFIRMATION_ERROR = 'The judging app did not confirm this check. Return to review to check the current status.';
 
 // No credentials enter this envelope: the nonce binds a response to this exact
@@ -36,7 +36,8 @@ export async function adminAcknowledgement(input: Record<string, unknown>): Prom
   if (!shape({ version: (v) => v === 1, id: (v) => typeof v === 'string' && v.length===64 && /^[a-f0-9]{64}$/.test(v) })(context) || !object(context)) throw new Error(ADMIN_CONFIRMATION_ERROR);
   const base = { action: (v: unknown) => v === input.action, adminRequest: (v: unknown) => v === context };
   const target = shape({ publicationId: id, sourceFingerprint: id });
-  const valid = input.action === 'list' || input.action === 'retry' ? shape(base)(input) : input.action === 'service' ? shape({ ...base, state })(input) : input.action === 'release-event' && shape({ ...base, eventId: id, publications: (v) => array(target)(v) && Array.isArray(v) && v.length > 0 && v.length <= 8 && new Set(v.map((p) => p.publicationId)).size === v.length })(input);
+  const listFields={...base,...(Object.hasOwn(input,'includeDeliveryChecks')?{includeDeliveryChecks:(v:unknown)=>v===true}:{})};
+  const valid = input.action === 'list' ? shape(listFields)(input) : input.action === 'retry' ? shape(base)(input) : input.action === 'service' ? shape({ ...base, state })(input) : input.action === 'release-event' && shape({ ...base, eventId: id, publications: (v) => array(target)(v) && Array.isArray(v) && v.length > 0 && v.length <= 8 && new Set(v.map((p) => p.publicationId)).size === v.length })(input);
   if (!valid) throw new Error(ADMIN_CONFIRMATION_ERROR);
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(input)));
   return { version: 1, accepted: true, requestId: context.id as string, action: String(input.action), requestDigest: Array.from(new Uint8Array(bytes), (v) => v.toString(16).padStart(2, '0')).join('') };
@@ -47,11 +48,14 @@ export async function adminAcknowledgement(input: Record<string, unknown>): Prom
 export function validateAdminReply(value: unknown, input: Record<string, unknown>, expected: AdminAcknowledgement): AdminReply {
   const ack: Check = (v) => shape(Object.fromEntries(Object.entries(expected).map(([key, item]) => [key, (actual: unknown) => actual === item])))(v);
   const events: Check = (v) => object(v) && Object.values(v).every(shape({ competitionIds: (x) => ids(x) && Array.isArray(x) && new Set(x).size === x.length, active: boolean }));
-  const valid = input.action === 'list' ? shape({ adminAcknowledgement: ack, publications: array(publication), events, enabled: boolean, serviceState: state })(value) : input.action === 'service' ? shape({ adminAcknowledgement: ack, ok: (v) => v === true, state: (v) => v === input.state })(value) : shape({ adminAcknowledgement: ack, ok: (v) => v === true, delivered: count, pending: count })(value);
+  const checks:Check=(v)=>object(v)&&Object.keys(v).length<=4096&&Object.entries(v).every(([key,n])=>key.length===26&&/^p-[a-f0-9]{24}$/.test(key)&&count(n));
+  const listFields={adminAcknowledgement:ack,publications:array(publication),events,enabled:boolean,serviceState:state,...(input.includeDeliveryChecks===true?{unconfirmedDeliveries:checks}:{})};
+  const valid = input.action === 'list' ? shape(listFields)(value) : input.action === 'service' ? shape({ adminAcknowledgement: ack, ok: (v) => v === true, state: (v) => v === input.state })(value) : shape({ adminAcknowledgement: ack, ok: (v) => v === true, delivered: count, pending: count })(value);
   if (!valid || !object(value)) throw new Error(ADMIN_CONFIRMATION_ERROR);
   if (input.action === 'list') {
     const reply = value as unknown as AdminReply;
     if (reply.enabled !== (reply.serviceState === 'enabled') || new Set(reply.publications!.map((p) => p.id)).size !== reply.publications!.length || reply.publications!.some((p) => !Object.hasOwn(reply.events!,p.snapshot.eventId))) throw new Error(ADMIN_CONFIRMATION_ERROR);
+    if(reply.unconfirmedDeliveries&&Object.keys(reply.unconfirmedDeliveries).some((key)=>!Object.hasOwn(reply.events!,key)))throw new Error(ADMIN_CONFIRMATION_ERROR);
   }
   return value as unknown as AdminReply;
 }
@@ -76,6 +80,7 @@ export async function readAdminReply(response: Response, input: Record<string, u
 
 export function releaseNotice(reply: AdminReply, eventId: string, manifest: { publicationId: string; sourceFingerprint: string }[]) {
   if (!reply.events || !Object.hasOwn(reply.events,eventId) || !Array.isArray(manifest) || manifest.length===0 || manifest.length>8 || new Set(manifest.map((p)=>p.publicationId)).size!==manifest.length) return 'Publication is unconfirmed. Open review to check its current status.';
+  if(reply.unconfirmedDeliveries&&Object.hasOwn(reply.unconfirmedDeliveries,eventId)&&reply.unconfirmedDeliveries[eventId]>0)return 'Last check found an unconfirmed previous delivery. Review the current status below.';
   const current=latestPublications((reply.publications??[]).filter((p)=>p.snapshot.eventId===eventId));
   const scope = reply.events?.[eventId], records = manifest.map((target) => current.find((p) => p.id === target.publicationId && p.sourceFingerprint === target.sourceFingerprint));
   if (!scope?.active || records.some((p) => !p) || scope.competitionIds.length !== records.length || new Set(records.map((p) => p!.competitionId)).size !== records.length || records.some((p) => !scope.competitionIds.includes(p!.competitionId) || p!.underReview || p!.status === 'stale')) return 'The event changed or its publication is unconfirmed. Open review to check its current status.';
