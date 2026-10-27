@@ -69,6 +69,38 @@ export function Correction({ data, round, action, revise, draft }: { data: LiveV
     <label><span>Correction reason</span><input name="reason" required maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></label>{draft && notice && <p id={feedbackId} role="status">{notice}</p>}<button className="quiet-button" aria-describedby={draft && notice ? feedbackId : undefined} disabled={Boolean(draft && pending)}>{draft && pending ? 'Requesting correction…' : revise ? 'Submit revised correction' : 'Request correction'}</button></> : <p id={sourceHelpId} role="status">{source ? 'The selected submitted heat was replaced. Choose a current version above and review the correction again. Your draft reason is retained.' : subs.length ? 'Choose a current submitted heat above to review a correction.' : 'No submitted heat is available for a correction yet.'}</p>}{draft && !heat && reason && <p><strong>Draft reason:</strong> {reason}</p>}</form>{draft && <details data-correction-help><summary>Correction rules &amp; draft recovery</summary><p>For a genuine recording error in submitted marks. Both organizer and head must approve this exact request. This does not unlock the ballot.</p><p>This draft stays with this round across Score, Results and Publish. Reloading or leaving this event ends the draft. Discarding it returns the editor to the selected round.</p></details>}</details>;
 }
 
+function RequestApproval({ data, request, target, action }: { data: LiveView; request: ReviewRequest; target: string; action: Action }) {
+  const [attempt, setAttempt] = useState<{ pending: boolean } | null>(null);
+  const pending = useRef<symbol | null>(null), alive = useRef(true);
+  const approved = request.approvals.some((approval) => approval.role === data.role);
+  const eligible = !approved && data.status === 'active' && !request.appliedAt && !request.cancelledAt && ['organizer', 'head'].includes(data.role);
+  const latest = useRef({ target, eligible });
+  useEffect(() => { latest.current = { target, eligible }; }, [target, eligible]);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const statusId = useId();
+  const waiting = attempt?.pending === true && !approved && data.status === 'active';
+  const status = approved ? '' : data.status !== 'active' ? attempt ? 'This event is read only. Check the request’s current status.' : '' : waiting ? 'Approval is in progress for this exact request version.' : attempt ? 'Approval is not confirmed in the current request yet. Check its status before trying again.' : '';
+  async function approve() {
+    if (pending.current || !alive.current || latest.current.target !== target || !latest.current.eligible) return;
+    const owner = Symbol(), input = { action: 'approve-request', reviewRequestId: request.id, requestVersion: request.version };
+    pending.current = owner;
+    let sent = false;
+    try {
+      if (!window.confirm(`Approve this exact version ${request.version}: ${request.reason}? Both distinct roles are required.`)) return;
+      if (!alive.current || latest.current.target !== target || !latest.current.eligible) return;
+      sent = true; setAttempt({ pending: true });
+      await action(input);
+    } catch { /* Only the authoritative request establishes approval or application. */ }
+    finally {
+      if (pending.current === owner) {
+        pending.current = null;
+        if (sent && alive.current) setAttempt({ pending: false });
+      }
+    }
+  }
+  return <><button className="quiet-button" disabled={!eligible || waiting} aria-busy={waiting} aria-describedby={status ? statusId : undefined} onClick={() => void approve()}>{waiting ? 'Approving request…' : `Approve request as ${data.role}`}</button>{status && <p id={statusId} role="status">{status}</p>}</>;
+}
+
 export function ReviewRequests({ data, action, embedded = false, pendingOnly = false, onReviseWithdrawal }: { data: LiveView; action: Action; embedded?: boolean; pendingOnly?: boolean; onReviseWithdrawal?: (q: ReviewRequest) => void }) {
   const requests = [...(data.reviewRequests ?? [])].filter((q) => !pendingOnly || !q.appliedAt && !q.cancelledAt).sort((a, b) => Number(Boolean(a.appliedAt || a.cancelledAt)) - Number(Boolean(b.appliedAt || b.cancelledAt)));
   return <section className="form-panel"><div className="panel-heading">{embedded ? <h3>{pendingOnly ? 'Pending requests' : 'Request history'}</h3> : <h2>{pendingOnly ? 'Pending requests' : 'Amendments & withdrawals'}</h2>}</div><div className="form-body review-request-list">
@@ -78,7 +110,8 @@ export function ReviewRequests({ data, action, embedded = false, pendingOnly = f
       const subject = round?.definition.subjects.find((s) => s.id === q.payload.subjectId);
       const competition = data.setup.competitions.find((c) => c.id === (round?.definition.competitionId ?? q.payload.competitionId));
       const pending = !q.appliedAt && !q.cancelledAt;
-      const approvedByRole = q.approvals.some((a) => a.role === data.role);
+      const participantId = data.role === 'organizer' ? data.setup.organizerParticipantId : data.setup.judges.find((judge) => judge.id === data.judgeId)?.participantId;
+      const approvalTarget = JSON.stringify([data.eventId, data.role, data.judgeId, participantId, q.id, q.version]);
       const status = q.cancelledAt ? 'Cancelled; records retained' : q.appliedAt ? 'Applied with both distinct role approvals; affected results require renewed review.' : `${q.approvals.length} / 2 approvals · scores unchanged`;
       return <article className={`review-request${pending ? ' is-pending' : ''}`} id={`review-request-${q.id}`} tabIndex={-1} key={`${q.id}/${q.version}`}>
         <p className="review-step-label">{competition ? `${competition.format} · ${competition.division}` : 'Competition review'}{round ? ` · ${round.definition.kind}` : ''}</p>
@@ -93,7 +126,7 @@ export function ReviewRequests({ data, action, embedded = false, pendingOnly = f
         <p className="review-request-status" role="status">{status}</p>
         {pending && <p>{q.approvals.length ? `Waiting for ${q.approvals.some((a) => a.role === 'head') ? 'the organizer' : 'the head judge'} to approve this same version.` : 'The organizer and head judge each review and approve this request.'}</p>}
         {pending && ['organizer', 'head'].includes(data.role) && <div className="shared-inline">
-          <button className="quiet-button" disabled={approvedByRole || data.status !== 'active'} onClick={() => { if (window.confirm(`Approve this exact version ${q.version}: ${q.reason}? Both distinct roles are required.`)) void action({ action: 'approve-request', reviewRequestId: q.id, requestVersion: q.version }); }}>Approve request as {data.role}</button>
+          <RequestApproval key={approvalTarget} data={data} request={q} target={approvalTarget} action={action} />
           {data.role === 'organizer' && q.kind === 'withdrawal' && onReviseWithdrawal && <button className="quiet-button" disabled={data.status !== 'active'} onClick={() => onReviseWithdrawal(q)}>Revise withdrawal request</button>}
           {data.role === 'organizer' && <button className="quiet-button" disabled={data.status !== 'active'} onClick={() => void action({ action: 'cancel-request', reviewRequestId: q.id, requestVersion: q.version })}>Cancel request</button>}
         </div>}
