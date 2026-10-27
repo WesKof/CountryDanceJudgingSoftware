@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './review-action-render-harness.mjs';
+import { text } from '../lib/live/validation.ts';
 
 const flush = async () => { for (let n = 0; n < 24; n++) await Promise.resolve(); };
 function deferred<T>() {
@@ -91,7 +92,7 @@ test('authoritative own vote finalizes after round.version advances, independent
 test('exact authoritative head decision confirms across a version increment; boolean alone cannot', async () => {
   const wait = deferred<boolean>(), h = await harness('legacyDecision', () => wait.promise); h.render(); edit(h, 'legacyDecision'); send(h, 'legacyDecision').props.onClick();
   const payload = h.calls[0], next = structuredClone(h.data), r = next.rounds[0]; r.version++;
-  r.standings.decisions.push({ key: 'controlled-tie', fingerprint: r.standings.fingerprint, judgeId: next.judgeId, role: 'head', order: payload.order as string[], shared: payload.shared as boolean, explanation: payload.explanation as string, decidedAt: 'confirmed' });
+  r.standings.decisions.push({ key: 'controlled-tie', fingerprint: r.standings.fingerprint, judgeId: next.judgeId, role: 'head', order: payload.order as string[], shared: payload.shared as boolean, explanation: text(payload.explanation, 'tie explanation', 500), decidedAt: 'confirmed' });
   h.setData(next); let html = h.render(); assert.match(html, /Decision saved in current results\./);
   assert.ok(!html.includes('earlier decision draft')); assert.equal(h.button(/^Decision saved$/)!.props.disabled, true);
   wait.resolve(false); await flush(); html = h.render(); assert.match(html, /Decision saved in current results\./);
@@ -180,4 +181,16 @@ test('eligibility loss unmounts a head draft; its completion cannot clear a fres
   h.data.rounds[0].phase = 'discussion'; h.render(); assert.equal(explanation(h).props.value, ''); send(h, 'legacyDecision').props.onClick(); h.render();
   old.resolve(true); await flush(); h.render(); assert.equal(send(h, 'legacyDecision').props['aria-busy'], true);
   fresh.resolve(false); await flush(); h.render(); assert.equal(send(h, 'legacyDecision').props['aria-busy'], false);
+});
+
+test('server text validation preserves whitespace-only explanation; a trimmed different value cannot confirm it', async () => {
+  const wait = deferred<boolean>(), h = await harness('legacyDecision', () => wait.promise); h.render();
+  explanation(h).props.onChange({ target: { value: '   ' } }); h.render(); send(h, 'legacyDecision').props.onClick();
+  const payload = h.calls[0], next = structuredClone(h.data), r = next.rounds[0]; r.version++;
+  const stored = text(payload.explanation, 'tie explanation', 500); assert.equal(stored, '   '); assert.equal(payload.explanation, '   ');
+  r.standings.decisions.push({ key: 'controlled-tie', fingerprint: r.standings.fingerprint, judgeId: next.judgeId, role: 'head', order: payload.order as string[], shared: payload.shared as boolean, explanation: stored, decidedAt: 'confirmed' });
+  h.setData(next); assert.match(h.render(), /Decision saved in current results\./); assert.equal(explanation(h).props.value, '   ');
+  wait.resolve(false); await flush(); h.render(); assert.equal(h.button(/^Decision saved$/)!.props.disabled, true);
+  const different = structuredClone(next); different.rounds[0].standings.decisions[0].explanation = '';
+  h.setData(different); const html = h.render(); assert.ok(!html.includes('Decision saved in current results.')); assert.match(html, /Results changed/);
 });
