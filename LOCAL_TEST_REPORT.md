@@ -22,6 +22,8 @@ Master owns next scoped compatibility repair/cohort decision and review/integrat
 
 Failure evidence limit: the initial failed fixture helper and shared runner were edited before a source-hash snapshot; failed logs remain, but their exact earlier helper bytes were not sealed. Current successful fixture/consumer/follow-up sources and inputs are sealed at delivery; no claim reconstructs all failed helper versions.
 
+75 source 412faed968b69e70279ff9aa6f7196c1cf0d3e33; branch codex/sharp-copy-compatibility; annotated checkpoints checkpoint/before-sharp-copy-compatibility-2026-10-27, checkpoint/local-sharp-copy-compatibility-source-2026-10-27 and checkpoint/local-sharp-copy-compatibility-2026-10-27. Master review/integration and guarded mirror synchronization are pending this dated worker delivery. These tags retain source, not installed packages or event data.
+
 ## October 27 — Sharp native residual assessment PASS
 
 Read-only 74 on codex/sharp-residual-assessment examines aebbb3478508e95edd438237613f6263bfc03c83. Assessment is complete; the installed residual remains unremediated. Miniflare selects Sharp 0.34.5 while Next independently selects 0.35.5 in both checkouts. Fresh pnpm 11.25.0 audit returns 17 records (11 high/5 moderate/1 low), including three high Sharp advisories, checked against current maintainer pages. Initial unsupported CLI --userconfig failure is preserved; package-audit-corrected.json is the successful structured result, with owned empty userconfig/cache and sanitized public-registry command. Exit 1 reports findings, not a clean audit.
