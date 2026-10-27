@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import type { AdvancementTie, LiveView, RoundView } from '@/lib/live/types';
 import { LiveResults } from './results';
 import SetupSection from './setup-section';
@@ -10,21 +10,35 @@ import OrganizerResults from './organizer-results';
 
 type Action = (input: Record<string, unknown>) => Promise<boolean>;
 function Vote({ data, round, tie, action }: { data: LiveView; round: RoundView; tie: AdvancementTie; action: Action }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const target = JSON.stringify([data.eventId, data.judgeId, round.key, round.version, round.standings!.fingerprint, tie.key, tie.subjectIds, tie.slots]);
+  const freshDraft = () => ({ target, edited: false, selected: [] as string[], subjects: tie.subjectIds.map((id) => ({ ...round.definition.subjects.find((subject) => subject.id === id)! })), slots: tie.slots });
+  const [storedDraft, setDraft] = useState(freshDraft);
+  const [saving, setSaving] = useState(false), [attempted, setAttempted] = useState(false);
+  const draft = storedDraft.edited || attempted || saving ? storedDraft : freshDraft();
+  const pending = useRef(false), changed = draft.target !== target;
   const statusId = useId();
   const ownVote = tie.votes.find((vote) => vote.judgeId === data.judgeId), voted = Boolean(ownVote);
-  const choices = ownVote?.selected ?? selected, remaining = tie.slots - choices.length;
+  const choices = ownVote?.selected ?? draft.selected, slots = voted ? tie.slots : draft.slots, remaining = slots - choices.length;
   const canChoose = round.phase === 'discussion' && !voted && data.role !== 'organizer' && data.status === 'active' && round.definition.judgeIds.includes(data.judgeId!);
-  const selectionStatus = `${choices.length} / ${tie.slots} selected · ${voted ? 'Vote finalized.' : !canChoose ? 'Read only · voting is closed.' : remaining > 0 ? `Choose ${remaining} more.` : remaining < 0 ? `Remove ${-remaining} ${remaining === -1 ? 'choice' : 'choices'}.` : 'Ready to submit.'}`;
+  const selectionStatus = `${choices.length} / ${slots} selected · ${voted ? 'Vote finalized.' : saving ? changed ? 'Submitting previous vote…' : 'Submitting vote…' : changed ? 'Results changed. Your earlier vote draft is kept. Discard it to review current results.' : !canChoose ? 'Read only · voting is closed.' : attempted ? 'Check current results for your vote before trying again. Your choices are kept.' : remaining > 0 ? `Choose ${remaining} more.` : remaining < 0 ? `Remove ${-remaining} ${remaining === -1 ? 'choice' : 'choices'}.` : 'Ready to submit.'}`;
   const waiting = round.definition.judgeIds.filter((id) => !tie.votes.some((vote) => vote.judgeId === id)).map((id) => round.definition.judges.find((judge) => judge.id === id)?.name ?? 'an assigned judge');
+  async function submit() {
+    if (pending.current || changed || !canChoose || remaining !== 0) return;
+    const input = { action: 'vote', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint, tieKey: tie.key, selected: [...draft.selected] };
+    pending.current = true; setDraft({ ...draft, edited: true }); setSaving(true); setAttempted(true);
+    try { await action(input); }
+    catch { /* Authoritative votes confirm finalization; the draft remains available. */ }
+    finally { pending.current = false; setSaving(false); }
+  }
   return <fieldset className="tie-editor"><legend>{round.definition.division} · {tie.group} advancement tie</legend>
-    <p>Choose exactly {tie.slots} of these tied entrants. {tie.votes.length} / {round.definition.judgeIds.length} panel votes received. Marks and numeric averages stay unchanged.</p>
-    {tie.subjectIds.map((id) => {
-      const subject = round.definition.subjects.find((subject) => subject.id === id)!;
-      return <label className="check-label" key={id}><input type="checkbox" checked={choices.includes(id)} disabled={!canChoose} onChange={(event) => setSelected(event.target.checked ? [...selected, id] : selected.filter((choice) => choice !== id))} />#{subject.number} {subject.primary}{subject.secondary ? ` & ${subject.secondary}` : ''}</label>;
+    <p>Choose exactly {slots} of these tied entrants. {tie.votes.length} / {round.definition.judgeIds.length} panel votes received. Marks and numeric averages stay unchanged.</p>
+    {(voted ? tie.subjectIds.map((id) => round.definition.subjects.find((subject) => subject.id === id)!) : draft.subjects).map((subject) => {
+      const id = subject.id;
+      return <label className="check-label" key={id}><input type="checkbox" checked={choices.includes(id)} disabled={!canChoose || saving || changed} onChange={(event) => { if (pending.current || changed || !canChoose) return; setDraft({ ...draft, edited: true, selected: event.target.checked ? [...draft.selected, id] : draft.selected.filter((choice) => choice !== id) }); setAttempted(false); }} />#{subject.number} {subject.primary}{subject.secondary ? ` & ${subject.secondary}` : ''}</label>;
     })}
     <p id={statusId} role="status">{selectionStatus}</p>
-    {data.role !== 'organizer' && round.definition.judgeIds.includes(data.judgeId!) && <button className="primary-button" aria-describedby={statusId} disabled={!canChoose || remaining !== 0} onClick={() => void action({ action: 'vote', roundKey: round.key, roundVersion: round.version, fingerprint: round.standings!.fingerprint, tieKey: tie.key, selected })}>{voted ? 'Vote finalized' : 'Submit advancement vote'}</button>}
+    {data.role !== 'organizer' && round.definition.judgeIds.includes(data.judgeId!) && <button className="primary-button" aria-describedby={statusId} aria-busy={saving} disabled={!canChoose || remaining !== 0 || saving || changed} onClick={() => void submit()}>{voted ? 'Vote finalized' : saving ? 'Submitting vote…' : 'Submit advancement vote'}</button>}
+    {changed && canChoose && !saving && <button className="quiet-button" onClick={() => { if (pending.current) return; setDraft(freshDraft()); setAttempted(false); }}>Discard draft and review current results</button>}
     <p>{tie.complete ? `Advancing: ${tie.selected.map((id) => '#' + round.definition.subjects.find((subject) => subject.id === id)!.number).join(', ')}` : tie.deadlocked ? 'Full panel is tied. The head judge must resolve the remaining vote tie.' : `Waiting for ${waiting.length > 3 ? waiting.length + ' judges' : waiting.join(', ')} to submit advancement votes.`}</p>
   </fieldset>;
 }
@@ -46,7 +60,7 @@ export function StageReview({ data, action, selectedRoundId, showRound, setupRou
   const completed = reviewed.filter((r) => r.standings?.approved);
   if (part === 'history' && !reviewed.length && !data.ballots.length && !data.reviewRequests?.some((q)=>q.appliedAt || q.cancelledAt)) return null;
   if (part === 'pending' && !pending.length && !actionable.length) return null;
-  const controls = (round: RoundView) => round.standings?.advancementTies?.map((tie) => <Vote key={`${round.key}/${round.standings!.fingerprint}/${tie.key}`} data={data} round={round} tie={tie} action={action} />);
+  const controls = (round: RoundView) => round.standings?.advancementTies?.map((tie) => <Vote key={JSON.stringify([data.eventId, data.role, data.judgeId, round.key, tie.key])} data={data} round={round} tie={tie} action={action} />);
   return <div className="page-stack">
     {part !== 'history' && pending.length > 0 && <ReviewRequests data={data} action={action} pendingOnly />}
     {part !== 'history' && <LiveResults data={{ ...data, rounds: actionable }} action={action} head={data.role === 'head'} roundControls={controls} />}
