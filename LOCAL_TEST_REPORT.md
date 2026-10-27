@@ -20,6 +20,8 @@ Preservation before docs:227 tracked inputs,4681 prior evidence/store/package/fi
 
 Evidence stays in retained work/miniflare-consumer-source-review: preimages/preservation, npm metadata, integrity-checked archives, selected text, upstream primary receipts (including404 limits), comparison/function addresses and static analysis. These are source checkpoints, not package/data backups. Master owns independent review, main/mirror integration, checkpoints, merged-tip cleanup and any new bounded runtime assignment; no worker self-continuation.
 
+76 source 6e8aa84dfa395c31d438892fe04fdfcec58fdd73; branch codex/miniflare-consumer-source-review; annotated checkpoints checkpoint/before-miniflare-consumer-source-review-2026-10-27, checkpoint/local-miniflare-consumer-source-review-source-2026-10-27 and checkpoint/local-miniflare-consumer-source-review-2026-10-27. Master review/main/mirror integration and exact-tip cleanup are pending this dated worker delivery. All file claims release at clean detached handoff; no runtime claim was acquired.
+
 ## October 27 — Sharp copy-owned compatibility rehearsal
 
 75 tests a separately installed Miniflare 4.20260515.0 + Sharp 0.35.5 candidate from main bcb2f1f50e3bc7a4a9502511b9f9a0db8e758450 on codex/sharp-copy-compatibility. **NOT CLEARED for promotion:** actual consumer behavior remains incompatible with expected AVIF metadata and malformed-input rejection. App packages/lock/policy/source are unchanged; no remediation or hosted claim follows. [Behavior and limits](PROJECT_SPEC.md#sharp-copy-owned-compatibility-rehearsal--october-27).
