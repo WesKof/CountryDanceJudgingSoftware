@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LiveView } from '@/lib/live/types';
 import { mergeLiveView } from '@/lib/live/merge';
+import { isLiveView } from '@/lib/live/view-validation';
 
 export class ApiError extends Error {
   status: number;
@@ -20,6 +21,7 @@ export async function liveApi<T>(token: string, input?: Record<string, unknown>)
     result = parsed as typeof result;
   } catch { throw new ApiError(response.ok ? 502 : response.status, 'The shared event is temporarily unavailable. Retry the connection.'); }
   if (!response.ok) throw new ApiError(response.status, typeof result.error === 'string' ? result.error : 'The event could not be loaded.', result.details);
+  if (!input && !isLiveView(result)) throw new ApiError(502, 'The shared event is temporarily unavailable. Retry the connection.');
   return result as T;
 }
 export function useLive(token: string) {
