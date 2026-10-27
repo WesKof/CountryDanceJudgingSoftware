@@ -4,6 +4,7 @@ import { createElement, isValidElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stageFixture } from './stage-fixture.ts';
 import { freezeRound } from '../lib/live/validation.ts';
+import { deriveStandings, requiredCells } from '../lib/live/scoring.ts';
 
 const root = new URL('../', import.meta.url);
 const codeURL = code => 'data:text/javascript;base64,' + Buffer.from(code).toString('base64');
@@ -16,7 +17,7 @@ export function fixture() {
   const rounds = setup.rounds.filter(r => r.kind === 'prelims').map(r => {
     const definition = freezeRound(setup, r), key = r.id + ':1';
     return { id: r.id, key, generation: 1, version: 3, phase: 'discussion', definition,
-      standings: { complete: true, approved: false, rows: [], ties: [], fingerprint: key + '-fingerprint', advancementTies: /** @type {ReturnType<typeof tie>[]} */([]) } };
+      standings: { complete: true, approved: false, rows: /** @type {import('../lib/live/types.ts').LiveResult[]} */([]), ties: /** @type {import('../lib/live/types.ts').LiveStandings['ties']} */([]), fingerprint: key + '-fingerprint', advancementTies: /** @type {ReturnType<typeof tie>[]} */([]) } };
   });
   return { eventId: 'organizer-duty-event', version: 7, role: 'organizer', status: 'active', setup, rounds, ballots: [],
     heatSubmissions: rounds.flatMap(r => r.definition.heats.flatMap(h => r.definition.judgeIds.map(judgeId => ({ roundKey: r.key, heatId: h.id, judgeId })))),
@@ -27,6 +28,26 @@ export function fixture() {
 export function tie(round, voters = [], key = 'cutoff') {
   return { key, group: 'Couple', subjectIds: round.definition.subjects.map(s => s.id), slots: 1, selected: [], complete: false, deadlocked: false,
     votes: voters.map(judgeId => ({ judgeId, roundKey: round.key, fingerprint: round.standings.fingerprint, tieKey: key, selected: [round.definition.subjects[0].id], createdAt: 'synthetic' })) };
+}
+
+export function finalsFixture() {
+  const data = fixture();
+  data.rounds.forEach(r => { r.phase = 'approved'; r.standings.approved = true; });
+  for (const setupRound of data.setup.rounds.filter(r => r.kind === 'finals')) {
+    const pre = data.rounds.find(r => r.id === setupRound.prelimRoundId);
+    setupRound.subjects = structuredClone(pre.definition.subjects.slice(0, setupRound.finalistCount));
+    setupRound.finalistIds = setupRound.subjects.map(s => s.id);
+    setupRound.heats.forEach(h => { h.subjectIds = [...setupRound.finalistIds]; });
+    const definition = freezeRound(data.setup, setupRound), key = setupRound.id + ':1';
+    const submissions = definition.judgeIds.map(judgeId => ({ id: judgeId + key, roundKey: key, judgeId, ballotVersion: 1, createdAt: 'synthetic',
+      cells: Object.fromEntries(requiredCells(definition).map(c => [c.key, { mark: 'No', note: '', revision: 1, mutationId: 'synthetic' }])) }));
+    data.rounds.push({ id: setupRound.id, key, generation: 1, version: 3, phase: 'discussion', definition,
+      standings: { ...deriveStandings(definition, submissions), approved: false, fingerprint: key + '-fingerprint', advancementTies: [] } });
+  }
+  const block = data.setup.blocks.find(b => b.kind === 'finals');
+  data.context.blockId = block.id;
+  data.context.performanceId = data.rounds.find(r => r.definition.kind === 'finals').definition.heats[0].songs[0].id;
+  return data;
 }
 
 // Real StageDesk render; effects and unrelated child boundaries are deliberately controlled.
