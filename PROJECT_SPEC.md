@@ -17,7 +17,9 @@ After reviewing each completed batch, Master Country Dancer automatically sends 
 
 ### Next audit and limits
 
-Local64 [shared GET completion and status ordering](#shared-get-completion-and-connection-status-ordering--october-27) is independently reviewed/promoted from sourced98bdb7 and delivery961e9cb. Whole GET header/body/validation has a10s asynchronous completion policy; failed reads retain last-good data/hook-local drafts and allow the next poll. Only connection status follows highest completed request order; every valid success still merges and each caller gets its own view/null. POST timing/acknowledgements/retries,63 schema and server stay unchanged. Before controlled stall/status proof,18 focused lifecycle/read/merge tests/types/lint/build pass; preferred repeats18. Root verifies6 sealed inputs,219-file raw mirror parity,331 links and exact owner logical/private/store/runtime/build preimages. Before/source/delivery/integration checkpoints preserve source only; final main/ref/expected-tip cleanup is recorded at handoff. Next65 reviews canonical documentation/operative navigation and context quality; no reorganization is included in64. Actual services/API are not repeated; token/unmount, body-size limits, synchronous parsing/background throttling and actual-device outcomes stay outside this delivery. Existing schedules, central routing, native stop, denied restart/cleanup holds, owner event/data/runtime exclusions and local-only scope remain unchanged; live v5/source45c9682 remains last authorized release.
+Latest completed application batch64: [shared GET completion/status order](#shared-get-completion-and-connection-status-ordering--october-27), sourced98bdb7/delivery961e9cb, independently integrated at main48741db17c801d83d1c6560e8252c9ec1f2ae04a. Eighteen focused checks/types/lint/build and the master repeat pass; source checkpoints, mirror and protected-state checks are complete. See the [dated integration evidence](LOCAL_TEST_REPORT.md#october-27--preferred-shared-read-lifecycle-integration-pass). Source integration does not activate the owner preview or live site.
+
+Current batch65 is the docs-only navigation/status audit on codex/canonical-context-audit, prepared for master review/integration and a fresh preferred-checkout rendered-instruction diagnostic; it changes no app behavior. The [audit evidence](LOCAL_TEST_REPORT.md#october-27--canonical-navigation-and-dated-status-audit-pass) and [handoff guidance](#integration-addenda-and-historical-status) distinguish dated worker records from verified integration. Master owns guarded mirror/main/checkpoint/expected-tip cleanup and chooses the next bounded assignment after closeout; workers do not self-continue. Existing schedules, central owner-question routing, native stop, denied restart/cleanup holds and all owner event/data/runtime exclusions remain unchanged. Live v5/source45c9682 is still the last authorized judging release.
 
 The [post-Finals replacement/redance decision](#stage-workflow-revision--implemented-locally) remains undefined, so no replacement/redance is inferred. It does not block independent local maintenance. Hosted release evidence is scoped separately below; physical-device, venue and capacity outcomes remain unverified. Owner walkthrough/data/runtime exclusions and routine local-only enhancement remain in force beyond this explicitly authorized judging release.
 
@@ -127,7 +129,23 @@ Staging: (1) exact acknowledgement and focused fictional failure/retry tests; (2
 
 ## Completed local deliveries
 
-Reviewed local deliveries are indexed below; the latest application behavior source is8ed29e2 with delivery0f92903, and the latest dependency source is40d96a5 with deliveryfddf60b. Use the linked behavior and dated verification records for scope, source/serving evidence, residual limits and rollback context. All indexed deliveries are integrated; final remote/checkpoint/mirror checks are recorded at handoff. Test counts are dated evidence, not new runs or a requirement to repeat completed suites. Source delivery alone does not establish preview refresh, hosted deployment or real publication. Annotated checkpoints preserve source history; they do not restore data. See the [checkpoint map](#github-checkpoints-and-rollback-map).
+Use [Current coordination](#current-coordination-cadence-and-queue--october-24) plus fresh Git/writer verification for the latest completed and active work. The dated table below indexes reviewed October27 contracts; the earlier index retains prior deliveries. Test counts and serving/deployment statements belong to their dated evidence, not a requirement to rerun successful suites or proof of current serving. Source checkpoints preserve history, not data restoration. See the [checkpoint map](#github-checkpoints-and-rollback-map).
+
+### October 27 local deliveries
+
+All rows are verified ancestors of integrated main48741db at this audit. Later batches update current coordination; do not infer active claims or preview/hosted activation from this historical table. Source/delivery columns are distinct from the linked master integration proof.
+
+| Batch · contract | Source · delivery | Behavior · integration evidence |
+| --- | --- | --- |
+| 64 · Shared GET deadlines/status order | d98bdb7 · 961e9cb | [Contract](#shared-get-completion-and-connection-status-ordering--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-shared-read-lifecycle-integration-pass) |
+| 63 · Structural GET recovery | ba659d8 · 2881fe4 | [Contract](#shared-view-read-validation-and-recovery--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-shared-view-read-recovery-integration-pass) |
+| 62 · Organizer admin-delivery dependency | 079e76f · b8e776a | [Contract](#organizer-previous-delivery-dependency-guidance--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-organizer-delivery-guidance-integration-pass) |
+| 61 · No-op setup/preparation recovery | eed87ee · 0ef0030 | [Contract](#publication-preparation-reuse-and-no-op-setup-saves--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-preparation-reuse-integration-pass) |
+| 60 · Admin previous-delivery task | d13c095 · eb51ef2 | [Contract](#admin-unresolved-delivery-task-visibility--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-delivery-check-integration-pass) |
+| 59 · Admin exact operation confirmation | 9a2ba30 · 4cdbaf5 | [Contract](#admin-operation-acknowledgements-and-current-event-status--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-admin-operation-confirmation-integration-pass) |
+| 58 · Exact publication receipt recovery | 194455e · 757a94a | [Contract](#exact-publication-acknowledgements-and-uncertain-delivery-recovery--october-27) · [Master verification](LOCAL_TEST_REPORT.md#october-27--preferred-publication-receipt-recovery-integration-pass) |
+
+### Earlier local delivery index
 
 | Completed area | Delivery tip | Behavior and dated verification |
 | --- | --- | --- |
@@ -1732,6 +1750,12 @@ At every handoff or stopping point, review and update the relevant Markdown docu
 Keep this document as the concise map of stable behavior. Update relevant sections with the code change, including the review date, affected contract, test evidence and external configuration status. Do not append raw logs, secrets, long transcripts, or every dependency to it. Update AGENTS.md only when working rules or navigation to this reference change.
 
 Keep only AGENTS.md, PROJECT_SPEC.md and LOCAL_TEST_REPORT.md as working references. Record incomplete work/next steps in the test report rather than new handoff files. Proposed work must stay separate from locally verified behavior.
+
+### Integration addenda and historical status
+
+An implementation entry records its own handoff state. After independent review, prefer a compact master integration addendum linking that batch rather than repeating its full implementation/test narrative. Record the additional review or checks actually performed, verified integrated main/checkpoint references, mirror and protected-state outcome, claim/branch closeout and remaining limits/next step. Link existing passing evidence when unchanged; record new failures or verification separately when needed. This changes presentation, not the required verification or preservation duties.
+
+Update current coordination with completed versus pending status. Historical pending-integration wording remains a dated observation and is superseded only by verified later integration, never by a sent assignment or assumed completion. This supersession concerns delivery status only; owner exclusions, actual denials, native-stop holds and unverified limits remain unchanged. Keep the original evidence intact; private detailed output/claim journals remain scoped and ignored. No new tracked handoff file or routine approval gate is introduced.
 
 A useful prompt for a later authorized implementation task:
 
