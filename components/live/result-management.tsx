@@ -101,6 +101,33 @@ function RequestApproval({ data, request, target, action }: { data: LiveView; re
   return <><button className="quiet-button" disabled={!eligible || waiting} aria-busy={waiting} aria-describedby={status ? statusId : undefined} onClick={() => void approve()}>{waiting ? 'Approving request…' : `Approve request as ${data.role}`}</button>{status && <p id={statusId} role="status">{status}</p>}</>;
 }
 
+function RequestCancellation({ data, request, target, action }: { data: LiveView; request: ReviewRequest; target: string; action: Action }) {
+  const [attempt, setAttempt] = useState<{ pending: boolean } | null>(null);
+  const pending = useRef<symbol | null>(null), alive = useRef(true);
+  const resolved = Boolean(request.cancelledAt || request.appliedAt);
+  const eligible = data.role === 'organizer' && data.status === 'active' && !resolved;
+  const latest = useRef({ target, eligible });
+  useEffect(() => { latest.current = { target, eligible }; }, [target, eligible]);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const statusId = useId();
+  const waiting = attempt?.pending === true && !resolved && data.status === 'active';
+  const status = resolved ? '' : data.status !== 'active' ? attempt ? 'This event is read only. Check the request’s current status.' : '' : waiting ? 'Cancellation is in progress for this exact request version.' : attempt ? 'Cancellation is not confirmed in the current request yet. Check its status before trying again.' : '';
+  async function cancel() {
+    if (pending.current || !alive.current || latest.current.target !== target || !latest.current.eligible) return;
+    const owner = Symbol(), input = { action: 'cancel-request', reviewRequestId: request.id, requestVersion: request.version };
+    pending.current = owner; setAttempt({ pending: true });
+    try { await action(input); }
+    catch { /* Current request data, not the callback result, establishes cancellation. */ }
+    finally {
+      if (pending.current === owner) {
+        pending.current = null;
+        if (alive.current) setAttempt({ pending: false });
+      }
+    }
+  }
+  return <><button className="quiet-button" disabled={!eligible || waiting} aria-busy={waiting} aria-describedby={status ? statusId : undefined} onClick={() => void cancel()}>{waiting ? 'Cancelling request…' : 'Cancel request'}</button>{status && <p id={statusId} role="status">{status}</p>}</>;
+}
+
 export function ReviewRequests({ data, action, embedded = false, pendingOnly = false, onReviseWithdrawal }: { data: LiveView; action: Action; embedded?: boolean; pendingOnly?: boolean; onReviseWithdrawal?: (q: ReviewRequest) => void }) {
   const requests = [...(data.reviewRequests ?? [])].filter((q) => !pendingOnly || !q.appliedAt && !q.cancelledAt).sort((a, b) => Number(Boolean(a.appliedAt || a.cancelledAt)) - Number(Boolean(b.appliedAt || b.cancelledAt)));
   return <section className="form-panel"><div className="panel-heading">{embedded ? <h3>{pendingOnly ? 'Pending requests' : 'Request history'}</h3> : <h2>{pendingOnly ? 'Pending requests' : 'Amendments & withdrawals'}</h2>}</div><div className="form-body review-request-list">
@@ -128,7 +155,7 @@ export function ReviewRequests({ data, action, embedded = false, pendingOnly = f
         {pending && ['organizer', 'head'].includes(data.role) && <div className="shared-inline">
           <RequestApproval key={approvalTarget} data={data} request={q} target={approvalTarget} action={action} />
           {data.role === 'organizer' && q.kind === 'withdrawal' && onReviseWithdrawal && <button className="quiet-button" disabled={data.status !== 'active'} onClick={() => onReviseWithdrawal(q)}>Revise withdrawal request</button>}
-          {data.role === 'organizer' && <button className="quiet-button" disabled={data.status !== 'active'} onClick={() => void action({ action: 'cancel-request', reviewRequestId: q.id, requestVersion: q.version })}>Cancel request</button>}
+          {data.role === 'organizer' && <RequestCancellation key={'cancel/' + approvalTarget} data={data} request={q} target={approvalTarget} action={action} />}
         </div>}
         {q.payload.pairingPlan && <details><summary>Reviewed undanced pairings</summary>{q.payload.pairingPlan.map((plan) => <div key={plan.performanceId}><h4>{round?.definition.heats.flatMap((h) => h.songs).find((s) => s.id === plan.performanceId)?.title ?? 'Recorded song'}</h4>{plan.partners.map((pair, index) => <p key={index}>{pair.map((id) => { const s = round?.definition.subjects.find((s) => s.id === id); return s ? `#${s.number} ${s.primary}` : 'Recorded entrant'; }).join(' & ')}</p>)}</div>)}</details>}
         <details><summary>Request version &amp; approval record</summary><p>Request version {q.version} · requested by {q.requester}</p>{q.approvals.map((a) => <p key={a.role}>{a.role} · {a.participantId} · exact version {a.version} · {new Date(a.at).toLocaleString()}</p>)}</details>

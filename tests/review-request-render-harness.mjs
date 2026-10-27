@@ -24,11 +24,13 @@ export function fixture(role = 'organizer', kind = 'correction') {
 // Executes real ReviewRequests/approval controls, with deterministic hook identity/effect cleanup.
 // The unrelated Correction editor body is substituted; its real element key/props are recorded.
 // This is controlled component evidence, not a React DOM/StrictMode/browser/server model.
+/** @param {ReturnType<typeof fixture>} data @param {(input: Record<string, unknown>) => Promise<boolean>} action */
 export async function harness(data = fixture(), action = async () => true) {
   const buckets = new Map(); let current = '', index = 0, tree, seen = new Set(), idSequence = 0;
   const calls = /** @type {Record<string, unknown>[]} */([]), prompts = /** @type {string[]} */([]);
   const revisions = /** @type {import('../lib/live/types.ts').ReviewRequest[]} */([]);
   let corrections = [], lateStateUpdates = 0;
+  let actionKeys = /** @type {{approval: string | null, cancellation: string | null}[]} */([]);
   let confirmResult = /** @type {boolean | ((message: string) => boolean)} */(true);
   const bucket = () => { seen.add(current); if (!buckets.has(current)) buckets.set(current, []); return buckets.get(current); };
   const hooks = {
@@ -53,6 +55,13 @@ export async function harness(data = fixture(), action = async () => true) {
   function expand(node, path = 'root') {
     if (Array.isArray(node)) return node.map((child, i) => expand(child, path + '/' + (isValidElement(child) && child.key !== null ? child.key : i)));
     if (!isValidElement(node)) return node;
+    if (node.type === 'div' && node.props.className === 'shared-inline') {
+      const controls = (Array.isArray(node.props.children) ? node.props.children : [node.props.children]).filter(n => isValidElement(n) && typeof n.type === 'function' && ['RequestApproval', 'RequestCancellation'].includes(n.type.name));
+      if (controls.length) {
+        const keys = controls.map(n => n.key); if (new Set(keys).size !== keys.length) throw Error('Duplicate action sibling React keys');
+        actionKeys.push({ approval: controls.find(n => n.type.name === 'RequestApproval')?.key ?? null, cancellation: controls.find(n => n.type.name === 'RequestCancellation')?.key ?? null });
+      }
+    }
     const identity = path + '/' + (node.key ?? '');
     if (typeof node.type === 'function') {
       if (node.type.name === 'Correction') { corrections.push({ key: node.key, props: node.props }); return null; }
@@ -66,9 +75,9 @@ export async function harness(data = fixture(), action = async () => true) {
   const run = input => { calls.push(structuredClone(input)); return action(input); };
   return {
     get data() { return data; }, setData(value) { data = value; }, calls, prompts, revisions, text,
-    get corrections() { return corrections; }, get lateStateUpdates() { return lateStateUpdates; },
+    get corrections() { return corrections; }, get lateStateUpdates() { return lateStateUpdates; }, get actionKeys() { return actionKeys; },
     setConfirm(value) { confirmResult = value; },
-    render() { seen = new Set(); corrections = []; tree = expand(createElement(ReviewRequests, { data, action: run, embedded: true, pendingOnly: false, onReviseWithdrawal: q => revisions.push(q) }));
+    render() { seen = new Set(); corrections = []; actionKeys = []; tree = expand(createElement(ReviewRequests, { data, action: run, embedded: true, pendingOnly: false, onReviseWithdrawal: q => revisions.push(q) }));
       for (const key of buckets.keys()) if (!seen.has(key)) { buckets.get(key).forEach(v => { if (v?.kind === 'effect') v.cleanup?.(); }); buckets.delete(key); }
       for (const values of buckets.values()) for (const v of values) if (v?.kind === 'effect' && v.changed) { v.cleanup?.(); v.cleanup = v.fn(); v.changed = false; }
       return renderToStaticMarkup(tree); },
@@ -76,6 +85,8 @@ export async function harness(data = fixture(), action = async () => true) {
     article(id = data.reviewRequests[0].id) { return nodes(tree).find(n => n.type === 'article' && n.props.id === 'review-request-' + id); },
     approval(id = data.reviewRequests[0].id) { return nodes(this.article(id)).find(n => n.type === 'button' && /^(Approve request as |Approving request)/.test(text(n))); },
     approvalStatus(id = data.reviewRequests[0].id) { const statusId = this.approval(id)?.props['aria-describedby']; return statusId ? nodes(this.article(id)).find(n => n.type === 'p' && n.props.id === statusId) : undefined; },
+    cancellation(id = data.reviewRequests[0].id) { return nodes(this.article(id)).find(n => n.type === 'button' && /^(Cancel request$|Cancelling request)/.test(text(n))); },
+    cancellationStatus(id = data.reviewRequests[0].id) { const statusId = this.cancellation(id)?.props['aria-describedby']; return statusId ? nodes(this.article(id)).find(n => n.type === 'p' && n.props.id === statusId) : undefined; },
     button(pattern, id = data.reviewRequests[0].id) { return nodes(this.article(id)).find(n => n.type === 'button' && pattern.test(text(n))); },
     restore() { for (const values of buckets.values()) values.forEach(v => { if (v?.kind === 'effect') v.cleanup?.(); }); buckets.clear(); if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow; },
   };
