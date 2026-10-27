@@ -22,6 +22,8 @@ Preservation PASS:227 pre-doc tracked inputs,4767 prior evidence/store/package/f
 
 Master review, normal main/mirror integration and exact-tip cleanup are pending this dated delivery. Next separate scope should establish parent/override/API compatibility and usable dependency rollback before appropriate isolated app regressions/build or promotion. No owner-service restart or automatic worker continuation follows this standalone result.
 
+77 source 0f112a2bc7b2a89ca60e0a8507f2c2828dbde433; branch codex/maintained-miniflare-rehearsal; annotated checkpoints checkpoint/before-maintained-miniflare-rehearsal-2026-10-27, checkpoint/local-maintained-miniflare-rehearsal-source-2026-10-27 and checkpoint/local-maintained-miniflare-rehearsal-2026-10-27. Master review/main/mirror integration and expected-tip cleanup are pending this dated worker delivery. Runtime3001 is released; file claims release at clean detached handoff.
+
 ## October 27 — Maintained Miniflare consumer source comparison
 
 76 source-only comparison from main0942d0936b9007a9ae6889448190f9e5a571d08b on codex/miniflare-consumer-source-review is complete. [Per-version matrix, primary references and next gates](PROJECT_SPEC.md#maintained-miniflare-consumer-source-comparison--october-27). No package install/import, lifecycle/native/runtime/listener/owner-port query, test/build/audit or live action occurs. This is not remediation or runtime verification;75 stays NOT CLEARED and its24/22/two-failure plus9-observation record remains intact.
