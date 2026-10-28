@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 
 const schema = 'country-dance/verification-input/v1';
 const marker = Buffer.from(`${schema}\n`);
+const singleLink = BigInt(1);
 export const MAX_INPUT_BYTES = 16 * 1024 * 1024;
 /** @typedef {{schema: string, source: string, run: string, checkpoint: string, bytes: number, sha256: string, object: string}} InputReference */
 /** @typedef {{source: string, run: string, checkpoint: string, data: Uint8Array}} CaptureInput */
@@ -11,7 +12,7 @@ export const MAX_INPUT_BYTES = 16 * 1024 * 1024;
 const digest = data => createHash('sha256').update(data).digest('hex');
 /** @param {string} value */
 const folded = value => process.platform === 'win32' ? value.toLowerCase() : value;
-/** @param {import('node:fs').Stats} a @param {import('node:fs').Stats} b */
+/** @param {import('node:fs').BigIntStats} a @param {import('node:fs').BigIntStats} b */
 const sameFile = (a, b) => a.dev === b.dev && a.ino === b.ino;
 /** @param {string} value @param {number} maximum */
 function label(value, maximum) {
@@ -25,7 +26,7 @@ function sourceLabel(source) {
 /** Reject links/junctions and non-directory ancestors, without following them to read files. @param {string} directory */
 function directoryChain(directory) {
   for (let current = directory; ; current = path.dirname(current)) {
-    const stat = fs.lstatSync(current);
+    const stat = fs.lstatSync(current, { bigint: true });
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('Snapshot directory must have ordinary directory ancestors');
     if (path.dirname(current) === current) break;
   }
@@ -38,14 +39,14 @@ function localRoot(directory) {
 }
 /** @param {string} file @param {number} bytes */
 function readRegular(file, bytes) {
-  const before = fs.lstatSync(file);
-  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size !== bytes) throw new Error('Snapshot object is not the expected single-link regular file');
+  const before = fs.lstatSync(file, { bigint: true }), expectedSize = BigInt(bytes);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== singleLink || before.size !== expectedSize) throw new Error('Snapshot object is not the expected single-link regular file');
   const fd = fs.openSync(file, 'r');
   try {
-    const opened = fs.fstatSync(fd);
-    if (!opened.isFile() || opened.nlink !== 1 || !sameFile(before, opened) || opened.size !== bytes) throw new Error('Snapshot object identity changed');
-    const data = fs.readFileSync(fd), after = fs.lstatSync(file);
-    if (!sameFile(opened, after) || after.isSymbolicLink() || after.nlink !== 1 || after.size !== bytes || data.length !== bytes) throw new Error('Snapshot object changed during read');
+    const opened = fs.fstatSync(fd, { bigint: true });
+    if (!opened.isFile() || opened.nlink !== singleLink || !sameFile(before, opened) || opened.size !== expectedSize) throw new Error('Snapshot object identity changed');
+    const data = fs.readFileSync(fd), after = fs.lstatSync(file, { bigint: true });
+    if (!sameFile(opened, after) || after.isSymbolicLink() || after.nlink !== singleLink || after.size !== expectedSize || data.length !== bytes) throw new Error('Snapshot object changed during read');
     return data;
   } finally { fs.closeSync(fd); }
 }
@@ -63,10 +64,10 @@ function checkReference(reference) {
 function poolReader(directory) {
   const root = localRoot(directory), objects = path.join(root, 'sha256');
   directoryChain(root); directoryChain(objects);
-  const rootIdentity = fs.lstatSync(root), objectsIdentity = fs.lstatSync(objects);
+  const rootIdentity = fs.lstatSync(root, { bigint: true }), objectsIdentity = fs.lstatSync(objects, { bigint: true });
   function checkPool() {
     directoryChain(root); directoryChain(objects);
-    if (!sameFile(rootIdentity, fs.lstatSync(root)) || !sameFile(objectsIdentity, fs.lstatSync(objects))) throw new Error('Snapshot pool directory identity changed');
+    if (!sameFile(rootIdentity, fs.lstatSync(root, { bigint: true })) || !sameFile(objectsIdentity, fs.lstatSync(objects, { bigint: true }))) throw new Error('Snapshot pool directory identity changed');
     if (!readRegular(path.join(root, 'format'), marker.length).equals(marker)) throw new Error('Unknown snapshot pool format');
   }
   checkPool();
