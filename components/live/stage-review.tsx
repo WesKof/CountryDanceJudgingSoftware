@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type ReactNode } from 'react';
 import type { AdvancementTie, LiveView, RoundView } from '@/lib/live/types';
+import { finalistCountIssues } from '@/lib/live/validation';
 import { LiveResults } from './results';
 import SetupSection from './setup-section';
 import { Correction, ReviewRequests } from './result-management';
@@ -50,11 +51,50 @@ function SubmittedReview({ data, round, action }: { data: LiveView; round: Round
   </div></section>;
 }
 
+function sharedHeadWaiting(data: LiveView): string[] {
+  const head = data.setup.judges.find((judge) => judge.id === data.judgeId);
+  if (data.role !== 'head' || data.status !== 'active' || data.setup.workflow !== 'stage-v1' || !data.judgeId || data.judgeId !== data.setup.headJudgeId || !head || head.participantId === '' || data.rounds.some((round) => !round.standings?.complete || !['discussion', 'approved'].includes(round.phase))) return [];
+  const requests = data.reviewRequests?.filter((request) => !request.appliedAt && !request.cancelledAt) ?? [];
+  if (new Set(requests.map((request) => request.id)).size !== requests.length) return [];
+  for (const request of requests) {
+    if (!Array.isArray(request.approvals) || !request.payload) return [];
+    const approval = request.approvals[0];
+    const targetAvailable = request.payload.roundKey ? data.rounds.some((round) => round.key === request.payload.roundKey) : data.setup.competitions.some((competition) => competition.id === request.payload.competitionId) && data.rounds.some((round) => round.definition.competitionId === request.payload.competitionId);
+    // Private views project participant IDs to role labels; retain that privacy boundary.
+    if (!targetAvailable || !Number.isSafeInteger(request.version) || request.version < 1 || request.approvals.length !== 1 || approval.role !== 'head' || approval.version !== request.version || approval.participantId !== (head.participantId ?? 'Head judge')) return [];
+  }
+  const waitingJudges = new Map<string, string>();
+  let countBlocked = false;
+  for (const round of data.rounds.filter((round) => !round.standings!.approved)) {
+    const result = round.standings!, panel = round.definition.judgeIds;
+    if (round.phase !== 'discussion' || !result.complete || !panel.length || new Set(panel).size !== panel.length || panel.some((id) => round.definition.judges.filter((judge) => judge.id === id && judge.name).length !== 1)) return [];
+    if (round.definition.kind === 'finals' && result.rows.some((row) => !row.decided)) return [];
+    const ties = round.definition.kind === 'prelims' ? result.advancementTies?.filter((tie) => !tie.complete) ?? [] : [];
+    for (const tie of ties) {
+      if (!Number.isSafeInteger(tie.slots) || tie.slots < 1 || tie.slots > tie.subjectIds.length || new Set(tie.subjectIds).size !== tie.subjectIds.length || tie.subjectIds.some((id) => !round.definition.subjects.some((subject) => subject.id === id)) || new Set(tie.votes.map((vote) => vote.judgeId)).size !== tie.votes.length || tie.votes.some((vote) => !panel.includes(vote.judgeId) || vote.roundKey !== round.key || vote.fingerprint !== result.fingerprint || vote.tieKey !== tie.key || vote.selected.length !== tie.slots || new Set(vote.selected).size !== vote.selected.length || vote.selected.some((id) => !tie.subjectIds.includes(id)))) return [];
+      const missing = panel.filter((id) => !tie.votes.some((vote) => vote.judgeId === id));
+      // A full panel needs a head decision (or has ambiguous state), not a waiting cue.
+      if (!missing.length || missing.includes(data.judgeId) || tie.deadlocked) return [];
+      missing.forEach((id) => waitingJudges.set(id, round.definition.judges.find((judge) => judge.id === id)!.name));
+    }
+    const countIssues = round.definition.kind === 'prelims' ? finalistCountIssues(round.definition.format, result.finalistCount ?? 0, round.definition.subjects.filter((subject) => !round.definition.withdrawnIds?.includes(subject.id))) : [];
+    countBlocked ||= countIssues.length > 0;
+    const correctionBlocked = requests.some((request) => request.kind === 'correction' && request.payload.roundKey === round.key);
+    if (!ties.length && !countIssues.length && !correctionBlocked) return [];
+  }
+  const messages: string[] = [];
+  if (waitingJudges.size) messages.push(`Waiting for ${waitingJudges.size > 3 ? `${waitingJudges.size} assigned judges` : [...waitingJudges.values()].join(', ')} to submit advancement votes.`);
+  if (countBlocked) messages.push('Waiting for the organizer to review the finalist count.');
+  if (requests.length) messages.push(`Waiting for the organizer to approve ${requests.length === 1 ? 'the request' : `${requests.length} requests`}.`);
+  return messages;
+}
+
 export function StageReview({ data, action, selectedRoundId, showRound, setupRoute, navigate, openHeadAccess, correctionDraft, part = 'all' }: { correctionDraft?: NewCorrectionDraft; part?: 'pending' | 'history' | 'all'; data: LiveView; action: Action; managementExtra?: ReactNode; selectedRoundId?: string; showRound?: (id: string, page?: number) => void; setupRoute?: (roundId?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
   const reviewed = data.rounds.filter((r) => r.standings);
   const pending = data.role === 'head' ? data.reviewRequests?.filter((q) => !q.appliedAt && !q.cancelledAt) ?? [] : [];
   const organizer = data.role === 'organizer';
   if (organizer) return <OrganizerResults correctionDraft={correctionDraft!} data={data} action={action} selected={selectedRoundId ?? ''} select={(id) => showRound?.(id, 2)} setupRoute={setupRoute} navigate={navigate} openHeadAccess={openHeadAccess} />;
+  const waiting = sharedHeadWaiting(data);
   const actionable = data.status === 'active' ? reviewed.filter((r) => !r.standings?.approved && (data.role === 'head' || r.standings?.advancementTies?.some((t) => !t.complete && r.definition.judgeIds.includes(data.judgeId!) && !t.votes.some((v) => v.judgeId === data.judgeId)))) : [];
   const contextResults = reviewed.filter((r) => !actionable.includes(r));
   const completed = reviewed.filter((r) => r.standings?.approved);
@@ -62,6 +102,7 @@ export function StageReview({ data, action, selectedRoundId, showRound, setupRou
   if (part === 'pending' && !pending.length && !actionable.length) return null;
   const controls = (round: RoundView) => round.standings?.advancementTies?.map((tie) => <Vote key={JSON.stringify([data.eventId, data.role, data.judgeId, round.key, tie.key])} data={data} round={round} tie={tie} action={action} />);
   return <div className="page-stack">
+    {part !== 'history' && waiting.length > 0 && <section className="hero-panel stage-judge-current" aria-label="Current head review waiting status"><div><h2>Waiting for others</h2>{waiting.map((message) => <p key={message}>{message}</p>)}</div></section>}
     {part !== 'history' && pending.length > 0 && <ReviewRequests data={data} action={action} pendingOnly />}
     {part !== 'history' && <LiveResults data={{ ...data, rounds: actionable }} action={action} head={data.role === 'head'} roundControls={controls} />}
     {part !== 'pending' && <SetupSection title="Completed judging & history" caption="Retained records" summaryText={`${completed.length} approved rounds · scores, notes and request history`}>
