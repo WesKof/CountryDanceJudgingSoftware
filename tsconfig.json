@@ -26,5 +26,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "work/owner-runtime-backups"]
+  "exclude": ["node_modules", "work"]
 }
