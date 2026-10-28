@@ -1,14 +1,14 @@
 import type { LiveSetup } from './types.ts';
-import { finalistCountIssues, freezeRound } from './validation.ts';
+import { finalistCountIssues, freezeRound, roleVerificationIssues } from './validation.ts';
 export type SetupTask = { id: string; label: string; detail: string; section: string; roundId?: string; complete: boolean };
 export function setupTasks(setup: LiveSetup): SetupTask[] {
   const panel = setup.judges;
-  const identities = [setup.organizerParticipantId, ...panel.map((j) => j.participantId)];
-  const peopleReady = !setup.workflow || Boolean(setup.organizerName?.trim() && setup.separationAttested && identities.every((id) => id?.trim()) && new Set(identities).size === identities.length);
+  const roleIssues = roleVerificationIssues(setup);
+  const peopleReady = roleIssues.length === 0;
   const tasks: SetupTask[] = [
     { id:'details',label:'Name your event',detail:'Venue and date are optional.',section:'Event details',complete:Boolean(setup.name.trim()) },
     { id:'program',label:'Add competitions',detail:'Choose formats and divisions.',section:'Program & stages',complete:setup.competitions.length>0 },
-    { id:'panel',label:'Set the judging panel',detail:'Add judges, choose the head and confirm separate role holders.',section:panel.length && panel.some((j)=>j.id===setup.headJudgeId) && panel.every((j)=>Boolean(j.name.trim())) && !peopleReady ? 'Role verification' : 'Judges',complete:panel.length>0 && panel.every((j)=>Boolean(j.name.trim())) && panel.some((j)=>j.id===setup.headJudgeId) && peopleReady },
+    { id:'panel',label:'Set the judging panel',detail:roleIssues.length ? roleIssues[0] + (roleIssues.length > 1 ? ` ${roleIssues.length - 1} more role requirements.` : '') : 'Add judges and choose the head.',section:panel.length && panel.some((j)=>j.id===setup.headJudgeId) && panel.every((j)=>Boolean(j.name.trim())) && !peopleReady ? 'Role verification' : 'Judges',complete:panel.length>0 && panel.every((j)=>Boolean(j.name.trim())) && panel.some((j)=>j.id===setup.headJudgeId) && peopleReady },
   ];
   for(const c of setup.competitions) {
     const pre=setup.rounds.find((r)=>r.competitionId===c.id&&r.kind==='prelims');

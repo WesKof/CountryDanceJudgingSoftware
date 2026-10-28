@@ -205,7 +205,7 @@ export default function JudgeBallot({ token }: { token: string }) {
       queueMicrotask(() => { setSelected(data.context.performanceId); setRole('All'); });
     }
   }, [data, selected]);
-  if (!data) return <LiveShell navigationDisabled title="Judge ballot" identity="Private judge link" status={error ? 'Unable to open judge link' : 'Connecting…'} items={['Score']} current={0} navigate={setPage}><p role="status">{error || 'Loading your ballot…'}</p>{error && <p>Check that this is your latest private judge link, or retry the connection.</p>}<button className="quiet-button" onClick={() => void refresh()}>Retry</button></LiveShell>;
+  if (!data) return <LiveShell compact navigationDisabled title="Opening judge page" identity="Private judge link" status={error ? 'Unable to open judge link' : 'Connecting…'} items={['Score']} current={0} navigate={setPage}><p role="status">{error || 'Loading your ballot…'}</p>{error && <p>Check that this is your latest private judge link, or retry the connection.</p>}<button className="quiet-button" onClick={() => void refresh()}>Retry</button></LiveShell>;
   if (data.role === 'organizer') return <p role="alert">Use an individual judge link to score.</p>;
   const judge = data.setup.judges.find((j) => j.id === data.judgeId);
   const stage = data.setup.workflow === 'stage-v1';
