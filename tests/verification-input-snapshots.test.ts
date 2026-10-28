@@ -113,3 +113,43 @@ test('a directory replaced by another ordinary directory invalidates the existin
   const f = fixture(t), store = createInputSnapshots(f.pool), objects = path.join(f.pool, 'sha256'); fs.renameSync(objects, path.join(f.root, 'retained')); fs.mkdirSync(objects);
   assert.throws(() => store.capture(input())); assert.deepEqual(fs.readdirSync(objects), []);
 });
+
+// Simulate adjacent exact IDs that default NumberStats cannot distinguish. The
+// Number conversion exists only in this legacy-observation model, never the helper.
+function syntheticIdentity<T extends fs.Stats | fs.BigIntStats>(stat: T, field: 'dev' | 'ino', value: bigint, options?: fs.StatOptions): T {
+  return Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { [field]: options?.bigint ? value : Number(value) });
+}
+
+for (const scope of ['pool', 'objects', 'opened', 'after']) for (const field of ['dev', 'ino'] as const) test(`${scope} preserves adjacent large ${field} identities through the public reader`, t => {
+  const f = fixture(t), data = input(), a = BigInt('1152921504606846976'), b = a + BigInt(1);
+  assert.notEqual(a, b); assert.equal(Number(a), Number(b));
+  const blob = path.join(f.pool, 'sha256', sha(data.data) + '.bin'), original = { lstat: fs.lstatSync, fstat: fs.fstatSync, open: fs.openSync }, descriptors = new Map<number, string>();
+  let changed = false, blobLstats = 0;
+  fs.openSync = (file, flags, mode) => { const fd = original.open(file, flags, mode); descriptors.set(fd, path.resolve(String(file))); return fd; };
+  Object.defineProperty(fs, 'lstatSync', { value: ((file: fs.PathLike, options?: fs.StatOptions) => {
+    const stat = original.lstat(file, options), full = path.resolve(String(file));
+    assert.ok(stat);
+    if (scope === 'pool' && full === f.pool || scope === 'objects' && full === path.join(f.pool, 'sha256')) return syntheticIdentity(stat, field, changed ? b : a, options);
+    if ((scope === 'opened' || scope === 'after') && full === blob) return syntheticIdentity(stat, field, scope === 'after' && changed && blobLstats++ > 0 ? b : a, options);
+    return stat;
+  }) as typeof fs.lstatSync });
+  fs.fstatSync = ((fd: number, options?: fs.StatOptions) => {
+    const stat = original.fstat(fd, options);
+    return descriptors.get(fd) === blob && (scope === 'opened' || scope === 'after') ? syntheticIdentity(stat, field, scope === 'opened' && changed ? b : a, options) : stat;
+  }) as typeof fs.fstatSync;
+  try {
+    const store = createInputSnapshots(f.pool), ref = store.capture(data); changed = true; blobLstats = 0;
+    assert.throws(() => store.read(ref), /identity changed|changed during read/);
+    changed = false; assert.deepEqual(store.read(ref), data.data); assert.deepEqual(openInputSnapshots(f.pool).read(JSON.parse(JSON.stringify(ref))), data.data);
+  } finally { Object.defineProperty(fs, 'lstatSync', { value: original.lstat }); fs.fstatSync = original.fstat; fs.openSync = original.open; }
+});
+
+test('normal create, capture, marker, ancestor, read and reopen observations consistently request bigint stats', t => {
+  const f = fixture(t), original = { lstat: fs.lstatSync, fstat: fs.fstatSync }, observations: { kind: string; bigint: boolean }[] = [];
+  Object.defineProperty(fs, 'lstatSync', { value: ((file: fs.PathLike, options?: fs.StatOptions) => { observations.push({ kind: 'lstat', bigint: options?.bigint === true }); return original.lstat(file, options); }) as typeof fs.lstatSync });
+  fs.fstatSync = ((fd: number, options?: fs.StatOptions) => { observations.push({ kind: 'fstat', bigint: options?.bigint === true }); return original.fstat(fd, options); }) as typeof fs.fstatSync;
+  try {
+    const store = createInputSnapshots(f.pool), ref = store.capture(input()); assert.deepEqual(store.read(ref), input().data); assert.deepEqual(openInputSnapshots(f.pool).read(ref), input().data);
+    assert.ok(observations.some(o => o.kind === 'lstat')); assert.ok(observations.some(o => o.kind === 'fstat')); assert.equal(observations.every(o => o.bigint), true);
+  } finally { Object.defineProperty(fs, 'lstatSync', { value: original.lstat }); fs.fstatSync = original.fstat; }
+});
