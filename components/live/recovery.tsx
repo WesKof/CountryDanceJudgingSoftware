@@ -49,8 +49,10 @@ export default function Recovery({ includeNotes, setIncludeNotes, task, feedback
   disabled?: boolean; extra?: ReactNode; history?: unknown; children: ReactNode;
 }) {
   const busy = task !== null;
+  const needsAttention = !busy && Boolean(feedback?.error);
+  const summary = busy ? task === 'backup' ? 'Preparing backup…' : 'Restoring a new event…' : needsAttention ? feedback?.kind === 'backup' ? 'Backup failed. Open for retry details.' : 'Restore did not finish here. Open for retry details.' : 'Backups, restore and event management';
   const message = (kind: 'backup' | 'restore') => feedback?.kind === kind && <p className={feedback.error ? 'notice recovery-feedback' : 'recovery-feedback'} role={feedback.error ? 'alert' : 'status'}>{feedback.message}</p>;
-  return <SetupSection title="Data & recovery" caption="Data management" summaryText={busy ? task === 'backup' ? 'Preparing backup…' : 'Restoring a new event…' : 'Backups, restore and event management'}><div className="form-body page-stack">
+  return <SetupSection title="Data & recovery" caption="Data management" summaryText={summary} attention={needsAttention}><div className="form-body page-stack">
     <fieldset className="shared-unframed page-stack recovery-controls" disabled={busy || disabled}>
     <div><p>Save an event backup for recovery.</p><p className="recovery-backup-privacy">{includeNotes ? 'Private judge notes will be included; anyone with the file can read them.' : 'Private judge notes are excluded.'} Access credentials are always excluded.</p><button className="quiet-button" aria-busy={task === 'backup'} onClick={() => { if (!disabled) void backup(); }}>Download event backup</button>{message('backup')}</div>
     <details><summary>Backup options</summary><label className="check-label"><input type="checkbox" checked={includeNotes} onChange={(e) => setIncludeNotes(e.target.checked)} />Include private judge notes in this backup (anyone with the file can read them)</label></details>
