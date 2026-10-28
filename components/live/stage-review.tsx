@@ -89,12 +89,52 @@ function sharedHeadWaiting(data: LiveView): string[] {
   return messages;
 }
 
+function mixedHeadReview(data: LiveView) {
+  const head = data.setup.judges.find((judge) => judge.id === data.judgeId);
+  if (data.role !== 'head' || data.status !== 'active' || data.setup.workflow !== 'stage-v1' || !data.judgeId || data.judgeId !== data.setup.headJudgeId || !head || head.participantId === '' || data.rounds.some((round) => !round.standings?.complete || !['discussion', 'approved'].includes(round.phase))) return null;
+  if (new Set(data.rounds.map((round) => round.id)).size !== data.rounds.length || new Set(data.rounds.map((round) => round.key)).size !== data.rounds.length || data.rounds.some((round) => !round.id || !round.key || !round.standings!.fingerprint)) return null;
+  const requests = data.reviewRequests?.filter((request) => !request.appliedAt && !request.cancelledAt) ?? [];
+  if (new Set(requests.map((request) => request.id)).size !== requests.length) return null;
+  const tasks: { target: string; label: string }[] = [];
+  let waiting = 0;
+  for (const [index, request] of requests.entries()) {
+    if (!request.id || !request.payload || !['correction', 'withdrawal'].includes(request.kind) || !Number.isSafeInteger(request.version) || request.version < 1 || !Array.isArray(request.approvals) || request.approvals.length > 1) return null;
+    const round = data.rounds.find((round) => round.key === request.payload.roundKey);
+    const competition = data.setup.competitions.find((competition) => competition.id === (round?.definition.competitionId ?? request.payload.competitionId));
+    if (!competition || (request.payload.roundKey ? !round : !data.rounds.some((round) => round.definition.competitionId === competition.id))) return null;
+    const approval = request.approvals[0];
+    // Match the private role projection without exposing or reconstructing hidden IDs.
+    if (approval && (approval.version !== request.version || !['head', 'organizer'].includes(approval.role) || approval.participantId !== (approval.role === 'head' ? head.participantId ?? 'Head judge' : data.setup.organizerParticipantId ?? 'Organizer'))) return null;
+    if (approval?.role === 'head') waiting++;
+    else tasks.push({ target: `review-request-${request.id}`, label: `Review request ${index + 1} · ${competition.format} · ${competition.division}${round ? ` · ${round.definition.kind}` : ''}` });
+  }
+  if (!waiting) return null;
+  for (const round of data.rounds.filter((round) => !round.standings!.approved)) {
+    const result = round.standings!, panel = round.definition.judgeIds;
+    if (round.phase !== 'discussion' || !panel.length || new Set(panel).size !== panel.length || panel.some((id) => round.definition.judges.filter((judge) => judge.id === id && judge.name).length !== 1)) return null;
+    const ties = round.definition.kind === 'prelims' ? result.advancementTies?.filter((tie) => !tie.complete) ?? [] : [];
+    for (const tie of ties) {
+      if (!Number.isSafeInteger(tie.slots) || tie.slots < 1 || tie.slots > tie.subjectIds.length || new Set(tie.subjectIds).size !== tie.subjectIds.length || tie.subjectIds.some((id) => !round.definition.subjects.some((subject) => subject.id === id)) || new Set(tie.votes.map((vote) => vote.judgeId)).size !== tie.votes.length || tie.votes.some((vote) => !panel.includes(vote.judgeId) || vote.roundKey !== round.key || vote.fingerprint !== result.fingerprint || vote.tieKey !== tie.key || vote.selected.length !== tie.slots || new Set(vote.selected).size !== vote.selected.length || vote.selected.some((id) => !tie.subjectIds.includes(id)))) return null;
+      if (tie.deadlocked !== (tie.votes.length === panel.length)) return null;
+    }
+    const context = `${round.definition.format} · ${round.definition.division} · ${round.definition.kind}`;
+    if (panel.includes(data.judgeId) && ties.some((tie) => !tie.votes.some((vote) => vote.judgeId === data.judgeId))) tasks.push({ target: `round-result-${round.id}`, label: `Review advancement votes · ${context}` });
+    const decisions = result.ties.filter((tie) => round.definition.kind === 'finals' ? result.rows.some((row) => tie.subjectIds.includes(row.subjectId) && !row.decided) : ties.some((voteTie) => voteTie.key === tie.key && voteTie.deadlocked && voteTie.votes.length === panel.length));
+    decisions.forEach((tie) => tasks.push({ target: `head-tie-${round.key}-${tie.key}`, label: `Review ${tie.group} head decision · ${context}` }));
+    const countIssues = round.definition.kind === 'prelims' ? finalistCountIssues(round.definition.format, result.finalistCount ?? 0, round.definition.subjects.filter((subject) => !round.definition.withdrawnIds?.includes(subject.id))) : [];
+    if (!ties.length && !countIssues.length && !(round.definition.kind === 'finals' && result.rows.some((row) => !row.decided)) && !requests.some((request) => request.kind === 'correction' && request.payload.roundKey === round.key)) tasks.push({ target: `round-result-${round.id}`, label: `Review results for approval · ${context}` });
+  }
+  if (!tasks.length || new Set(tasks.map((task) => task.target)).size !== tasks.length) return null;
+  return { waiting, tasks };
+}
+
 export function StageReview({ data, action, selectedRoundId, showRound, setupRoute, navigate, openHeadAccess, correctionDraft, part = 'all' }: { correctionDraft?: NewCorrectionDraft; part?: 'pending' | 'history' | 'all'; data: LiveView; action: Action; managementExtra?: ReactNode; selectedRoundId?: string; showRound?: (id: string, page?: number) => void; setupRoute?: (roundId?: string, section?: string) => void; navigate?: (page: number) => void; openHeadAccess?: () => void }) {
   const reviewed = data.rounds.filter((r) => r.standings);
   const pending = data.role === 'head' ? data.reviewRequests?.filter((q) => !q.appliedAt && !q.cancelledAt) ?? [] : [];
   const organizer = data.role === 'organizer';
   if (organizer) return <OrganizerResults correctionDraft={correctionDraft!} data={data} action={action} selected={selectedRoundId ?? ''} select={(id) => showRound?.(id, 2)} setupRoute={setupRoute} navigate={navigate} openHeadAccess={openHeadAccess} />;
   const waiting = sharedHeadWaiting(data);
+  const mixedReview = mixedHeadReview(data);
   const actionable = data.status === 'active' ? reviewed.filter((r) => !r.standings?.approved && (data.role === 'head' || r.standings?.advancementTies?.some((t) => !t.complete && r.definition.judgeIds.includes(data.judgeId!) && !t.votes.some((v) => v.judgeId === data.judgeId)))) : [];
   const contextResults = reviewed.filter((r) => !actionable.includes(r));
   const completed = reviewed.filter((r) => r.standings?.approved);
@@ -102,7 +142,7 @@ export function StageReview({ data, action, selectedRoundId, showRound, setupRou
   if (part === 'pending' && !pending.length && !actionable.length) return null;
   const controls = (round: RoundView) => round.standings?.advancementTies?.map((tie) => <Vote key={JSON.stringify([data.eventId, data.role, data.judgeId, round.key, tie.key])} data={data} round={round} tie={tie} action={action} />);
   return <div className="page-stack">
-    {part !== 'history' && waiting.length > 0 && <section className="hero-panel stage-judge-current" aria-label="Current head review waiting status"><div><h2>Waiting for others</h2>{waiting.map((message) => <p key={message}>{message}</p>)}</div></section>}
+    {part !== 'history' && (waiting.length > 0 ? <section className="hero-panel stage-judge-current" aria-label="Current head review waiting status"><div><h2>Waiting for others</h2>{waiting.map((message) => <p key={message}>{message}</p>)}</div></section> : mixedReview && <nav className="head-review-tasks" aria-label="Current head review tasks"><p><strong>Review next</strong> · {mixedReview.waiting === 1 ? 'One request is' : `${mixedReview.waiting} requests are`} waiting for the organizer.</p><ul>{mixedReview.tasks.map((task) => <li key={task.target}><a href={`#${encodeURIComponent(task.target)}`}>{task.label}</a></li>)}</ul></nav>)}
     {part !== 'history' && pending.length > 0 && <ReviewRequests data={data} action={action} pendingOnly />}
     {part !== 'history' && <LiveResults data={{ ...data, rounds: actionable }} action={action} head={data.role === 'head'} roundControls={controls} />}
     {part !== 'pending' && <SetupSection title="Completed judging & history" caption="Retained records" summaryText={`${completed.length} approved rounds · scores, notes and request history`}>
