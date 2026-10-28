@@ -120,12 +120,23 @@ export function unpairedFinalists(setup: LiveSetup, round: LiveRound): LiveSubje
   const members = new Set(round.subjects.flatMap((s) => s.members ?? []));
   return setup.rounds.find((r) => r.id === round.prelimRoundId)?.subjects.filter((s) => round.finalistIds.includes(s.id) && !members.has(s.id)) ?? [];
 }
+export function roleVerificationIssues(setup: LiveSetup): string[] {
+  if (setup.workflow !== 'stage-v1') return [];
+  const issues: string[] = [];
+  if (!setup.organizerName?.trim()) issues.push('Enter the organizer name.');
+  if (!setup.organizerParticipantId?.trim()) issues.push('Enter the organizer participant identifier.');
+  for (const judge of setup.judges) if (!judge.participantId?.trim()) issues.push('Enter the participant identifier for ' + (judge.name.trim() || 'each unnamed judge') + '.');
+  const ids = [setup.organizerParticipantId, ...setup.judges.map(j => j.participantId)].map(id => id?.trim().toLowerCase()).filter(Boolean);
+  if (new Set(ids).size !== ids.length) issues.push('Give the organizer and each judge a unique participant identifier for a different person.');
+  if (!setup.separationAttested) issues.push('Confirm that the organizer and each judge are distinct people.');
+  return issues;
+}
 export function roundOpeningIssues(setup: LiveSetup, round: LiveRound): string[] {
   const competition = setup.competitions.find((c) => c.id === round.competitionId)!;
   const prefix = `${competition.format} · ${competition.division} · ${round.kind}: `;
   const issues: string[] = [];
   if (!setup.judges.length || !setup.headJudgeId) issues.push('Add judges and designate the event head judge.');
-  if (setup.workflow === 'stage-v1' && (!setup.organizerName?.trim() || !setup.organizerParticipantId || !setup.separationAttested || setup.judges.some((j) => !j.participantId))) issues.push('Enter distinct organizer/panel participant identifiers and confirm separation of duties.');
+  issues.push(...roleVerificationIssues(setup).map(issue => 'Set up → Role verification: ' + issue));
   if (setup.workflow === 'stage-v1' && round.judgeIds.length && !round.judgeIds.includes(setup.headJudgeId)) issues.push('Include the event head judge among this stage’s required judges.');
   const unpaired = unpairedFinalists(setup, round);
   if (unpaired.length) issues.push(`Finalists are already selected. Enter their actual Finals draw in Set up → Couples, then Save setup. Unpaired: ${unpaired.map((s) => `#${s.number} ${s.primary}`).join(', ')}.`);
