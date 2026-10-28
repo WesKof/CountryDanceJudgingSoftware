@@ -56,7 +56,9 @@ function PublicationSection({ title, caption, summary, className = '', publicati
   </details>;
 }
 const manifest = (records: PublicationRecord[]) => records.map((p) => ({ publicationId: p.id, sourceFingerprint: p.sourceFingerprint }));
-export function PublicationPanel({ data, action, navigate, route, recovery }: { recovery?: ReactNode; data: LiveView; action: (input: Record<string, unknown>) => Promise<boolean>; navigate?: (page: number) => void; route?: (competitionId: string, page: 0 | 1 | 2, target?: PublicationTarget) => void }) {
+export function PublicationPanel({ data, action, navigate, route, recovery, recoveryIssue }: { recovery?: ReactNode; recoveryIssue?: 'backup' | 'restore'; data: LiveView; action: (input: Record<string, unknown>) => Promise<boolean>; navigate?: (page: number) => void; route?: (competitionId: string, page: 0 | 1 | 2, target?: PublicationTarget) => void }) {
+  const recoveryError = recovery ? recoveryIssue : undefined;
+  const recoverySummary = recoveryError === 'backup' ? 'Backup failed. Open Data & recovery for retry details.' : recoveryError === 'restore' ? 'Restore did not finish here. Open Data & recovery for retry details.' : 'History, backup & recovery';
   const latest = latestPublications(data.publications ?? []), records = data.setup.competitions.flatMap((c) => latest.filter((p) => p.competitionId === c.id));
   const issues = data.setup.competitions.flatMap((c) => publicationPreparationIssues(data, c.id).map((issue) => ({ ...issue, competitionId: c.id, competition: `${c.format} · ${c.division}` })));
   const groupedIssues = new Map<string, typeof issues>();
@@ -86,7 +88,7 @@ export function PublicationPanel({ data, action, navigate, route, recovery }: { 
         <SnapshotPreview snapshot={p.snapshot} heading={false} />
       </PublicationSection>)}
     </div> : null}
-    <details id="publication-supporting" className="supporting-drawer"><summary>Publication records &amp; tools <small>History, backup &amp; recovery</small></summary><div className="supporting-content page-stack">
+    <details id="publication-supporting" className={`supporting-drawer${recoveryError ? ' setup-needs-attention' : ''}`}><summary>Publication records &amp; tools <small className={recoveryError ? 'section-summary' : undefined}>{recoverySummary}</small></summary><div className="supporting-content page-stack">
     <PublicationSection className="publication-history" title="Publication history & status" caption="Publication records" summary={records.length ? status : 'No publication prepared yet'}>
       <div className="form-body page-stack">{records.length ? <div className="publication-records">{records.map((p) => <PublicationHistoryCard key={p.id} record={p} />)}</div> : <p>No current publication records.</p>}
       {history.length > 0 && <details className="publication-past"><summary>Past result versions ({history.length})</summary><div className="publication-records">
