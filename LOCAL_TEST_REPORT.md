@@ -2,7 +2,15 @@
 
 ## Reading current status and dated evidence
 
-Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [recent deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
+Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
+
+## October 30 — Canonical navigation labels (batch102)
+
+Documentation-only delivery from mainb85858ed862aa782fe374d0f9375ee24d7565467. Master pre-reviewed three precise entrypoint corrections: AGENTS completed-work row leads to Current coordination before Earlier87–90 evidence; SPEC labels the batch91-verified87–90 index as dated; REPORT calls its October27 link October27 deliveries. All original anchors, batch91 hash/facts, older links, operative boundaries and dated receipts remain. The concise latest queue and this receipt record the documentation delivery without a new rolling table or historical rewrite.
+
+Ignored work/canonical-navigation-102-20261030 preserves247 raw preferred/mirror baseline hashes, raw index and original6-path EOL-only status, exact document preimages/reversible operations, bounded-reader/link checks, push and checkpoint/ref verification. Reversing only the recorded operations reconstructs all three original raw documents byte for byte;244 unrelated tracked raw files and staged index entries are preserved. Guarded three-document sync verifies all247 tracked raw preferred/mirror pairs. Before/delivery/integration annotated checkpoints preserve source, not owner data; final main/tag objects/peeled refs, exact-tip cleanup and released claims are recorded after verification in integration-handoff.json.
+
+No app source or behavior changes, app tests/build, loading-limit/configuration diagnostic, browser/runtime/native/API/HTTP/ports/process/private-store/hosted or publication action. No global/browser-policy/model/schedule/dependency edit. Reader/anchor checks prove document navigation only, not instruction reload in existing chats, serving or live deployment. MASTER COUNTRY DANCER pre-reviewed the bounded scope and owns consolidated outcome/next assignment; no worker continuation.
 
 ## October 30 — Scoped publication history master integration
 
