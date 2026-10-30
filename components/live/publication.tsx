@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { LiveView } from '@/lib/live/types';
 import { publicationPreparationIssues, type PublicationTarget } from '@/lib/live/publication-readiness';
 import { latestPublications, type PublicSnapshot, type PublicationRecord } from '@/lib/live/publication';
@@ -56,6 +56,30 @@ function PublicationSection({ title, caption, summary, className = '', publicati
   </details>;
 }
 const manifest = (records: PublicationRecord[]) => records.map((p) => ({ publicationId: p.id, sourceFingerprint: p.sourceFingerprint }));
+// Keep the publication guard alive across target/eligibility changes, but not events.
+function PublicationAction({ target, input, action, label, pendingLabel, disabledLabel }: { target: string; input?: Record<string, unknown>; action: (input: Record<string, unknown>) => Promise<boolean>; label: string; pendingLabel: string; disabledLabel: string }) {
+  const scope = useMemo(() => ({ target }), [target]);
+  const running = useRef<object | null>(null), currentTarget = useRef<typeof scope | null>(null);
+  const [pending, setPending] = useState<{ scope: typeof scope; label: string } | null>(null), [unconfirmed, setUnconfirmed] = useState<typeof scope | null>(null);
+  // Layout cleanup invalidates captured handlers in the commit, before passive effects.
+  useLayoutEffect(() => { currentTarget.current = scope; return () => { currentTarget.current = null; }; }, [scope]);
+  async function run() {
+    if (!input || running.current || currentTarget.current !== scope) return;
+    const attempt = {}; running.current = attempt; setPending({ scope, label: pendingLabel }); setUnconfirmed(null);
+    try {
+      const confirmed = await action(input);
+      if (currentTarget.current === scope && !confirmed) setUnconfirmed(scope);
+    } catch {
+      if (currentTarget.current === scope) setUnconfirmed(scope);
+    } finally {
+      if (running.current === attempt) {
+        running.current = null;
+        if (currentTarget.current !== null) setPending(null);
+      }
+    }
+  }
+  return <><button className="primary-button" disabled={!input || Boolean(pending)} aria-busy={pending ? true : undefined} onClick={() => void run()}>{!input ? disabledLabel : pending ? pending.scope === scope ? pending.label : 'Finishing previous request…' : label}</button>{unconfirmed === scope && <p role="status">This action was not confirmed here. Check the current publication status before retrying.</p>}</>;
+}
 export function PublicationPanel({ data, action, navigate, route, recovery, recoveryIssue }: { recovery?: ReactNode; recoveryIssue?: 'backup' | 'restore'; data: LiveView; action: (input: Record<string, unknown>) => Promise<boolean>; navigate?: (page: number) => void; route?: (competitionId: string, page: 0 | 1 | 2, target?: PublicationTarget) => void }) {
   const recoveryError = recovery ? recoveryIssue : undefined;
   const recoverySummary = recoveryError === 'backup' ? 'Backup failed. Open Data & recovery for retry details.' : recoveryError === 'restore' ? 'Restore did not finish here. Open Data & recovery for retry details.' : 'History, backup & recovery';
@@ -74,12 +98,15 @@ export function PublicationPanel({ data, action, navigate, route, recovery, reco
   const waiting = complete && records.some((p) => p.status === 'requested') && records.every((p) => ['requested', 'released'].includes(p.status) && !p.underReview);
   const published = complete && records.every((p) => p.status === 'released' && !p.underReview);
   const pending = records.some((p) => p.status === 'queued');
+  const actionTarget = JSON.stringify([data.eventId, data.status, deliveryUnconfirmed, data.setup, manifest(records), records.map(p => [p.status, p.underReview]), data.rounds.map(r => [r.key, r.generation, r.version, r.standings?.fingerprint, r.standings?.complete, r.standings?.approved])]);
+  const publicationInput = data.status !== 'active' || deliveryUnconfirmed ? undefined : canSend ? { action: 'approve-event-publication', publications: manifest(records) } : !published && !waiting && !pending && ready ? { action: 'prepare-event-publication' } : undefined;
+  const disabledLabel = data.status !== 'active' ? 'Archived · read only' : deliveryUnconfirmed ? 'Waiting for website admin' : published ? 'Results already published' : waiting ? 'Sent · awaiting website admin' : pending ? 'Publication in progress' : 'Review results to publish';
   const history = (data.publications ?? []).filter((p) => !records.some((r) => r.id === p.id));
   const status = data.status !== 'active' ? 'Archived · read only' : deliveryUnconfirmed ? 'Website admin action needed' : canSend ? 'Ready to send' : waiting ? 'Waiting for website approval' : published ? 'Already published' : pending ? 'Publication in progress' : ready ? 'Ready for your review' : 'Judging and head approval needed';
   function issueRow(group: typeof issues, index: number) { const issue=group[0];return <li key={index}><p><strong>{issue.competition}</strong><br />{issue.message}</p>{route && <button className="quiet-button" onClick={() => route(issue.competitionId, issue.page, {kind:issue.kind,roundId:issue.roundId,section:issue.section})}>Open {issue.competition} · {['Set up', 'Score', 'Results'][issue.page]}</button>}{group.length>1&&<details><summary>Related requirements</summary>{group.slice(1).map((item,i)=><p key={i}>{item.message}</p>)}</details>}</li>; }
   return <div className="page-stack publication-layout"><section className="form-panel publication-task"><div className="form-body"><p className="kicker">Whole event · {data.setup.competitions.length} {data.setup.competitions.length === 1 ? 'competition' : 'competitions'}</p><h2>Publish results</h2><h3 className="publication-task-status">{status}</h3>
     <p role="status">{data.status !== 'active' ? 'This event is archived and read only.' : deliveryUnconfirmed ? 'Ask the website admin to check the previous delivery before updated results can be prepared. Judging and head review can continue.' : canSend ? 'Check the results below, then send them for website approval.' : waiting ? 'Sent for approval. The website admin can now approve and publish the complete event.' : published ? 'Published. The approved results are available on the results website.' : pending ? 'Website approval recorded. Results are waiting to finish sending; the admin can retry.' : ready ? 'All Finals are approved. Prepare a private preview before sending for website approval.' : 'Finish judging and get head judge approval before publishing.'}</p>
-    <div className="shared-inline publication-actions">{data.status !== 'active' ? <button className="primary-button" disabled>Archived · read only</button> : deliveryUnconfirmed ? <button className="primary-button" disabled>Waiting for website admin</button> : canSend ? <button className="primary-button" onClick={() => void action({ action: 'approve-event-publication', publications: manifest(records) })}>Send results for approval</button> : published ? <button className="primary-button" disabled>Results already published</button> : waiting ? <button className="primary-button" disabled>Sent · awaiting website admin</button> : pending ? <button className="primary-button" disabled>Publication in progress</button> : <button className="primary-button" disabled={!ready} onClick={() => void action({ action: 'prepare-event-publication' })}>Review results to publish</button>}{published && navigate && <button className="quiet-button" onClick={() => navigate(2)}>Review judging results</button>}</div>
+    <div className="shared-inline publication-actions"><PublicationAction key={data.eventId} target={actionTarget} input={publicationInput} action={action} label={canSend ? 'Send results for approval' : 'Review results to publish'} pendingLabel={canSend ? 'Sending for approval…' : 'Preparing preview…'} disabledLabel={disabledLabel} />{published && navigate && <button className="quiet-button" onClick={() => navigate(2)}>Review judging results</button>}</div>
     {data.status === 'active' && issues.length > 0 && <div className="publication-blockers"><ul>{issueGroups.slice(0, 3).map(issueRow)}</ul>{issueGroups.length > 3 && <details><summary>{issueGroups.length - 3} more items to complete</summary><ul>{issueGroups.slice(3).map(issueRow)}</ul></details>}{navigate && !route && <div className="shared-inline">{Array.from(new Set(issues.map((i) => i.page))).map((page) => <button className="quiet-button" key={page} onClick={() => navigate(page)}>Go to {['Set up', 'Score', 'Results'][page]}</button>)}</div>}</div>}
   </div></section>
     {records.length > 0 ? <div className="publication-competitions page-stack" aria-label="Results preview">
