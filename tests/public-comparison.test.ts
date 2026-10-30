@@ -64,7 +64,7 @@ test('current revision returns to exact retained entrant and judge identities wi
   assert.equal(href('entry-1'), '/results/v2/entrant/entry-1', 'retained withdrawn identity stays available');
   assert.equal(href(undefined, 'judge-a'), '/results/v2/judge/judge-a', 'panel membership does not require observations');
   const html = renderResults(first, store, 'entry-1');
-  assert.match(html, /href="\/results\/v2">Revision 2 · Current results/);
+  assert.match(html, /href="\/results\/v2\/entrant\/entry-1">Revision 2 · Current results/);
 });
 
 test('current revision uses exact public person membership without guessing a replacement couple, bib or name', () => {
@@ -417,4 +417,52 @@ test('retained stage kinds and no-Finals scoped records keep escaped standings b
   assert.equal((prelimOnly.match(/<table>/g) ?? []).length, 1);
   assert.ok(prelimOnly.indexOf('</table>') < prelimOnly.indexOf('class="public-comparison"'));
   assert.doesNotMatch(prelimOnly, /public-supporting|Final places/);
+});
+
+// History is a direct destination choice, including the original when the nearest
+// predecessor is a different revision. Keep exact reader identity, never a guess.
+function historyLinks(html: string) {
+  return [...(html.match(/<ol class="version-list">([\s\S]*?)<\/ol>/)?.[1] ?? '').matchAll(/href="([^"]+)">([^<]+)<\/a>/g)].map(match => ({href: match[1], label: match[2]}));
+}
+for (const scope of ['entrant', 'judge'] as const) test(`three-revision history keeps the ${scope} on original and intermediate destinations`, () => {
+  const versions = [1,2,3].map(n => published('v' + n, n)), records = Object.fromEntries(versions.map(r => [r.id,r])), store = {records,current:{'public-event/public-competition':'v3'}}, original = structuredClone(store);
+  const suffix = scope === 'entrant' ? '/entrant/entry-1' : '/judge/judge-a';
+  const render = (record: PublicationRecord) => renderResults(record, store, scope === 'entrant' ? 'entry-1' : undefined, scope === 'judge' ? 'judge-a' : undefined);
+  assert.deepEqual(historyLinks(render(versions[2])), [{href:'/results/v2'+suffix,label:'Revision 2'},{href:'/results/v1'+suffix,label:'Revision 1'}]);
+  assert.deepEqual(historyLinks(render(versions[0])), [{href:'/results/v3'+suffix,label:'Revision 3 · Current results'},{href:'/results/v2'+suffix,label:'Revision 2'}]);
+  assert.match(render(versions[2]), /Revision 3 · Viewing this version/);
+  assert.match(render(versions[0]), /Revision 1 · Viewing this version/);
+  assert.deepEqual(store, original);
+});
+test('history preserves exact withdrawn identities and public member scope without observation prerequisites', () => {
+  const first=published(), current=published('v3',3), store={records:{v1:first,v3:current},current:{'public-event/public-competition':'v3'}};
+  first.snapshot.stages[0].entrants[0].withdrawn=true;
+  assert.equal(historyLinks(renderResults(current,store,'entry-1'))[0].href,'/results/v1/entrant/entry-1');
+  first.snapshot.stages[0].entrants[0].id='prior-couple';first.snapshot.stages[0].entrants[0].members=['entry-1','other-person'];
+  assert.equal(historyLinks(renderResults(current,store,'entry-1'))[0].href,'/results/v1/entrant/entry-1');
+  first.snapshot.stages[0].marks=[];
+  assert.equal(historyLinks(renderResults(current,store,undefined,'judge-a'))[0].href,'/results/v1/judge/judge-a');
+});
+for (const missing of ['entrant', 'judge', 'replacement-couple'] as const) test(`history ${missing} keeps overview fallback and never guesses a matching name or bib`, () => {
+  const first=published(), current=published('v3',3), store={records:{v1:first,v3:current},current:{'public-event/public-competition':'v3'}};
+  let entrant: string|undefined='entry-1', judge: string|undefined;
+  if(missing==='judge'){entrant=undefined;judge='judge-a';first.snapshot.stages[0].judges[0].id='different-judge';}
+  else if(missing==='entrant')first.snapshot.stages[0].entrants[0].id='different-entrant';
+  else {entrant='current-couple';current.snapshot.stages[0].entrants[0].id=entrant;current.snapshot.stages[0].entrants[0].members=['person-1','person-2'];first.snapshot.stages[0].entrants[0].id='old-couple';first.snapshot.stages[0].entrants[0].members=['person-1','person-2'];}
+  const original=structuredClone(store);assert.equal(historyLinks(renderResults(current,store,entrant,judge))[0].href,'/results/v1');assert.deepEqual(store,original);
+});
+for (const invalid of ['private','timestamp','id','snapshot-revision','revision','canonical-key','event','competition'] as const) test(`history ${invalid} destination cannot acquire a scoped path`, () => {
+  const first=published(), current=published('v3',3), store: PublicStore={records:{v1:first,v3:current},current:{'public-event/public-competition':'v3'}};
+  if(invalid==='private')first.status='prepared';else if(invalid==='timestamp')first.releasedAt='invalid';else if(invalid==='id')first.snapshot.id='mismatch';else if(invalid==='snapshot-revision')first.snapshot.revision=2;else if(invalid==='revision')first.revision=0;else if(invalid==='canonical-key'){delete store.records.v1;store.records['wrong-key']=first;}else if(invalid==='event')first.snapshot.eventId='other';else first.snapshot.competitionId='other';
+  const original=structuredClone(store);
+  for(const [entrant,judge]of [['entry-1',undefined],[undefined,'judge-a']] as const){const links=historyLinks(renderResults(current,store,entrant,judge));assert.deepEqual(links.map(link=>link.href), invalid==='event'||invalid==='competition'?[]:['/results/v1']);}
+  assert.deepEqual(store,original);
+});
+test('history encodes destination and selected identity, escapes the attribute and keeps judge precedence', () => {
+  const first=published('original /"&\'',1), current=published('v3',3), store={records:{[first.id]:first,v3:current},current:{'public-event/public-competition':'v3'}};
+  first.snapshot.stages[0].entrants[0].id='entrant /"&\'';first.snapshot.stages[0].judges[0].id='judge /"&\'';
+  const prefix='/results/original%20%2F%22%26&#39;';
+  assert.equal(historyLinks(renderResults(current,store,'entrant /"&\''))[0].href,prefix+'/entrant/entrant%20%2F%22%26&#39;');
+  assert.equal(historyLinks(renderResults(current,store,'entrant /"&\'','judge /"&\''))[0].href,prefix+'/judge/judge%20%2F%22%26&#39;');
+  assert.equal(historyLinks(renderResults(current,store))[0].href,prefix);
 });
