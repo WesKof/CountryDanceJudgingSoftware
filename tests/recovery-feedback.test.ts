@@ -40,7 +40,7 @@ async function harness(stage = false, publication = false) {
   };
   const key = '__recoveryFeedback' + crypto.randomUUID().replaceAll('-', '');
   (globalThis as unknown as Record<string, unknown>)[key] = { hooks, env };
-  const react = codeURL(`export const {useState,useRef}=globalThis[${JSON.stringify(key)}].hooks;`);
+  const react = codeURL(`export const useLayoutEffect=()=>{};export const useMemo=(make)=>make();export const {useState,useRef}=globalThis[${JSON.stringify(key)}].hooks;`);
   const client = codeURL(`const e=globalThis[${JSON.stringify(key)}].env;export const creationNonce=()=>"fictional-receipt-"+(++e.nonces);export const download=(name,body)=>e.downloads.push({name,body});export const liveApi=async(token,input)=>{e.calls.push({token,input:structuredClone(input)});return e.api(token,input);};`);
   function compile(file: string, imports: Record<string, string> = {}) {
     const code = ts.transpileModule(fs.readFileSync(new URL(file, root), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
