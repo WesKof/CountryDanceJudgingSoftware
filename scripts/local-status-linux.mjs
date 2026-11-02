@@ -43,7 +43,8 @@ export function parseStat(buffer, expectedPid) {
 
 export function parseTcp(buffer, family, ports) {
   const lines = buffer.toString('ascii').trim().split('\n');
-  if (!/^\s*sl\s+local_address\s+rem_address\s+st\b/.test(lines.shift() ?? '')) throw new Error('Invalid socket table');
+  const remote = family === 4 ? 'rem_address' : family === 6 ? 'remote_address' : null;
+  if (!remote || !new RegExp(`^\\s*sl\\s+local_address\\s+${remote}\\s+st\\b`).test(lines.shift() ?? '')) throw new Error('Invalid socket table');
   const result = [];
   for (const line of lines) {
     const f = line.trim().split(/\s+/), addressLength = family === 4 ? 8 : 32;
@@ -64,7 +65,7 @@ export function expectedArguments(projectRoot, profile, role, port) {
     : ['--env-file=.dev.vars', '--experimental-strip-types', path.join(projectRoot, 'scripts/fake-publisher.mts')];
 }
 
-export function inspectLinux(projectRoot, profileName, manifest, { reader = procReader, executable = process.execPath, budget = limits.reads } = {}) {
+export function inspectLinux(projectRoot, profileName, manifest, { reader = procReader, executable = process.execPath, argv0 = process.argv0, budget = limits.reads } = {}) {
   try {
     if (!['owner', 'test'].includes(profileName) || !path.isAbsolute(projectRoot)) return unknown();
     const ports = profileName === 'owner' ? [3000, 3100] : [3001, 3110];
@@ -134,8 +135,9 @@ export function inspectLinux(projectRoot, profileName, manifest, { reader = proc
         if (!ids.includes(String(saved))) state = 'absent';
         else {
           node = getNode(saved);
-          const expected = [executable, ...expectedArguments(projectRoot, profileName, role, ports[i])];
-          state = node.exe === executable && JSON.stringify(node.args) === JSON.stringify(expected) ? 'match' : 'different';
+          const expected = expectedArguments(projectRoot, profileName, role, ports[i]);
+          const allowedName = node.args[0] === executable || typeof argv0 === 'string' && argv0.length > 0 && node.args[0] === argv0;
+          state = node.exe === executable && allowedName && JSON.stringify(node.args.slice(1)) === JSON.stringify(expected) ? 'match' : 'different';
         }
       }
       const selected = before.filter(s => s.port === ports[i]);

@@ -6,12 +6,13 @@ import { collectStatus, inspectWindows, inspectPlatform } from '../scripts/local
 const root = '/fictional country/app', exe = '/runtime/node';
 const manifest = { state: 'legacy', organizer: 10, receiver: 20 };
 const header = '  sl  local_address rem_address st tx_queue rx_queue tr tm->when retrnsmt uid timeout inode\n';
+const header6 = '  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt uid timeout inode\n';
 const row = (port, inode, address = '0100007F') => `0: ${address}:${port.toString(16).toUpperCase().padStart(4, '0')} ${'0'.repeat(address.length)}:0000 0A 0:0 00:0 0 1000 0 ${inode}\n`;
 const stat = (pid, parent = 0, start = '100', name = 'worker ) tricky (name)') => Buffer.from(`${pid} (${name}) S ${parent} ${Array(17).fill('0').join(' ')} ${start} 0 0\n`);
 function fixture() {
   const files = new Map(), links = new Map(), directories = new Map();
   files.set('/proc/net/tcp', Buffer.from(header + row(3001, 111) + row(3110, 222)));
-  files.set('/proc/net/tcp6', Buffer.from(header));
+  files.set('/proc/net/tcp6', Buffer.from(header6));
   links.set('/proc/self/ns/net', 'net:[7]');
   directories.set('/proc', ['10', '20', 'self', 'net']);
   function process(pid, parent, start, role, fds = []) {
@@ -40,11 +41,11 @@ test('synthetic Linux direct owners and child ancestry match, while legacy insta
 
 test('IPv6 loopback, wildcard bindings and unrelated listener ownership remain distinct', () => {
   const f = fixture(); f.files.set('/proc/net/tcp', Buffer.from(header + row(3110, 222)));
-  f.files.set('/proc/net/tcp6', Buffer.from(header + row(3001, 111, '00000000000000000000000001000000')));
+  f.files.set('/proc/net/tcp6', Buffer.from(header6 + row(3001, 111, '00000000000000000000000001000000')));
   assert.equal(f.run().services.organizer.listener, 'loopback');
   for (const address of ['00000000', '00000000000000000000000000000000']) {
     const x = fixture(); x.files.set('/proc/net/tcp', Buffer.from(header + row(3001, 111, address.length === 8 ? address : '0100007F') + row(3110, 222)));
-    if (address.length === 32) x.files.set('/proc/net/tcp6', Buffer.from(header + row(3001, 111, address)));
+    if (address.length === 32) x.files.set('/proc/net/tcp6', Buffer.from(header6 + row(3001, 111, address)));
     assert.equal(x.run().services.organizer.listener, 'nonloopback');
   }
   f.directories.set('/proc', ['10', '20', '30']); f.process(30, 0, '101', 'foreign', [111]); f.directories.set('/proc/10/fd', []);
@@ -122,4 +123,32 @@ test('defensive parsers handle comm parentheses and reject truncated/malformed p
   for (const input of ['10 (x) S 0', '11 (x) S 0', 'garbage']) assert.throws(() => parseStat(Buffer.from(input), 10));
   for (const input of ['garbage', header + 'broken', header + row(3001, 0)]) assert.throws(() => parseTcp(Buffer.from(input), 4, [3001]));
   const f = fixture(); f.files.set('/proc/10/cmdline', Buffer.from('unterminated PRIVATE_CANARY')); assert.equal(f.run().state, 'unknown');
+});
+
+// Linux tcp6_seq_show uses remote_address, unlike the IPv4 rem_address header.
+const kernelHeader6 = '  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt uid timeout inode\n';
+test('kernel IPv6 header accepts empty tables and real loopback/wildcard rows', () => {
+  assert.deepEqual(parseTcp(Buffer.from(kernelHeader6), 6, [3001]), []);
+  const f = fixture(); f.files.set('/proc/net/tcp6', Buffer.from(kernelHeader6));
+  assert.equal(f.run().state, 'observed');
+  f.files.set('/proc/net/tcp6', Buffer.from(kernelHeader6 + row(3001, 111, '00000000000000000000000001000000')));
+  assert.equal(f.run().services.organizer.listener, 'loopback');
+  f.files.set('/proc/net/tcp6', Buffer.from(kernelHeader6 + row(3001, 111, '00000000000000000000000000000000')));
+  assert.equal(f.run().services.organizer.listener, 'nonloopback');
+  assert.throws(() => parseTcp(Buffer.from(kernelHeader6.replace('remote_address', 'unknown_column')), 6, [3001]));
+});
+test('captured runtime argv0 alias requires resolved executable and exact remaining arguments', () => {
+  const f = fixture(); f.links.set('/proc/10/exe', '/runtime/node-22');
+  const run = () => f.run({ executable: '/runtime/node-22', argv0: '/runtime/node' });
+  assert.equal(run().services.organizer.process, 'match');
+  f.files.set('/proc/10/cmdline', Buffer.from('/foreign/node\0' + root + '/work/local-status-fixtures/organizer.mjs\0'));
+  assert.equal(run().services.organizer.process, 'different');
+  f.files.set('/proc/10/cmdline', Buffer.from('/runtime/node\0' + root + '/work/local-status-fixtures/organizer.mjs\0--extra\0'));
+  assert.equal(run().services.organizer.process, 'different');
+  f.files.set('/proc/10/cmdline', Buffer.from('/runtime/node\0/private/launcher.mjs\0'));
+  assert.equal(run().services.organizer.process, 'different');
+  f.files.set('/proc/10/cmdline', Buffer.from('/runtime/node-22\0' + root + '/work/local-status-fixtures/organizer.mjs\0'));
+  assert.equal(run().services.organizer.process, 'match');
+  f.links.set('/proc/10/exe', '/foreign/node-22');
+  assert.equal(run().services.organizer.process, 'different');
 });
