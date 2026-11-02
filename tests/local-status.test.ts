@@ -1,3 +1,4 @@
+import './local-status-linux.test.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer, type Server } from 'node:http';

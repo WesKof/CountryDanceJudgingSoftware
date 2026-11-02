@@ -3,13 +3,14 @@ import { request } from 'node:http';
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectLinux } from './local-status-linux.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 export const profiles = Object.freeze({
   owner: Object.freeze({ organizer: 3000, receiver: 3100, manifest: 'local-publication-preview-process.json' }),
   test: Object.freeze({ organizer: 3001, receiver: 3110, manifest: 'local-status-test-process.json' }),
 });
-const usage = 'Usage: pnpm local:status [--profile owner|test] [--json]\nRead-only root HTTP and Windows process/listener checks; no service or data changes.\n';
+const usage = 'Usage: pnpm local:status [--profile owner|test] [--json]\nRead-only root HTTP and Windows/Linux process/listener checks; no service or data changes.\n';
 const pid = value => Number.isInteger(value) && value > 0 && value <= 0xffffffff;
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -104,6 +105,11 @@ export async function inspectWindows(projectRoot, profileName, manifest, platfor
   }));
 }
 
+export function inspectPlatform(projectRoot, profileName, manifest, platform = process.platform) {
+  if (platform === 'linux') return inspectLinux(projectRoot, profileName, manifest);
+  return inspectWindows(projectRoot, profileName, manifest, platform);
+}
+
 export function assessService(http, observed, hasManifest) {
   let project = 'unknown', detail = 'Process/listener evidence is unavailable.';
   if (observed) {
@@ -122,7 +128,7 @@ export function assessService(http, observed, hasManifest) {
   return { http, project, detail, readiness: ready ? 'HTTP ready' : 'not HTTP ready', recordedInstance: 'unverified' };
 }
 
-export async function collectStatus({ profileName = 'owner', projectRoot = root, load = readManifest, inspect = inspectWindows, probe = probeHttp } = {}) {
+export async function collectStatus({ profileName = 'owner', projectRoot = root, load = readManifest, inspect = inspectPlatform, probe = probeHttp } = {}) {
   if (!Object.hasOwn(profiles, profileName)) throw new Error('Unknown fixed profile.');
   const profile = profiles[profileName], manifest = load(projectRoot, profile);
   const [organizer, receiver, inspection] = await Promise.all([probe(profile.organizer), probe(profile.receiver), inspect(projectRoot, profileName, manifest)]);
@@ -136,7 +142,7 @@ export async function collectStatus({ profileName = 'owner', projectRoot = root,
         : 'Local HTTP and current project evidence match. If an existing browser tab still shows an error, reload it manually.';
   return { profile: profileName, readOnly: true, manifest: { state: manifest.state, reason: manifest.reason }, inspection: { state: inspection.state, ...(inspection.reason ? { reason: inspection.reason } : {}) }, services,
     recordedInstance: 'Unverified: the legacy runtime record has no saved creation/executable baseline. HTTP or a PID alone is not ownership proof.',
-    next, limits: 'Separate point-in-time HTTP/process snapshots do not prove which process answered. Working directory, data/store identity or integrity, browser state and restart survival are not verified.', exitCode };
+    next, limits: 'Separate point-in-time HTTP/process snapshots do not prove which process answered. Process visibility is limited to the current host/proc and network namespaces; hidden processes are not ruled out. Working directory, data/store identity or integrity, browser state and restart survival are not verified.', exitCode };
 }
 
 export function formatReport(report) {
