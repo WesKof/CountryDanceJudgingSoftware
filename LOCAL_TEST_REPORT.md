@@ -4,6 +4,14 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 2 — Descriptor snapshot master integration (batch107)
+
+Master reviewed sourcee0f0ebc61e25267c235efdbff15c43db4c4e9433 and delivery5f7ee58dd834878dc99d6023b79705438266297a and independently verified all24 delivery seals. Reviewed-tree merge 0454a268a4e7a23fed2c2bf6b1c03abc4945b351 preserves first parent main875851f1e739d43bea8057111135a0468d84fd34 and second parent that exact delivery. A following integration documentation commit and annotated integration checkpoint bind final main; original106 failure and all prior checkpoints remain retained.
+
+Acceptance remains thirteen focused Linux groups, scoped lint/noEmit module/type checks (checkJs off) and ONE actual private namespace standard-fixture gate with command/listener ancestry match, rootHTTP200, no inspection errors, unverified recordedInstance and normal child/listener shutdown absence inside the namespace. Subsequent enumeration in a unit test exercises recovery and is not standalone OS handle-closure proof; implementation finally and the accepted actual gate support that behavior. No tests or runtime checks were rerun for integration. Current custom owner launcher, host visibility/permissions and venue/hosted behavior remain unqualified. No owner process/port/service/store/event/browser/dependency/global/schedule/live actions occurred.
+
+Fresh exact refs/object peels, source bindings, four guarded mirror destinations,249 tracked raw pairs,245 unrelated raw files/index, retained EOL differences and expected-tip merged branch cleanup are recorded in work/linux-descriptor-snapshot-107-20261102/integration/final-handoff.json with preimages/reversal operations/seals. Source checkpoints are not data backups.
+
 ## November 2 — Descriptor snapshot correction and isolated acceptance (batch107)
 
 Source e0f0ebc61e25267c235efdbff15c43db4c4e9433 fixes the reproduced own-fd enumeration race by resolving descriptor link targets before closing the directory. finally closes every production enumeration path; per-target reads consume the existing operation/deadline budget. The own PID is never skipped and missing/unreadable/malformed descriptors still yield unknown. Existing standard command matching, namespace/visibility limits and legacy recorded-instance uncertainty remain unchanged.
