@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inspectLinux, parseStat, parseTcp, expectedArguments } from '../scripts/local-status-linux.mjs';
+import { mkdtempSync, symlinkSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { inspectLinux, parseStat, parseTcp, expectedArguments, procReader } from '../scripts/local-status-linux.mjs';
 import { collectStatus, inspectWindows, inspectPlatform } from '../scripts/local-status.mjs';
 
 const root = '/fictional country/app', exe = '/runtime/node';
@@ -151,4 +154,45 @@ test('captured runtime argv0 alias requires resolved executable and exact remain
   assert.equal(run().services.organizer.process, 'match');
   f.links.set('/proc/10/exe', '/foreign/node-22');
   assert.equal(run().services.organizer.process, 'different');
+});
+
+test('descriptor snapshot reader supplies targets without reopening closed enumeration entries', () => {
+  const f = fixture(); let snapshots = 0, consumes = 0;
+  f.reader.descriptors = (directory, consume) => {
+    snapshots++;
+    return f.directories.get(directory).map(name => {
+      consume(); consumes++;
+      return { name, target: f.links.get(`${directory}/${name}`) };
+    });
+  };
+  const list = f.reader.list;
+  f.reader.list = directory => { assert.ok(!directory.endsWith('/fd')); return list(directory); };
+  const link = f.reader.link;
+  f.reader.link = file => { assert.ok(!file.includes('/fd/')); return link(file); };
+  assert.equal(f.run().services.organizer.ancestryMatches, true);
+  assert.equal(snapshots, 4); assert.equal(consumes, 4);
+  assert.equal(f.run({ budget: 15 }).state, 'unknown');
+  for (const value of [null, [{ name: '../1', target: 'socket:[111]' }], [{ name: '0', target: null }]]) {
+    f.reader.descriptors = () => value;
+    assert.equal(f.run().state, 'unknown');
+  }
+  for (const code of ['ENOENT', 'EACCES']) {
+    f.reader.descriptors = () => { throw Object.assign(new Error('PRIVATE_CANARY'), { code }); };
+    assert.equal(f.run().state, 'unknown');
+  }
+});
+
+test('production descriptor reader closes its real fixture directory on success and failure', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'country-descriptors-'));
+  try {
+    symlinkSync('socket:[111]', path.join(directory, '1'));
+    symlinkSync('/fictional/private-canary', path.join(directory, '2'));
+    let count = 0;
+    const snapshot = procReader.descriptors(directory, () => count++);
+    assert.equal(count, 2);
+    assert.deepEqual(snapshot.sort((a, b) => a.name.localeCompare(b.name)), [{ name: '1', target: 'socket:[111]' }, { name: '2', target: '/fictional/private-canary' }]);
+    assert.throws(() => procReader.descriptors(directory, () => { throw new Error('Budget exhausted'); }), /Budget exhausted/);
+    // Subsequent enumeration works after the exceptional finally-close path.
+    assert.equal(procReader.descriptors(directory, () => {}).length, 2);
+  } finally { rmSync(directory, { recursive: true }); }
 });

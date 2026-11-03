@@ -19,6 +19,18 @@ export const procReader = Object.freeze({
     } finally { closeSync(fd); }
   },
   link: readlinkSync,
+  descriptors(directory, consume) {
+    const dir = opendirSync(directory), result = [];
+    try {
+      let entry;
+      while ((entry = dir.readSync())) {
+        if (result.length >= limits.entries || !/^[0-9]+$/.test(entry.name)) throw new Error('Descriptor budget or name');
+        consume(); // Account for each readlink while the directory is still open.
+        result.push({ name: entry.name, target: readlinkSync(path.join(directory, entry.name)) });
+      }
+    } finally { dir.closeSync(); }
+    return result;
+  },
   list(directory) {
     const dir = opendirSync(directory), result = [];
     try {
@@ -71,9 +83,12 @@ export function inspectLinux(projectRoot, profileName, manifest, { reader = proc
     const ports = profileName === 'owner' ? [3000, 3100] : [3001, 3110];
     let remainingBytes = 16 * 1048576;
     const deadline = performance.now() + 3000;
-    const call = (method, file) => {
+    const consume = () => {
       if (--budget < 0 || performance.now() > deadline) throw new Error('Inspection budget');
-      return reader[method](file);
+    };
+    const call = (method, file, ...args) => {
+      consume();
+      return reader[method](file, ...args);
     };
     const read = file => {
       const result = call('read', file);
@@ -112,9 +127,17 @@ export function inspectLinux(projectRoot, profileName, manifest, { reader = proc
       if (JSON.stringify([...currentIds].sort()) !== JSON.stringify([...ids].sort())) throw new Error('Changed process set');
       for (const id of currentIds) {
         if (call('link', `/proc/${id}/ns/net`) !== net) continue;
-        for (const fd of list(`/proc/${id}/fd`)) {
-          if (!/^[0-9]+$/.test(fd)) throw new Error('Invalid descriptor');
-          const match = /^socket:\[([0-9]+)\]$/.exec(call('link', `/proc/${id}/fd/${fd}`));
+        const directory = `/proc/${id}/fd`;
+        // Production snapshots link targets before closing the directory handle,
+        // including the collector's own directory descriptor. Injected readers
+        // may retain the separate list/link contract for race/error fixtures.
+        const descriptors = reader.descriptors
+          ? call('descriptors', directory, consume)
+          : list(directory).map(name => ({ name, target: call('link', `${directory}/${name}`) }));
+        if (!Array.isArray(descriptors) || descriptors.length > limits.entries) throw new Error('Invalid descriptor snapshot');
+        for (const descriptor of descriptors) {
+          if (!descriptor || !/^[0-9]+$/.test(descriptor.name) || typeof descriptor.target !== 'string') throw new Error('Invalid descriptor');
+          const match = /^socket:\[([0-9]+)\]$/.exec(descriptor.target);
           if (match && found.has(match[1])) found.get(match[1]).add(Number(id));
         }
       }
