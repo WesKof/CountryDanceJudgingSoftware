@@ -4,6 +4,14 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 4 — Judge missing-score master integration (batch108)
+
+Master accepted sourcea26d9b778fc1bcf22dce343c6f73e8ad2d383d5e/delivery5207093c060f280606d9f7de3fca5741a37d069e after inspecting the shared selector/component and independently verifying all21 seals. Reviewed-tree merge 80276a9044f016cb3e884097936703df71d9effa preserves first parent mainfa01cf41656c3801f20e87eea7496d5e4b5e0b46 and second parent the exact accepted delivery; an ordinary integration documentation commit follows. All source/history/checkpoints remain retained, including the baseline three-failure reproduction and accepted six-pass component evidence.
+
+No tests/build/runtime/browser checks were rerun for integration. Acceptance is modeled real component handlers/state/static markup plus clean scoped lint and project noEmit/nonincremental TypeScript, not actual DOM focus, keyboard, physical phone, visual or assistive-technology proof. Coverage/server/scoring/atomic stage submission and saved drafts/notes remain unchanged. Owner event/original+corrected records, private state, owner services, dependencies, global instructions/schedules and live site remain untouched.
+
+Exact source bindings, normal pushed branch/checkpoint/main object and peeled refs, six guarded mirror destinations (two new absent guards),251 tracked raw pairs,245 unrelated old raw files/index, retained EOL differences and exact-tip merged branch cleanup are recorded in work/judge-missing-score-108-20261104/integration/final-handoff.json with preimages/reversal operations/seals. Source checkpoints are not data backups.
+
 ## November 4 — Judge missing-score navigation delivery (batch108)
 
 Source a26d9b778fc1bcf22dce343c6f73e8ad2d383d5e routes both Score next bib and stage-review missing-score links to the first selectable same-heat song allowed by the unchanged existing scoring restriction. It preserves All-role reset, stage-review exit, exact bib focus intent and pending marks/notes. A missing valid destination gives assignment guidance without an editable shortcut; ordinary first-song behavior remains. The restriction helper was moved unchanged, with shared use by editor and route; server/coverage/submission logic is untouched.
