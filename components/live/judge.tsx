@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { cellKey, type Cell, type LiveBallot, type LiveView, type Performance, type RoundView } from '@/lib/live/types';
+import { cellKey, type Cell, type LiveBallot, type LiveHeat, type LiveView, type RoundView } from '@/lib/live/types';
 import { LIVE_MARKS, missingCells, requiredCells } from '@/lib/live/scoring';
 import { ApiError, liveApi, useLive } from './client';
 import { LiveShell } from './shell';
 import { LiveResults } from './results';
 import { heatReviewSignature, missingHeatSubjects, stageAssignments, stageCoverage, stageReviewSignature } from '@/lib/live/stage';
 import { StageReview } from './stage-review';
+import { missingScoreDestination, scoringRestriction } from '@/lib/live/judge-recovery';
 
 type Pending = { roundKey: string; performanceId: string; subjectId: string; mark: Cell['mark']; note: string; baseRevision: number; mutationId: string; error?: string; saved?: Cell; blocked?: boolean };
 const pendingKey = (p: Pick<Pending, 'roundKey' | 'performanceId' | 'subjectId'>) => `${p.roundKey}/${cellKey(p.performanceId, p.subjectId)}`;
@@ -50,12 +51,6 @@ function BibJump({ bibs, jump }: { bibs: number[]; jump: (bib: number) => void }
     if (!bibs.includes(bib)) { input.setCustomValidity('Choose a bib in this heat and role filter.'); input.reportValidity(); return; }
     jump(bib);
   }}><input name="bib" type="text" inputMode="numeric" pattern="[0-9]+" required autoComplete="off" placeholder="Bib" aria-label="Find bib in this heat" onInput={(event) => event.currentTarget.setCustomValidity('')} /><button className="quiet-button" type="submit" aria-label="Go to bib">Go</button></form>;
-}
-
-function scoringRestriction(round: RoundView, song: Performance, subjectId: string) {
-  if (round.definition.withdrawnIds?.includes(subjectId)) return 'This entry is withdrawn. Retained marks and notes are read only.';
-  if (song.pairingRevised && !song.partners.some((pair) => pair.includes(subjectId))) return 'Not scheduled for this song. Retained marks and notes are read only.';
-  return '';
 }
 
 export default function JudgeBallot({ token }: { token: string }) {
@@ -233,9 +228,12 @@ export default function JudgeBallot({ token }: { token: string }) {
   const stageCueSymbol = stageSubmitted || stageReady ? '✓' : checking || submitting || (stageSavePending && pendingState === 'Saving…') ? '…' : '!';
   function chooseSong(id: string, bib?: number) { setSelected(id); setRole('All'); setStageReview(false); setScoreFocus({ bib }); }
   const songIndex = options.findIndex((o) => o.song.id === target?.song.id);
+  const selectableSongIds = new Set(options.map((option) => option.song.id));
+  function recoverySong(round: RoundView, heat: LiveHeat, subjectId: string) { return missingScoreDestination(round, heat, subjectId, selectableSongIds); }
   const nextMissing = missingCoverage[0];
   const missingCount = missingCoverage.reduce((n, h) => n + h.missing.length, 0);
   const nextMissingBib = nextMissing?.round.definition.subjects.find((s) => s.id === nextMissing.missing[0])?.number;
+  const nextMissingSong = nextMissing && recoverySong(nextMissing.round, nextMissing.heat, nextMissing.missing[0]);
 
   const lineupRound = data.rounds.find((r) => r.definition.heats.some((h) => h.id === data.context.lineupHeatId));
   const lineupHeat = lineupRound?.definition.heats.find((h) => h.id === data.context.lineupHeatId);
@@ -289,13 +287,13 @@ export default function JudgeBallot({ token }: { token: string }) {
     {stage && coverage.length === 0 && !pendingReviewDuty && <section className="hero-panel judge-action-current"><div><p className="kicker">Nothing to score yet</p><h2>{data.context.performanceId ? 'No scores assigned to you for this stage' : 'Waiting for setup'}</h2><p>{data.context.performanceId ? 'You are up to date. Your next assigned stage will appear here automatically.' : 'The organizer is preparing the event. Your assigned scores will appear here automatically.'}</p></div></section>}
     {wholeStage && coverage.length > 0 && compactWorkspace && <section id="judge-current-task" tabIndex={-1} aria-labelledby="judge-current-task-title" className="hero-panel stage-judge-current judge-action-current"><div><p className="kicker">{currentBlock?.kind} · Your scores</p><div className={'action-cue ' + (stageSubmitted || stageReady ? 'is-complete' : 'needs-action')}><span className="action-symbol" aria-hidden="true">{stageCueSymbol}</span><span>{stageAction}</span></div><h2 id="judge-current-task-title"><span className={'judge-task-symbol ' + (stageSubmitted || stageReady ? 'is-complete' : '')} aria-hidden="true">{stageCueSymbol}</span>{currentApproved ? (currentBlock?.kind === 'finals' ? 'Finals results approved' : 'Prelims results approved') : stageSubmitted ? 'Your stage scores are submitted' : checking ? 'Checking saved scores' : submitting ? 'Submitting your stage scores' : stageSavePending && !missingCoverage.length ? pendingState === 'Saving…' ? 'Scores awaiting confirmation' : pendingState : stageReview ? 'Review your stage scores' : missingCoverage.length ? missingCount + (missingCount === 1 ? ' score still needed' : ' scores still needed') : 'Ready to submit your scores'}</h2>
       <p>{stageSubmitted ? requestWaiting || voteWaiting || (currentApproved ? currentBlock?.kind === 'finals' ? 'Judging is complete. No further action needed.' : 'Waiting for Finals to open.' : reviewingStage ? 'Waiting for head approval. Nothing else to do yet.' : 'Waiting for the other judges. Nothing else to do yet.') : coverage.reduce((n,h) => n + h.heat.subjectIds.filter((id) => !h.heat.withdrawnIds?.includes(id)).length - h.missing.length, 0) + ' / ' + coverage.reduce((n,h) => n + h.heat.subjectIds.filter((id) => !h.heat.withdrawnIds?.includes(id)).length, 0) + ' scored · ' + coverage.length + ' heats'}</p>
-      {!stageSubmitted && <div className="judge-task-actions">{nextMissing && !stageReview && <button className="primary-button" onClick={() => chooseSong(nextMissing.heat.songs[0].id, nextMissingBib)}>Score next bib · #{nextMissingBib}</button>}<button className={nextMissing && !stageReview ? 'quiet-button' : 'primary-button'} onClick={() => setStageReview(!stageReview)}>{stageReview ? 'Return to scoring' : 'Review & submit ' + (currentBlock?.kind ?? 'stage')}</button></div>}
+      {!stageSubmitted && <div className="judge-task-actions">{nextMissing && !stageReview && (nextMissingSong ? <button className="primary-button" onClick={() => chooseSong(nextMissingSong.id, nextMissingBib)}>Score next bib · #{nextMissingBib}</button> : <p role="status">No available song for bib #{nextMissingBib} in {nextMissing.heat.name}. Ask the organizer to check this assignment. Your marks and notes are kept.</p>)}<button className={nextMissingSong && !stageReview ? 'quiet-button' : 'primary-button'} onClick={() => setStageReview(!stageReview)}>{stageReview ? 'Return to scoring' : 'Review & submit ' + (currentBlock?.kind ?? 'stage')}</button></div>}
 
     </div></section>}
     {wholeStage && !stageSubmitted && stageReview && <section className="form-panel" aria-label="Review entire stage"><div className="form-body page-stack">
-      {missingCoverage.length > 0 && <div className="review-attention" role="status"><h3>Scores needed before submission</h3>{missingCoverage.map(({ round, heat, missing }) => <p key={heat.id}><button className="result-card-link" onClick={() => chooseSong(heat.songs[0].id, round.definition.subjects.find((s) => s.id === missing[0])?.number)}>{round.definition.format} · {round.definition.division} · {heat.name}: {missing.map((id) => { const s = round.definition.subjects.find((s) => s.id === id)!; return `#${s.number} ${s.primary}`; }).join(', ')}</button></p>)}</div>}
+      {missingCoverage.length > 0 && <div className="review-attention" role="status"><h3>Scores needed before submission</h3>{missingCoverage.map(({ round, heat, missing }) => { const song = recoverySong(round, heat, missing[0]), bib = round.definition.subjects.find((s) => s.id === missing[0])?.number; const label = `${round.definition.format} · ${round.definition.division} · ${heat.name}: ${missing.map((id) => { const subject = round.definition.subjects.find((s) => s.id === id)!; return `#${subject.number} ${subject.primary}`; }).join(', ')}`; return <p key={heat.id}>{song ? <button className="result-card-link" onClick={() => chooseSong(song.id, bib)}>{label}</button> : <span>{label}. No available song for bib #{bib}. Ask the organizer to check this assignment. Your marks and notes are kept.</span>}</p>; })}</div>}
       <label className="check-label"><input type="checkbox" disabled={!canSubmitStage} checked={(canSubmitStage || checking || submitting) && acknowledgedSignature === stageSignature} onChange={(e) => setAcknowledgedSignature(e.target.checked ? stageSignature : '')} />My scheduled dancing is finished, and I checked every assigned heat’s bibs and song marks. Submit once to lock my entire stage; later corrections require organizer and head approval.</label>
-      <button className="primary-button" disabled={!canSubmitStage || acknowledgedSignature !== stageSignature} onClick={() => void submit()}>{checking ? 'Checking saved scores…' : submitting ? 'Submitting…' : 'Submit ' + (currentBlock?.kind ?? 'stage')}</button><p role="status">{checking ? 'Checking saved scores before submission…' : submitting ? 'Submitting your stage scores…' : pending.length || saving ? 'Wait for every pending edit to be acknowledged.' : missingCoverage.length ? 'Follow the missing-score links above.' : 'One submission includes every assigned heat in this stage.'}</p>
+      <button className="primary-button" disabled={!canSubmitStage || acknowledgedSignature !== stageSignature} onClick={() => void submit()}>{checking ? 'Checking saved scores…' : submitting ? 'Submitting…' : 'Submit ' + (currentBlock?.kind ?? 'stage')}</button><p role="status">{checking ? 'Checking saved scores before submission…' : submitting ? 'Submitting your stage scores…' : pending.length || saving ? 'Wait for every pending edit to be acknowledged.' : missingCoverage.length ? missingCoverage.some(({ round, heat, missing }) => recoverySong(round, heat, missing[0])) ? 'Follow the missing-score links above.' : 'Ask the organizer to check the unavailable assignments above.' : 'One submission includes every assigned heat in this stage.'}</p>
       {coverage.map(({ round, heat, ballot, submitted, missing }) => <details key={heat.id} className="stage-heat-review"><summary>{round.definition.format} · {round.definition.division} · {heat.name} · {submitted ? 'Submitted / locked' : missing.length ? `${missing.length} missing` : 'Covered'}</summary><div className="table-wrap"><table><thead><tr><th>Entrant / couple</th>{heat.songs.map((p) => <th key={p.id}>{p.title}</th>)}</tr></thead><tbody>{round.definition.subjects.filter((s) => heat.subjectIds.includes(s.id)).map((s) => <tr key={s.id}><th>#{s.number} {s.primary}{s.secondary && ` & ${s.secondary}`}{heat.withdrawnIds?.includes(s.id) && ' · Withdrawn'}</th>{heat.songs.map((p) => { const c = getCell(ballot, p.id, s.id); return <td key={p.id}>{c.mark === 'No' ? 'No · 0' : c.mark || 'Blank'}{c.note && <small>{c.note}</small>}</td>; })}</tr>)}</tbody></table></div>{!submitted && heat.songs.map((p) => <button key={p.id} className="result-card-link" onClick={() => chooseSong(p.id)}>Edit {p.title}</button>)}</details>)}
 
     </div></section>}
