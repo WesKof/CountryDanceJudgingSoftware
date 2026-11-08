@@ -115,11 +115,18 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
     const bibRows = new Map<number, number>();
     for (const [index, subject] of subjects.entries()) {
       const row = index + 2;
-      const problem = !Number.isSafeInteger(subject.number) || subject.number < 1 ? 'Number must be a positive whole-number bib.'
-        : !subject.primary ? `${jj ? 'Name' : 'Lead'} is required.`
-        : jj && !['Lead', 'Follow'].includes(subject.role!) ? 'Role must be Lead or Follow.'
-        : !jj && !subject.secondary ? 'Follow is required.'
-        : bibRows.has(subject.number) ? `Number repeats bib ${subject.number} from CSV row ${bibRows.get(subject.number)}.` : '';
+      let problem = '';
+      if (!Number.isSafeInteger(subject.number) || subject.number < 1) {
+        problem = 'Number must be a positive whole-number bib.';
+      } else if (!subject.primary) {
+        problem = `${jj ? 'Name' : 'Lead'} is required.`;
+      } else if (jj && !['Lead', 'Follow'].includes(subject.role!)) {
+        problem = 'Role must be Lead or Follow.';
+      } else if (!jj && !subject.secondary) {
+        problem = 'Follow is required.';
+      } else if (bibRows.has(subject.number)) {
+        problem = `Number repeats bib ${subject.number} from CSV row ${bibRows.get(subject.number)}.`;
+      }
       if (problem) { setIssue(`CSV row ${row}: ${problem}`); return; }
       bibRows.set(subject.number, row);
     }
