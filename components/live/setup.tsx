@@ -112,7 +112,24 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
     const columnIssue = csvColumnIssue(rows, 3);
     if (columnIssue) { setIssue(columnIssue); return; }
     const subjects: LiveSubject[] = rows.slice(1).map((row) => ({ id: newId(), number: Number(row[0]), primary: row[1] ?? '', secondary: jj ? '' : row[2] ?? '', ...(jj ? { role: row[2] as 'Lead' | 'Follow' } : {}) }));
-    if (subjects.some((s) => !Number.isSafeInteger(s.number) || s.number < 1 || !s.primary || (jj ? !['Lead', 'Follow'].includes(s.role!) : !s.secondary)) || new Set(subjects.map((s) => s.number)).size !== subjects.length) { setIssue('Every row needs a unique positive bib, names, and a valid role or partner.'); return; }
+    const bibRows = new Map<number, number>();
+    for (const [index, subject] of subjects.entries()) {
+      const row = index + 2;
+      let problem = '';
+      if (!Number.isSafeInteger(subject.number) || subject.number < 1) {
+        problem = 'Number must be a positive whole-number bib.';
+      } else if (!subject.primary) {
+        problem = `${jj ? 'Name' : 'Lead'} is required.`;
+      } else if (jj && !['Lead', 'Follow'].includes(subject.role!)) {
+        problem = 'Role must be Lead or Follow.';
+      } else if (!jj && !subject.secondary) {
+        problem = 'Follow is required.';
+      } else if (bibRows.has(subject.number)) {
+        problem = `Number repeats bib ${subject.number} from CSV row ${bibRows.get(subject.number)}.`;
+      }
+      if (problem) { setIssue(`CSV row ${row}: ${problem}`); return; }
+      bibRows.set(subject.number, row);
+    }
     if (round.subjects.length && !window.confirm('Replace this unopened roster and its heat assignments?')) return;
     editRound((r) => ({ ...r, subjects: subjects.sort((a, b) => a.number - b.number), heats: r.heats.map((h, i) => ({ ...h, subjectIds: i === 0 ? subjects.map((s) => s.id) : [], songs: h.songs.map((s) => ({ ...s, partners: [] })) })) })); setIssue('');
   }
@@ -162,7 +179,7 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
         {round.kind === 'prelims' ? <><label><span>Number</span><input aria-label={`Bib for ${s.primary}`} type="number" min={1} value={s.number} onChange={(e) => editRound((r) => ({ ...r, subjects: r.subjects.map((x) => x.id === s.id ? { ...x, number: Number(e.target.value) } : x) }))} /></label><label><span>{competition!.format === 'Strictly' ? 'Lead' : 'Name'}</span><input aria-label={`Name for bib ${s.number}`} value={s.primary} onChange={(e) => editRound((r) => ({ ...r, subjects: r.subjects.map((x) => x.id === s.id ? { ...x, primary: e.target.value } : x) }))} /></label>{competition!.format === 'Strictly' ? <label><span>Follow</span><input aria-label={`Follow for bib ${s.number}`} value={s.secondary} onChange={(e) => editRound((r) => ({ ...r, subjects: r.subjects.map((x) => x.id === s.id ? { ...x, secondary: e.target.value } : x) }))} /></label> : <span className="roster-role">{s.role}</span>}<button className="quiet-button" aria-label={`Remove bib ${s.number}`} onClick={() => editRound((r) => ({ ...r, subjects: r.subjects.filter((x) => x.id !== s.id), heats: r.heats.map((h) => ({ ...h, subjectIds: h.subjectIds.filter((id) => id !== s.id), songs: h.songs.map((p) => ({ ...p, partners: p.partners.filter((pair) => !pair.includes(s.id)) })) })) }))}>Remove</button></> : <><span className="number-badge">{s.number}</span><span>{s.primary} · {s.secondary}</span></>}
       </div>)}</div>
       <SetupSection title="Heat assignments" summaryText={`${round.subjects.filter((s) => !round.heats.some((h) => h.subjectIds.includes(s.id))).length} unassigned · ${quantity(round.heats.length, 'heat')}`}><div className="form-body">{round.subjects.map((s) => <label key={s.id}><span>#{s.number} {s.primary} · {s.role ?? s.secondary}</span><select aria-label={`Heat for bib ${s.number}`} value={round.heats.find((h) => h.subjectIds.includes(s.id))?.id ?? ''} onChange={(e) => assign(s.id, e.target.value)}><option value="">Unassigned</option>{round.heats.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>)}</div></SetupSection>
-      {round.kind === 'prelims' && <SetupSection title="Import roster"><div className="form-body"><form onSubmit={importRoster}><label><span>{competition!.format === 'Strictly' ? 'Number,Lead,Follow' : 'Number,Name,Role'}</span><textarea name="csv" rows={5} required /></label><button className="quiet-button">Replace unopened roster</button></form></div></SetupSection>}
+      {round.kind === 'prelims' && <SetupSection title="Import roster"><div className="form-body"><p>CSV row numbers count records; a quoted multiline value stays in one row.</p><form onSubmit={importRoster}><label><span>{competition!.format === 'Strictly' ? 'Number,Lead,Follow' : 'Number,Name,Role'}</span><textarea name="csv" rows={5} required /></label><button className="quiet-button">Replace unopened roster</button></form></div></SetupSection>}
       </fieldset></div></SetupSection>}
     </div>
     {round && <SetupSection title="Round settings" sectionId="Round setup" caption={`${competition!.format} · ${competition!.division} · ${round.kind}`} main detailsRef={roundSection} attention={countIssues.length > 0} summaryText={`${quantity(round.heats.length, 'heat')} · ${quantity(round.heats.reduce((n, h) => n + h.songs.length, 0), 'song')} · ${round.judgeIds.length || setup.judges.length} judges${locked ? ' · Frozen' : ''}${countIssues.length ? ' · Finalist count needs attention' : ''}`}><div className="form-body">
