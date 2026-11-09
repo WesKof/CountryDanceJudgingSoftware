@@ -33,3 +33,19 @@ test('valid quoted multiline roster retains cancellation, confirmation and draft
   assert.ok(round.heats.every((heat) => heat.songs.every((song) => song.partners.length === 0)));
   assert.deepEqual(h.setup.judges, h.initial.judges); assert.equal(h.setup.headJudgeId, h.initial.headJudgeId);
 });
+
+test('corrected valid import canceled after an error reports cancellation and keeps the draft', async () => {
+  const h = await rosterHarness();
+  const invalid = 'Number,Name,Role\n901,Ada,Lead\n902,Bea,Folow';
+  h.submit(invalid);
+  assert.equal(h.issue(), 'CSV row 3: Role must be Lead or Follow.');
+  assert.equal(h.confirmations, 0); assert.equal(h.updates, 0);
+  const corrected = 'Number,Name,Role\n901,Ada,Lead\n902,Bea,Follow';
+  assert.equal(h.submit(corrected, false).retainedInput, corrected);
+  assert.equal(h.issue(), 'Roster import canceled. Current roster and heat assignments are kept.');
+  assert.equal(h.confirmations, 1); assert.equal(h.updates, 0); assert.deepEqual(h.setup, h.initial);
+  h.submit(corrected);
+  assert.equal(h.confirmations, 2); assert.equal(h.updates, 1); assert.equal(h.issue(), '');
+  const round = h.setup.rounds.find((r) => r.id === h.roundId)!;
+  assert.deepEqual(round.subjects.map((s) => [s.number, s.primary, s.role]), [[901, 'Ada', 'Lead'], [902, 'Bea', 'Follow']]);
+});
