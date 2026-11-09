@@ -130,7 +130,10 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
       if (problem) { setIssue(`CSV row ${row}: ${problem}`); return; }
       bibRows.set(subject.number, row);
     }
-    if (round.subjects.length && !window.confirm('Replace this unopened roster and its heat assignments?')) return;
+    if (round.subjects.length && !window.confirm('Replace this unopened roster and its heat assignments?')) {
+      setIssue('Roster import canceled. Current roster and heat assignments are kept.');
+      return;
+    }
     editRound((r) => ({ ...r, subjects: subjects.sort((a, b) => a.number - b.number), heats: r.heats.map((h, i) => ({ ...h, subjectIds: i === 0 ? subjects.map((s) => s.id) : [], songs: h.songs.map((s) => ({ ...s, partners: [] })) })) })); setIssue('');
   }
   function importJudges(e: FormEvent<HTMLFormElement>) {
