@@ -57,12 +57,36 @@ export function useLive(token: string) {
   }, [token]);
   useEffect(() => {
     let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
-    const poll = async () => { if (!alive) return; await refresh(); if (alive) timer = setTimeout(poll, 4000); };
-    void poll();
+    let running = false;
+    let refreshWhenFinished = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const clearPoll = () => { clearTimeout(timer); timer = undefined; };
+    const poll = async (initial = false) => {
+      clearPoll();
+      if (!alive || (!initial && document.visibilityState === 'hidden')) return;
+      if (running) { refreshWhenFinished = true; return; }
+      running = true;
+      await refresh();
+      running = false;
+      if (!alive) return;
+      if (document.visibilityState === 'hidden') { refreshWhenFinished = false; return; }
+      if (refreshWhenFinished) {
+        refreshWhenFinished = false;
+        void poll();
+      } else {
+        timer = setTimeout(() => { void poll(); }, 4000);
+      }
+    };
+    const visibility = () => {
+      clearPoll();
+      if (document.visibilityState === 'hidden') { refreshWhenFinished = false; return; }
+      void poll();
+    };
+    void poll(true);
     const online = () => { void refresh(); };
     window.addEventListener('online', online);
-    return () => { alive = false; clearTimeout(timer); window.removeEventListener('online', online); };
+    document.addEventListener('visibilitychange', visibility);
+    return () => { alive = false; clearPoll(); window.removeEventListener('online', online); document.removeEventListener('visibilitychange', visibility); };
   }, [refresh]);
   return { data, setData, error, refresh };
 }
