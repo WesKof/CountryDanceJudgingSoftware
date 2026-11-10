@@ -26,16 +26,16 @@ export async function rosterHarness(jackAndJill = true, sourceUrl = new URL('../
   return {
     initial, get setup() { return setup; }, get updates() { return updates; }, get confirmations() { return confirmations; }, roundId,
     issue() { return text(nodes(tree).find((node) => node.props.role === 'alert')); },
-    submit(csv, accept = true) {
-      const form = nodes(tree).find((node) => node.type === 'form' && nodes(node).some((child) => child.type === 'textarea' && child.props.name === 'csv'));
+    submit(csv, accept = true, field = 'csv') {
+      const form = nodes(tree).find((node) => node.type === 'form' && nodes(node).some((child) => child.type === 'textarea' && child.props.name === field));
       const originalFormData = globalThis.FormData, originalWindow = globalThis.window;
-      const target = { csv }; let prevented = false;
+      const target = { [field]: csv }; let prevented = false;
       try {
         globalThis.FormData = class { constructor(form) { this.form = form; } get(name) { return this.form[name]; } };
         globalThis.window = { confirm() { confirmations++; return accept; } };
         form.props.onSubmit({ currentTarget: target, preventDefault() { prevented = true; } });
       } finally { globalThis.FormData = originalFormData; if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow; }
-      render(); return { retainedInput: target.csv, prevented };
+      render(); return { retainedInput: target[field], prevented };
     },
   };
 }

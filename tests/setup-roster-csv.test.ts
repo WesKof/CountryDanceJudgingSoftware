@@ -49,3 +49,21 @@ test('corrected valid import canceled after an error reports cancellation and ke
   const round = h.setup.rounds.find((r) => r.id === h.roundId)!;
   assert.deepEqual(round.subjects.map((s) => [s.number, s.primary, s.role]), [[901, 'Ada', 'Lead'], [902, 'Bea', 'Follow']]);
 });
+
+test('corrected judge import canceled after an error keeps the panel, head and round assignments', async () => {
+  const h = await rosterHarness();
+  const invalid = 'Name,ParticipantId\nFirst,person-a,Unexpected';
+  h.submit(invalid, true, 'judges');
+  assert.equal(h.issue(), 'CSV row 2 needs exactly 2 columns. Put names containing commas in double quotes.');
+  assert.equal(h.confirmations, 0); assert.equal(h.updates, 0);
+  const corrected = 'Name,ParticipantId\nFirst,PERSON-A\nSecond,person-b';
+  assert.equal(h.submit(corrected, false, 'judges').retainedInput, corrected);
+  assert.equal(h.issue(), 'Judge import canceled. Current panel, head judge and round assignments are kept.');
+  assert.equal(h.confirmations, 1); assert.equal(h.updates, 0); assert.deepEqual(h.setup, h.initial);
+  h.submit(corrected, true, 'judges');
+  assert.equal(h.confirmations, 2); assert.equal(h.updates, 1);
+  assert.equal(h.issue(), 'Judge import validated. Choose the head and Save setup to apply.');
+  assert.deepEqual(h.setup.judges.map((judge) => [judge.name, judge.participantId]), [['First', 'person-a'], ['Second', 'person-b']]);
+  assert.equal(h.setup.headJudgeId, ''); assert.ok(h.setup.rounds.every((round) => round.judgeIds.length === 0));
+  assert.deepEqual(h.setup.rounds.map((round) => ({ ...round, judgeIds: [] })), h.initial.rounds.map((round) => ({ ...round, judgeIds: [] })));
+});

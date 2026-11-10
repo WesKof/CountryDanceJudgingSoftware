@@ -144,7 +144,10 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
     if (columnIssue) { setIssue(columnIssue); return; }
     const imported=rows.slice(1).map((row)=>({id:newId(),name:row[0]?.trim() ?? '',participantId:row[1]?.trim().toLowerCase() ?? ''}));
     if(!imported.length || imported.length>15 || imported.some((j)=>!j.name || !j.participantId || j.participantId===setup.organizerParticipantId) || new Set(imported.map((j)=>j.participantId)).size!==imported.length) {setIssue('Every judge needs a name and unique participant identifier distinct from the organizer.');return;}
-    if(setup.judges.length && !window.confirm('Replace the preparation panel and clear panel assignments? Save setup applies this draft.')) return;
+    if(setup.judges.length && !window.confirm('Replace the preparation panel and clear panel assignments? Save setup applies this draft.')) {
+      setIssue('Judge import canceled. Current panel, head judge and round assignments are kept.');
+      return;
+    }
     update({...setup,judges:imported,headJudgeId:'',rounds:setup.rounds.map((r)=>({...r,judgeIds:[]}))});setIssue('Judge import validated. Choose the head and Save setup to apply.');
   }
   function updateFinalists(ids: string[]) {
