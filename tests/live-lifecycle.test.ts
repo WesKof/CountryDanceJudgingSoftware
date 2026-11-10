@@ -7,13 +7,14 @@ import type {LiveView} from '../lib/live/types.ts';
 const view=(version=2):LiveView=>({eventId:'fictional',version,status:'active',role:'organizer',judgeId:null,setup:liveFixture(2),context:{blockId:null,performanceId:null,visited:[]},rounds:[],ballots:[]});
 function deferred<T>(){let resolve!:(value:T)=>void,reject!:(reason:unknown)=>void;const promise=new Promise<T>((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};}
 const flush=async()=>{for(let n=0;n<24;n++)await Promise.resolve();};
-async function harness(){
- const original={fetch:globalThis.fetch,setTimeout:globalThis.setTimeout,clearTimeout:globalThis.clearTimeout,window:globalThis.window};const state:unknown[]=[],pending:(()=>void)[]=[],effects:(()=>()=>void)[]=[];let index=0,now=0,next=1,cleanup:(()=>void)|undefined;const timers=new Map<number,{at:number;fn:()=>void}>();
+async function harness(visibility: DocumentVisibilityState = 'visible'){
+ const original={fetch:globalThis.fetch,setTimeout:globalThis.setTimeout,clearTimeout:globalThis.clearTimeout,window:globalThis.window,document:globalThis.document};const state:unknown[]=[],pending:(()=>void)[]=[],effects:(()=>()=>void)[]=[];let index=0,now=0,next=1,cleanup:(()=>void)|undefined;const timers=new Map<number,{at:number;fn:()=>void}>();
  const hooks={useState(initial:unknown){const slot=index++;if(!(slot in state))state[slot]=initial;return[state[slot],(value:unknown)=>pending.push(()=>{state[slot]=typeof value==='function'?value(state[slot]):value;})];},useRef(initial:unknown){const slot=index++;if(!(slot in state))state[slot]={current:initial};return state[slot];},useCallback<T>(fn:T){return fn;},useEffect(fn:()=>()=>void){if(!effects.length)effects.push(fn);}};
  const key='__lifecycleHooks'+crypto.randomUUID().replaceAll('-','');(globalThis as unknown as Record<string,unknown>)[key]=hooks;const stub='data:text/javascript;base64,'+Buffer.from(`export const {useState,useCallback,useEffect,useRef}=globalThis[${JSON.stringify(key)}];`).toString('base64');let code=ts.transpileModule(readFileSync(new URL('../components/live/client.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;code=code.replace(/from\s*(['"])([^'"]+)\1/g,(_all:string,_quote:string,specifier:string)=>'from '+JSON.stringify(specifier==='react'?stub:specifier.startsWith('@/')?new URL('../'+specifier.slice(2)+'.ts',import.meta.url).href:import.meta.resolve(specifier)));const client=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));delete(globalThis as unknown as Record<string,unknown>)[key];
  globalThis.setTimeout=((fn:()=>void,ms=0)=>{const id=next++;timers.set(id,{at:now+ms,fn});return id;}) as unknown as typeof setTimeout;globalThis.clearTimeout=((id:unknown)=>{timers.delete(id as number);}) as typeof clearTimeout;
  const listeners=new Map<string,()=>void>();globalThis.window={addEventListener:(type:string,fn:()=>void)=>listeners.set(type,fn),removeEventListener:(type:string)=>listeners.delete(type)} as unknown as Window&typeof globalThis;
- return{client,timers,listeners,render(){while(pending.length)pending.shift()!();index=0;const hook=client.useLive('PRIVATE_TOKEN_SENTINEL');const[draft,setDraft]=hooks.useState('Unsent local edit');return{...hook,draft,setDraft};},mount(){cleanup=effects[0]();},unmount(){cleanup?.();cleanup=undefined;},async advance(ms:number){const end=now+ms;await flush();while(true){const entry=[...timers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!entry)break;now=entry[1].at;timers.delete(entry[0]);entry[1].fn();await flush();}now=end;await flush();},restore(){cleanup?.();Object.assign(globalThis,original);if(original.window===undefined)delete(globalThis as unknown as Record<string,unknown>).window;}};
+ const visibilityListeners=new Map<string,()=>void>();globalThis.document={get visibilityState(){return visibility;},addEventListener:(type:string,fn:()=>void)=>visibilityListeners.set(type,fn),removeEventListener:(type:string)=>visibilityListeners.delete(type)} as unknown as Document;
+ return{client,timers,listeners,visibilityListeners,setVisibility(value:DocumentVisibilityState){visibility=value;visibilityListeners.get('visibilitychange')?.();},render(){while(pending.length)pending.shift()!();index=0;const hook=client.useLive('PRIVATE_TOKEN_SENTINEL');const[draft,setDraft]=hooks.useState('Unsent local edit');return{...hook,draft,setDraft};},mount(){cleanup=effects[0]();},unmount(){cleanup?.();cleanup=undefined;},async advance(ms:number){const end=now+ms;await flush();while(true){const entry=[...timers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!entry)break;now=entry[1].at;timers.delete(entry[0]);entry[1].fn();await flush();}now=end;await flush();},restore(){cleanup?.();Object.assign(globalThis,original);if(original.window===undefined)delete(globalThis as unknown as Record<string,unknown>).window;if(original.document===undefined)delete(globalThis as unknown as Record<string,unknown>).document;}};
 }
 
 test('GET header stall settles at the controlled deadline and aborts only its own read',async()=>{
@@ -54,4 +55,46 @@ test('older valid success does not clear a newer completed error and effect clea
  const h=await harness();try{const old=deferred<Response>();let calls=0;globalThis.fetch=()=>++calls===1?old.promise:Promise.reject(Error('newer'));let hook=h.render();const first=hook.refresh();assert.equal(await hook.refresh(),null);old.resolve(Response.json(view(10)));assert.equal((await first).version,10);hook=h.render();assert.equal(hook.data.version,10);assert.match(hook.error,/Connection interrupted/);
   globalThis.fetch=async()=>new Promise<Response>(()=>{});h.mount();h.unmount();assert.equal(h.listeners.size,0);await h.advance(10000);assert.equal(h.timers.size,0);assert.equal(calls,2);
  }finally{h.restore();}
+});
+
+test('background visibility pauses hidden polling but leaves explicit and online reads unconditional',async()=>{
+ const h=await harness();try{
+  let calls=0;globalThis.fetch=async()=>{calls++;return Response.json(view(calls));};
+  let hook=h.render();hook.setDraft('Pending private draft');h.mount();await flush();
+  assert.equal(calls,1);await h.advance(4000);assert.equal(calls,2);
+  h.setVisibility('hidden');await h.advance(20000);assert.equal(calls,2);assert.equal(h.timers.size,0);
+  hook=h.render();assert.equal(hook.draft,'Pending private draft');await hook.refresh();assert.equal(calls,3);
+  h.listeners.get('online')!();await flush();assert.equal(calls,4);assert.equal(h.timers.size,0);
+  h.setVisibility('visible');await flush();assert.equal(calls,5);await h.advance(3999);assert.equal(calls,5);await h.advance(1);assert.equal(calls,6);
+  h.unmount();assert.equal(h.listeners.size,0);assert.equal(h.visibilityListeners.size,0);await h.advance(12000);assert.equal(calls,6);assert.equal(h.timers.size,0);
+ }finally{h.restore();}
+});
+
+test('background visibility initial hidden mount reads once and resumes immediately on show',async()=>{
+ const h=await harness('hidden');try{
+  let calls=0;globalThis.fetch=async()=>{calls++;return Response.json(view());};h.render();h.mount();await flush();assert.equal(calls,1);
+  await h.advance(16000);assert.equal(calls,1);assert.equal(h.timers.size,0);
+  h.setVisibility('visible');await flush();assert.equal(calls,2);await h.advance(4000);assert.equal(calls,3);
+ }finally{h.restore();}
+});
+
+test('background visibility changes during an active read coalesce one fresh follow-up without abort',async()=>{
+ const h=await harness();try{
+  const first=deferred<Response>();let calls=0,signal:AbortSignal|undefined;
+  globalThis.fetch=async(_url,options)=>{calls++;if(calls===1){signal=options?.signal as AbortSignal;return first.promise;}return Response.json(view(calls));};
+  h.render();h.mount();h.setVisibility('hidden');h.setVisibility('visible');h.setVisibility('hidden');h.setVisibility('visible');assert.equal(calls,1);assert.equal(signal!.aborted,false);
+  first.resolve(Response.json(view(1)));await flush();assert.equal(calls,2);await h.advance(3999);assert.equal(calls,2);await h.advance(1);assert.equal(calls,3);
+ }finally{h.restore();}
+});
+
+test('background visibility settling hidden waits for visibility and cleanup drops a queued follow-up',async()=>{
+ const h=await harness();try{
+  const first=deferred<Response>();let calls=0;globalThis.fetch=async()=>{calls++;return calls===1?first.promise:Response.json(view());};h.render();h.mount();
+  h.setVisibility('hidden');first.resolve(Response.json(view()));await flush();assert.equal(h.timers.size,0);await h.advance(12000);assert.equal(calls,1);
+  h.setVisibility('visible');await flush();assert.equal(calls,2);
+ }finally{h.restore();}
+ const next=await harness();try{
+  const first=deferred<Response>();let calls=0;globalThis.fetch=async()=>{calls++;return first.promise;};next.render();next.mount();next.setVisibility('hidden');next.setVisibility('visible');next.unmount();first.resolve(Response.json(view()));await flush();await next.advance(12000);
+  assert.equal(calls,1);assert.equal(next.timers.size,0);assert.equal(next.listeners.size,0);assert.equal(next.visibilityListeners.size,0);
+ }finally{next.restore();}
 });
