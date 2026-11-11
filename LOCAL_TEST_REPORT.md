@@ -4,6 +4,12 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 11 — Roster readiness integration (batch 116)
+
+The master independently reviewed delivery dc13d997d1a83e77d5b028f5c69941c06ba3fc89 and verified all 15 delivery seals. Merge a67a7753f56cb5fd5032c1eb0961b4c6dcec8f53 has parents a6794672230e230bc8ea275385f9d444d7a66c66 and the reviewed delivery, retaining its exact tree. This completion record reuses the accepted 14/14 guidance tests, scoped lint and project TypeScript evidence. Browser focus/expansion remains unverified.
+
+Four annotated checkpoints, exact remote main and peeled-tag checks, four guarded mirror updates, 253 tracked raw pairs, preservation of 249 unrelated files and expected-tip merged-branch cleanup are recorded in `work/roster-readiness-116-20261111/integration/final-handoff.json`. Owner walkthrough, runtime, private data, fixtures and live site remain preserved. Source checkpoints cover repository history.
+
 ## November 11 — Roster name and bib readiness guidance (batch 116)
 
 Source 311fbeebd427a8cb2676147013e0e800061725a8 extends the existing canonical roster-task guidance to missing trimmed J&J Name fields and invalid or repeated bibs. It examines entries in roster order, validates each bib with the server’s existing safe-integer1–1000000 requirement, checks per-round numeric uniqueness and then required names. Invalid bibs identify the entry position, duplicates identify the bib and earlier position, and missing names identify the bib and field. Strictly Lead/Follow guidance, canonical task priority, exact round/Roster routing and J&J role readiness are preserved. Validation and Save setup source remain unchanged.
