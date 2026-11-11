@@ -1128,7 +1128,7 @@ Delivery map: base bb473f8; source 7cb0862; branch codex/correction-form-recover
 
 ## Judge CSV count and record diagnostics — November 10 (batch 114)
 
-Judge CSV imports report an empty panel or a count above 15 after checking the header and column widths. Within the accepted count range, the first invalid parsed record identifies the missing Name or ParticipantId, organizer identity match, or duplicate identifier and its earlier record. The record count includes the header and treats quoted multiline fields as part of one record. Messages omit participant identifier values. Existing validation bounds, identity normalization and organizer comparison, panel lock, cancellation, deliberate replacement and explicit Save setup behavior are preserved. See the November 10 report for handler evidence and review status.
+Judge CSV imports report an empty panel or a count above 15 after checking the header and column widths. Within the accepted count range, the first invalid parsed record identifies the missing Name or ParticipantId, organizer identity match, or duplicate identifier and its earlier record. CSV row numbering includes the header and treats quoted multiline fields as part of one record. The panel count excludes the header. Messages omit participant identifier values. Existing validation bounds, identity normalization and organizer comparison, panel lock, cancellation, deliberate replacement and explicit Save setup behavior are preserved. See the November 10 report for handler evidence and review status.
 
 ## Judge import cancellation feedback — November 10 (batch113)
 
