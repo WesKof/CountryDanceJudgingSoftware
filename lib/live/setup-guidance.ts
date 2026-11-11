@@ -14,10 +14,18 @@ export function setupTasks(setup: LiveSetup): SetupTask[] {
     const pre=setup.rounds.find((r)=>r.competitionId===c.id&&r.kind==='prelims');
     if(!pre) {tasks.push({id:c.id,label:'Prepare '+c.format+' · '+c.division,detail:'Add the Prelims and Finals program.',section:'Program & stages',complete:false});continue;}
     const title=c.format+' · '+c.division, final=setup.rounds.find((r)=>r.prelimRoundId===pre.id);
-    const roster=pre.subjects.length>0 && (c.format!=='Jack & Jill'||pre.subjects.some((s)=>s.role==='Lead')&&pre.subjects.some((s)=>s.role==='Follow'));
+    const missingPartner = c.format === 'Strictly' ? pre.subjects.find((subject) => !subject.primary.trim() || !subject.secondary.trim()) : undefined;
+    let missingPartnerDetail = '';
+    if (missingPartner) {
+      const names = [];
+      if (!missingPartner.primary.trim()) names.push('Lead');
+      if (!missingPartner.secondary.trim()) names.push('Follow');
+      missingPartnerDetail = `Bib #${missingPartner.number} needs ${names.join(' and ')} ${names.length === 1 ? 'name' : 'names'}.`;
+    }
+    const roster=pre.subjects.length>0 && !missingPartner && (c.format!=='Jack & Jill'||pre.subjects.some((s)=>s.role==='Lead')&&pre.subjects.some((s)=>s.role==='Follow'));
     const unassigned=pre.subjects.some((s)=>!pre.heats.some((h)=>h.subjectIds.includes(s.id)));
     const heatReady=pre.heats.length>0&&pre.heats.every((h)=>h.subjectIds.length>0&&h.songs.length>=2&&h.songs.length<=3)&&!unassigned;
-    tasks.push({id:pre.id+'-entries',label:'Add entries · '+title,detail:pre.subjects.length+' entries'+(c.format==='Jack & Jill'?' · both roles needed':''),section:'Roster',roundId:pre.id,complete:roster});
+    tasks.push({id:pre.id+'-entries',label:'Add entries · '+title,detail:missingPartnerDetail || pre.subjects.length+' entries'+(c.format==='Jack & Jill'?' · both roles needed':''),section:'Roster',roundId:pre.id,complete:roster});
     tasks.push({id:pre.id+'-program',label:'Prepare heats & songs · '+title,detail:unassigned?'Assign every entry to a heat.':pre.heats.length+' heats · check songs and assignments',section:unassigned?'Heat assignments':'Heats, songs & partner rotations',roundId:pre.id,complete:heatReady});
     const countIssues=finalistCountIssues(c.format,final?.finalistCount??0,pre.subjects);
     tasks.push({id:pre.id+'-finalists',label:'Choose finalist count · '+title,detail:countIssues[0]??(final?.finalistCount+' '+(c.format==='Jack & Jill'?'pairs / per role':'couples')),section:'Finalists & pairings',roundId:pre.id,complete:countIssues.length===0});

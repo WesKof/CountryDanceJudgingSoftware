@@ -23,3 +23,26 @@ test('setup guidance points to missing role verification and the exact finalist 
  assert.equal(next.section,'Finalists & pairings');assert.equal(next.roundId,final.prelimRoundId);
  setup.venue='';setup.date='';final.finalistCount=1;assert.ok(setupTasks(setup).every((t)=>t.complete));
 });
+
+for (const [fields, detail] of [
+  [['primary'], 'Lead name'],
+  [['secondary'], 'Follow name'],
+  [['primary', 'secondary'], 'Lead and Follow names'],
+] as const) test(`setup guidance routes missing ${detail} in a later Strictly competition to its roster`, () => {
+  const setup = sampleSetup();
+  setup.competitions.reverse();
+  const competition = setup.competitions.find((item) => item.format === 'Strictly')!;
+  const round = setup.rounds.find((item) => item.competitionId === competition.id && item.kind === 'prelims')!;
+  const subject = round.subjects[1], originalSubject = { ...subject };
+  for (const field of fields) subject[field] = '  ';
+  const before = structuredClone(setup);
+  const tasks = setupTasks(setup), next = tasks.find((task) => !task.complete)!;
+  assert.deepEqual(setup, before);
+  assert.equal(next?.id, round.id + '-entries');
+  assert.equal(next.roundId, round.id);
+  assert.equal(next.section, 'Roster');
+  assert.equal(next.detail, `Bib #${subject.number} needs ${detail}.`);
+  assert.ok(tasks.filter((task) => task.roundId && task.roundId !== round.id).every((task) => task.complete));
+  Object.assign(subject, originalSubject);
+  assert.ok(setupTasks(setup).every((task) => task.complete));
+});
