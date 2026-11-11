@@ -4,6 +4,12 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 11 — Partner-name routing integration (batch 115)
+
+The master reviewed delivery fe0f0036f2c202f7145725b77e15c5c4d29cfd1b and independently verified all 15 delivery hashes. Merge 13af47355697e40a5e51f06e665279dd17af87d1 has parents 2b3af5e03146fd3c4ebec587119491ea337d0f82 and the reviewed delivery and preserves the exact reviewed tree. A completion-documentation commit follows.
+
+Acceptance covers five setup-guidance tests, scoped lint and project TypeScript. Browser expansion, focus and visual verification remain pending. Integration reused the accepted test evidence. Four annotated checkpoints, exact remote refs, four guarded mirror updates, 253 tracked raw pairs, preservation of 249 unrelated files and expected-tip merged-branch cleanup are recorded in work/partner-name-routing-115-20261111/integration/final-handoff.json. The owner walkthrough, retained fixtures, runtime, private data and live site were preserved. Source checkpoints cover repository history.
+
 ## November 11 — Missing Strictly partner-name blocker routing (batch 115)
 
 Source 32d5ae702f6b9cda904ce041ad42363b594064ed updates the existing canonical roster task. Previously a populated Strictly roster counted as ready despite blank partner names. Missing Follow names reached the generic freezeRound fallback and its Round setup destination, while missing Lead names could leave this checklist fully complete. The task now checks both trimmed partner fields, identifies the first affected bib and missing Lead/Follow fields, and routes to that prelim round’s Roster section. Existing task priority and route consumers are reused. Validation and Save setup code are byte-preserved.
