@@ -143,7 +143,33 @@ export default function SetupEditor({ setup, update, frozenIds, correction, init
     const columnIssue = csvColumnIssue(rows, 2);
     if (columnIssue) { setIssue(columnIssue); return; }
     const imported=rows.slice(1).map((row)=>({id:newId(),name:row[0]?.trim() ?? '',participantId:row[1]?.trim().toLowerCase() ?? ''}));
-    if(!imported.length || imported.length>15 || imported.some((j)=>!j.name || !j.participantId || j.participantId===setup.organizerParticipantId) || new Set(imported.map((j)=>j.participantId)).size!==imported.length) {setIssue('Every judge needs a name and unique participant identifier distinct from the organizer.');return;}
+    if (imported.length === 0) {
+      setIssue('Add at least one judge below the CSV header.');
+      return;
+    }
+    if (imported.length > 15) {
+      setIssue(`Import at most 15 judges. This CSV contains ${imported.length} judge records.`);
+      return;
+    }
+    const participantRows = new Map<string, number>();
+    for (const [index, judge] of imported.entries()) {
+      const row = index + 2;
+      let problem = '';
+      if (!judge.name) {
+        problem = 'Name is required.';
+      } else if (!judge.participantId) {
+        problem = 'ParticipantId is required.';
+      } else if (judge.participantId === setup.organizerParticipantId) {
+        problem = 'ParticipantId must differ from the organizer’s.';
+      } else if (participantRows.has(judge.participantId)) {
+        problem = `ParticipantId repeats the identifier from CSV row ${participantRows.get(judge.participantId)}.`;
+      }
+      if (problem) {
+        setIssue(`CSV row ${row}: ${problem}`);
+        return;
+      }
+      participantRows.set(judge.participantId, row);
+    }
     if(setup.judges.length && !window.confirm('Replace the preparation panel and clear panel assignments? Save setup applies this draft.')) {
       setIssue('Judge import canceled. Current panel, head judge and round assignments are kept.');
       return;
