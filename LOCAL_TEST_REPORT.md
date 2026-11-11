@@ -4,6 +4,12 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 10 — Judge CSV diagnostics integration (batch 114)
+
+The master reviewed delivery ba8f86d0ffa99d8cd249fb77d870a26a456e29e3 and independently verified all 15 delivery hashes. Merge d2092c9251db865e70a70adf1b6ee4abde159a36 has parents eb7b73e92d9200c5033c200e524ff78efc6ef22c and the reviewed delivery, with the exact reviewed tree. The completion record follows in a documentation commit.
+
+Verification covers nine focused handler cases and scoped lint and TypeScript. Browser verification is pending. Integration used the existing test results. Five annotated checkpoints preserve the base, source, delivery history and final integration. The integration receipt records the remote refs, four guarded mirror updates, 253 matching tracked file pairs and preservation of 249 unrelated files. See work/judge-csv-diagnostics-114-20261110/integration/final-handoff.json.
+
 ## November 10 — Judge CSV count and record diagnostics (batch 114)
 
 Source 88d93cd90c7ab887de76fdb0058e0e4f7e7ddb8d replaces the aggregate judge CSV validation message with separate empty and over-limit messages, followed by field guidance for the first invalid parsed record. Duplicate identifiers cite the earlier record number. The code preserves header and width precedence, the 1–15 count bounds, trim/lowercase normalization, exact organizer identity comparison and normalized uniqueness. Panel lock, confirmation, cancellation, draft replacement and explicit Save setup retain their existing paths.
