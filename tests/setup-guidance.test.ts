@@ -46,3 +46,56 @@ for (const [fields, detail] of [
   Object.assign(subject, originalSubject);
   assert.ok(setupTasks(setup).every((task) => task.complete));
 });
+
+for (const value of ['', '  ']) test(`roster readiness identifies a missing J&J name of length ${value.length}`, () => {
+  const setup = sampleSetup();
+  const competition = setup.competitions.find((item) => item.format === 'Jack & Jill')!;
+  const round = setup.rounds.find((item) => item.competitionId === competition.id && item.kind === 'prelims')!;
+  const subject = round.subjects[1], original = subject.primary;
+  subject.primary = value;
+  const before = structuredClone(setup), task = setupTasks(setup).find((item) => !item.complete)!;
+  assert.deepEqual(setup, before);
+  assert.equal(task?.id, round.id + '-entries');
+  assert.equal(task.roundId, round.id); assert.equal(task.section, 'Roster');
+  assert.equal(task.detail, `Bib #${subject.number} needs Name.`);
+  subject.primary = original;
+  assert.ok(setupTasks(setup).every((item) => item.complete));
+});
+
+for (const number of [0, 1.5, 1000001, Number.MAX_SAFE_INTEGER + 1]) test(`roster readiness identifies invalid bib ${number}`, () => {
+  for (const format of ['Strictly', 'Jack & Jill']) {
+    const setup = sampleSetup();
+    const competition = setup.competitions.find((item) => item.format === format)!;
+    const round = setup.rounds.find((item) => item.competitionId === competition.id && item.kind === 'prelims')!;
+    const original = round.subjects[1].number;
+    round.subjects[1].number = number;
+    const before = structuredClone(setup), task = setupTasks(setup).find((item) => !item.complete)!;
+    assert.deepEqual(setup, before);
+    assert.equal(task?.id, round.id + '-entries');
+    assert.equal(task.roundId, round.id); assert.equal(task.section, 'Roster');
+    assert.equal(task.detail, 'Entry 2 needs a whole-number bib from 1 to 1000000.');
+    round.subjects[1].number = original;
+    assert.ok(setupTasks(setup).every((item) => item.complete));
+  }
+});
+
+test('roster readiness identifies a duplicate bib with both entry positions and retains task priority', () => {
+  const setup = sampleSetup();
+  const competition = setup.competitions.find((item) => item.format === 'Jack & Jill')!;
+  const round = setup.rounds.find((item) => item.competitionId === competition.id && item.kind === 'prelims')!;
+  round.subjects[1].number = round.subjects[0].number;
+  const before = structuredClone(setup), task = setupTasks(setup).find((item) => !item.complete)!;
+  assert.deepEqual(setup, before);
+  assert.equal(task?.id, round.id + '-entries'); assert.equal(task.roundId, round.id); assert.equal(task.section, 'Roster');
+  assert.equal(task.detail, `Entry 2 repeats bib #${round.subjects[0].number} from entry 1. Use a unique bib.`);
+  setup.name = '';
+  assert.equal(setupTasks(setup).find((item) => !item.complete)?.id, 'details');
+});
+
+for (const number of [1, 1000000]) test(`roster readiness accepts server boundary bib ${number}`, () => {
+  const setup = sampleSetup();
+  for (const round of setup.rounds.filter((item) => item.kind === 'prelims')) round.subjects[1].number = number;
+  const before = structuredClone(setup);
+  assert.ok(setupTasks(setup).every((item) => item.complete));
+  assert.deepEqual(setup, before);
+});
