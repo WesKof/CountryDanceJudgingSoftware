@@ -365,6 +365,10 @@ Raw text Range geometry alone is not proof that content is visibly clipped: clos
 
 No application, test or layout source changed and no new build was needed: the reused compiled artifact's production source matches the current application. [Dated evidence](LOCAL_TEST_REPORT.md#october-25--short-viewport-visibility-audit-and-calibration-pass) records real versus replay scope, intended fixture writes, hashes, images and cleanup. This bounded result does not establish all viewport, device, keyboard, assistive-technology or venue outcomes; future observed friction can justify a new focused check.
 
+## Roster name and bib readiness — November 11 (batch 116)
+
+The canonical prelim roster task identifies the first entry with an invalid bib, duplicate bib or missing required name. Bib guidance matches server validation for safe integers1–1000000 and uniqueness within that round. An invalid bib uses its entry position; duplicate guidance identifies both entry positions. A missing J&J Name identifies its bib, while Strictly retains Lead/Follow guidance. The task keeps the exact prelim roundId, Roster destination and established task order. Server validation, save behavior and J&J role prerequisites retain their existing rules. See the November11 report for focused verification. Master review and integration are pending at handoff.
+
 ## Missing Strictly partner-name setup tasks — November 11 (batch 115)
 
 The existing roster task becomes incomplete when a Strictly prelim entrant has a blank or whitespace-only Lead or Follow name. Its detail identifies the first affected bib and the missing field or fields, and retains the exact roundId with section Roster. Existing Open this step and Review prelims setup consumers use this canonical task. Task order, validation, saving and valid Strictly/J&J readiness retain their existing behavior. See the November11 report for focused evidence. Master review and integration are pending at handoff.
