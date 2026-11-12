@@ -4,6 +4,12 @@
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
 
+## November 11 — Current guidance navigation refresh (batch 117)
+
+Docs-only maintenance from main a3b688cf0164fb00c2d01cdc745418b31d6100e4 adds one compact preparation-readiness/CSV task row linking the existing roster name/bib, roster CSV and judge CSV guidance. The current queue now identifies integrated batch 116 with fourteen guidance checks and unverified browser focus/expansion, and replaces the stale batch 110 no-browser statement with the exact November 8 AX/DOM invalid multiline Role rejection and input/original-roster preservation evidence. Failed screenshot capture and other modeled/visual/phone/assistive-technology limits remain explicit. The batch 112 browser timing/memory limits and unresolved incident wording are unchanged; no new incident or capability evidence is asserted.
+
+Anchor, targeted content/preservation, raw mirror preimage, document-size and staged-whitespace checks passed. Historical sections and all unrelated tracked bytes remain preserved. No application checks, browser, HTTP, runtime, owner/private/fixture/live, global or schedule changes were performed. Preimages, verification and immutable review patch are retained in `work/navigation-refresh-117-20261111`; master review and integration are pending. Source checkpoints preserve repository history.
+
 ## November 11 — Roster readiness integration (batch 116)
 
 The master independently reviewed delivery dc13d997d1a83e77d5b028f5c69941c06ba3fc89 and verified all 15 delivery seals. Merge a67a7753f56cb5fd5032c1eb0961b4c6dcec8f53 has parents a6794672230e230bc8ea275385f9d444d7a66c66 and the reviewed delivery, retaining its exact tree. This completion record reuses the accepted 14/14 guidance tests, scoped lint and project TypeScript evidence. Browser focus/expansion remains unverified.
