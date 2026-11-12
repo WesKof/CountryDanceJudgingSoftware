@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Saved setup disclosure wording — November 12 (batch 118)
+
+The existing setup disclosure now says Review or edit setup for active events and Review setup for archived records. Its Preparation, events & help support text remains. This makes the saved-setup editing entry explicit while retaining the archived read-only cue, default collapse, exact section routing, existing Save setup behavior and frozen-field restrictions. The change replaces only the summary label expression; it adds no controls or hints. Scoped lint and project TypeScript passed. Actual browser discoverability, visual, phone and assistive-technology behavior remain unverified.
+
 ## Current coordination, cadence and queue — October 24
 
 Master Country Dancer (01a1568c-2c3b-7160-9978-d5ec5748d38f) directs the whole initiative and consolidates owner decisions/status. Execution chat 01a1609a-64aa-7920-b691-7626cbbcf118 performs bounded assignments with file/runtime claims and returns verified evidence. Select existing/new execution contexts or subagents deliberately; preserve configured models and serialize writers/integration. Owner October 24 authority supersedes the earlier minor/major advance-approval gate: scope and complete authorized improvements autonomously. For substantial work, communicate benefit, tradeoffs, dependencies, verification and rollback, then proceed without a routine feedback stop. Scale diligence to consequences; retain explicit local-only/data/scoring/approval boundaries and any actual system/tool confirmation or external-action dependency. Version history supports source rollback, not database recovery or reversal of external effects.

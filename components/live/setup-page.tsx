@@ -36,7 +36,7 @@ export default function SetupPage({ automaticStages = false, tasks = [], openTas
     {hasDraft && <div className={`setup-toolbar${hasDraft ? ' has-draft' : ''}`}>
       <div className="setup-save-controls">{toolbar}</div>
     </div>}
-    <details ref={tools} id="setup-saved-details" className="setup-navigation supporting-drawer"><summary>Setup details &amp; tools <small>Preparation, events &amp; help</small></summary><div className="supporting-content">
+    <details ref={tools} id="setup-saved-details" className="setup-navigation supporting-drawer"><summary>{archived ? 'Review setup' : 'Review or edit setup'} <small>Preparation, events &amp; help</small></summary><div className="supporting-content">
       {tasks.length>0 && !archived && <details className="setup-checklist"><summary>Preparation checklist · {readyCount} / {tasks.length} ready</summary><ol>{tasks.map((task)=><li key={task.id} className={task.complete?'is-complete':'needs-action'}><span aria-hidden="true">{task.complete?'✓':'!'}</span><div><strong>{task.label}</strong><small>{task.detail}</small></div><button className="quiet-button" onClick={()=>openTask?.(task)}>{task.complete?'Review':'Open'}<span className="sr-only"> · {task.label}</span></button></li>)}</ol></details>}
 <div className="setup-navigation-controls">
       <label className="setup-section-picker"><span>Go to section</span><select aria-label="Go to section" defaultValue="" onChange={(event) => {

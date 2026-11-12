@@ -1,5 +1,11 @@
 # Local implementation verification and handoff
 
+## November 12 — Saved setup disclosure wording (batch 118)
+
+Copy-only change from main 6f415a26e55ba9e3035c0d4b506a06e2180076e7 replaces Setup details & tools with Review or edit setup, or Review setup for archived records. Exact reversal of that single label expression reproduces the entire component preimage; support text, collapse, routing, Save behavior and frozen/read-only controls remain unchanged. Search found no exact old-label browser assertion requiring adjustment. Scoped component lint and project noEmit/nonincremental TypeScript passed with empty diagnostics. No new wording test, browser, HTTP, runtime, owner/private/live, dependency, global or schedule action occurred; actual discoverability/visual/phone/AT effects remain unverified.
+
+All 253 raw mirror preimages and 250 unrelated tracked files were preserved. Preimages, logs, immutable patch and verification seals are retained in `work/setup-disclosure-118-20261112`. Master review, integration and guarded mirror synchronization remain pending. Source checkpoints preserve repository history.
+
 ## Reading current status and dated evidence
 
 Start with [Current coordination](PROJECT_SPEC.md#current-coordination-cadence-and-queue--october-24) and fresh Git/writer verification for completed versus active work. Each dated implementation entry preserves the state at its handoff; a later verified master integration entry/addendum supersedes its pending-integration wording. Use [October27 deliveries](PROJECT_SPEC.md#october-27-local-deliveries) for contract/integration pairs and the [full index](PROJECT_SPEC.md#completed-local-deliveries) for earlier work. Historical test counts and source references do not prove current preview/hosted state or require redundant reruns. Original records and limitations remain retained below.
