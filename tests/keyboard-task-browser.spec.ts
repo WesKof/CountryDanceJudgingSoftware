@@ -51,7 +51,7 @@ test('judge Note controls identify their own bib during real keyboard navigation
     const row = page.locator('#judge-bib-101'), note = row.getByRole('button', { name: /^Note/ });
     await tabTo(page, note); await expect(note).toHaveAccessibleName('Note for bib 101');
     await page.keyboard.press('Space'); await expect(note).toHaveAttribute('aria-expanded', 'true');
-    const editor = row.getByRole('textbox', { name: 'Note for bib 101', exact: true }); await tabTo(page, editor);
+    const editor = row.getByRole('textbox', { name: /^Note for bib 101 on .+$/, exact: true }); await tabTo(page, editor);
     await page.keyboard.insertText('PRIVATE_KEYBOARD_NOTE');
     await expect(page.locator('.pending-panel')).toHaveCount(0);
     const refreshed = page.waitForResponse((r) => r.url().endsWith('/api/live') && r.request().method() === 'GET');

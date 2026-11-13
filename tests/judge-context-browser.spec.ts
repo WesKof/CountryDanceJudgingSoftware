@@ -43,7 +43,7 @@ test('selected scoring context stays visible on a long ballot without changing m
   if(process.env.JUDGE_CONTEXT_EVIDENCE)writeFileSync(`${process.env.JUDGE_CONTEXT_EVIDENCE}/long-measurements.json`,JSON.stringify(longMeasurements,null,2));
   for(const row of longMeasurements){expect(row.scrollWidth).toBe(row.width);expect(row.height).toBeLessThan(220);expect(row.clearance).toBeGreaterThan(row.height);expect(row.textFits).toBe(true);expect(row.headingTextFits).toBe(true);}
   await select.selectOption(heat.songs[0].id);await expect(nav).toContainText(round.definition.division);await expect(page.getByRole('button',{name:'Bib 101: No',exact:true})).toHaveAttribute('aria-pressed','true');
-  await page.getByRole('button',{name:'Note for bib 101',exact:true}).click();await expect(page.getByRole('textbox',{name:'Note for bib 101',exact:true})).toHaveValue('PRIVATE_CONTEXT_RETAINED');
+  await page.getByRole('button',{name:'Note for bib 101',exact:true}).click();await expect(page.getByRole('textbox',{name:`Note for bib 101 on ${heat.songs[0].title}`,exact:true})).toHaveValue('PRIVATE_CONTEXT_RETAINED');
   expect((await api<LiveView>(fixture.tokens[0])).ballots).toEqual(before.ballots);expect(posts).toEqual([]);expect(errors).toEqual([]);
  }finally{await context.close();}
 });

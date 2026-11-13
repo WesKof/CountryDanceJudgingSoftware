@@ -42,7 +42,7 @@ test('deep-ballot delayed and interrupted saves stay visible until exact acknowl
  });
  try{
   await page.goto(base+(await api<LiveView>(event.organizer)).judgeLinks![0].path);
-  const row=page.locator(`#judge-bib-${subject.number}`),editor=row.getByRole('textbox',{name:`Note for bib ${subject.number}`,exact:true}),cue=page.locator('.judge-save-feedback'),panel=page.locator('.pending-panel');
+  const row=page.locator(`#judge-bib-${subject.number}`),editor=row.getByRole('textbox',{name:`Note for bib ${subject.number} on ${song.title}`,exact:true}),cue=page.locator('.judge-save-feedback'),panel=page.locator('.pending-panel');
   await row.getByRole('button',{name:`Note for bib ${subject.number}`,exact:true}).click();await editor.fill('PRIVATE_PENDING_NOTE');await started.promise;
   const focusedMark=page.getByRole('button',{name:'Bib 116: No',exact:true});await expect(cue).toHaveCount(0);const focusBefore=await focusAtEdge(focusedMark);
   await expect(cue).toBeVisible();await expect(cue).toContainText('1 pending edit');await expect(cue).toContainText('Saving');expect(await cue.textContent()).not.toContain('PRIVATE');

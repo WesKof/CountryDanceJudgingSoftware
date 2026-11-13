@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Judge note song context in accessible names — November 13 (batch 119)
+
+The judge note textarea now includes the exact selected song title in its explicit accessible name: Note for bib N on Song. This matches its existing hidden label instead of overriding that context with a bib-only name. The Note toggle keeps its bib-only name. No note cell, save, selection, mark, lock or keyboard handler changes. A real-component harness verifies distinct two-song names and saved note association across first/second/first navigation with zero writes. Browser selectors requiring exact textarea names are updated; actual browser and assistive-technology behavior remain unverified.
+
 ## Saved setup disclosure wording — November 12 (batch 118)
 
 The existing setup disclosure now says Review or edit setup for active events and Review setup for archived records. Its Preparation, events & help support text remains. This makes the saved-setup editing entry explicit while retaining the archived read-only cue, default collapse, exact section routing, existing Save setup behavior and frozen-field restrictions. The change replaces only the summary label expression; it adds no controls or hints. Scoped lint and project TypeScript passed. Actual browser discoverability, visual, phone and assistive-technology behavior remain unverified.
