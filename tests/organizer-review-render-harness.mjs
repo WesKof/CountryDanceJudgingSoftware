@@ -53,7 +53,7 @@ export function finalsFixture() {
 // Real StageDesk render; effects and unrelated child boundaries are deliberately controlled.
 // This does not simulate DOM layout, browser focus, network or server approval behavior.
 export async function harness(view = fixture()) {
-  const env = { view, page: 1, posts: [], pages: [], selections: /** @type {{key: string, value: string}[]} */([]), scrolls: [], childProps: /** @type {Record<string, Record<string, unknown>>} */({}) }, state = [];
+  const env = { view, error: '', reads: 0, page: 1, posts: [], pages: [], selections: /** @type {{key: string, value: string}[]} */([]), scrolls: [], childProps: /** @type {Record<string, Record<string, unknown>>} */({}) }, state = [];
   let index = 0, tree;
   const hooks = {
     useState(initial) { const slot = index++; if (!(slot in state)) state[slot] = typeof initial === 'function' ? initial() : initial;
@@ -97,8 +97,8 @@ export async function harness(view = fixture()) {
     else if (isValidElement(node)) { list.push(node); nodes(node.props.children, list); } return list; };
   const text = node => Array.isArray(node) ? node.map(text).join('') : isValidElement(node) ? text(node.props.children) : typeof node === 'string' || typeof node === 'number' ? String(node) : '';
   return {
-    env, imports, text, setView(value) { env.view = value; },
-    render() { index = 0; tree = StageDesk({ token: 'fictional-organizer', data: env.view, error: '', refresh: async () => env.view }); return renderToStaticMarkup(tree); },
+    state: () => state, env, imports, text, setView(value) { env.view = value; },
+    render() { index = 0; tree = StageDesk({ token: 'fictional-organizer', data: env.view, error: env.error, refresh: async () => { env.reads++; return env.view; } }); return renderToStaticMarkup(tree); },
     hero() { return nodes(tree).find(n => n.props['aria-label'] === 'Current stage and next action'); },
     cards() { return nodes(tree).filter(n => n.type === 'span' && n.props.className?.includes('judge-status-card')); },
     nodes: (node = tree) => nodes(node),
