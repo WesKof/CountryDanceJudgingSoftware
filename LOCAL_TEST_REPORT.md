@@ -1,5 +1,11 @@
 # Local implementation verification and handoff
 
+## November 14 — Loaded judge read-error retry (batch 121)
+
+From main 79960051ff47bb476ebdede59960da6e7b9c9357, the loaded judge notice adds a conditional Retry connection button calling refresh only. Baseline actual-component case failed on the absent action; accepted focused case passes with a loaded ballot and zero pending edits, one supplied refresh call, no liveApi POST, exact retained marks/notes/view/state and disappearance after the read error clears. Exact reversal of the added expression reproduces the complete judge component preimage, preserving initial Retry, pending retry and all other source behavior. This uses the existing modeled-hook harness, not browser/runtime/network acceptance. Scoped component/test lint, project noEmit/nonincremental TypeScript and staged whitespace passed.
+
+All255 old tracked raw mirror preimages and252 unrelated files remain preserved; the new focused test stays absent in the mirror pending review. Preimages, baseline/focused logs, immutable patch and seals are in `work/judge-read-retry-121-20261114`. Master review/integration remain pending. No browser/runtime/HTTP/fixture/owner/private/live, global, dependency or schedule actions occurred. Source checkpoints preserve repository history.
+
 ## November 13 — Pending edit context integration (batch 120)
 
 The master reviewed the exact five-file delivery e5ced4666f1bed6f01313e45f7dfe5c67c6d6def and independently verified all sixteen delivery seals. Merge 9fb1f36f5ad3309132d51d1eee0873199da04506 has parents 62ee70b708a086ebd1857c38ee25846e65b71a32 and the reviewed delivery and retains its exact tree. This completion receipt reuses the baseline naming failure, focused two-round conflict-context pass, exact article-label reversal, scoped lint, project TypeScript and whitespace checks. Three annotated checkpoints, remote objects and peeled targets, guarded five-file mirror parity across 255 tracked pairs, preservation of 250 unrelated old raw files and expected-tip branch cleanup are bound in `work/pending-context-120-20261113/integration/final-handoff.json`. No application checks, browser, HTTP, runtime, global, owner/private or live-site changes occurred. Source checkpoints preserve repository history.
