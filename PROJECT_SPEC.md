@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Organizer stage connection retry — November 14 (batch 122)
+
+Loaded StageDesk views now show a read-error notice with Retry connection calling existing refresh only. Mutation notices and setup-save errors remain separate; initial organizer Retry and legacy desk source are unchanged. The action preserves selected page and unsaved setup draft/version. A focused actual-StageDesk modeled-hook check verifies one refresh, no mutation request, unchanged state and removal after the read error clears. Browser/network recovery remains unverified.
+
 ## Loaded judge connection retry — November 14 (batch 121)
 
 A loaded judge ballot now offers Retry connection beside the notice when the shared read has an error. It calls the existing refresh function only; retained ballot and pending edit state remain in place. Initial loading Retry, pending-save retry, deadlines, polling and response ordering are unchanged. The button uses existing native-button styling. A focused actual-component modeled-hook check verifies one refresh call, no POST and retained marks/notes/view/state; clearing the read error removes the action. Browser and assistive-technology behavior remain unverified.
