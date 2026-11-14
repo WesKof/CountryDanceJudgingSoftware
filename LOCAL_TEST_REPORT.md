@@ -1,5 +1,9 @@
 # Local implementation verification and handoff
 
+## November 14 — Judge connection retry integration (batch 121)
+
+The master reviewed the exact four-file delivery 7c7fb0034b948e739fee221f114609224f60c193 and independently verified all fourteen delivery seals. Merge d71b6393b200f2c944479971d9df894d80802923 has parents 79960051ff47bb476ebdede59960da6e7b9c9357 and the reviewed delivery and retains its exact tree. This completion receipt reuses the baseline naming failure, focused loaded-state retry pass, exact production-expression reversal, scoped lint, project TypeScript and whitespace checks. Three annotated checkpoints, remote objects and peeled targets, guarded four-file mirror parity across 256 tracked pairs, preservation of 252 unrelated old raw files and expected-tip branch cleanup are bound in `work/judge-read-retry-121-20261114/integration/final-handoff.json`. No application checks, browser, HTTP, runtime, global, owner/private or live-site changes occurred. Source checkpoints preserve repository history.
+
 ## November 14 — Loaded judge read-error retry (batch 121)
 
 From main 79960051ff47bb476ebdede59960da6e7b9c9357, the loaded judge notice adds a conditional Retry connection button calling refresh only. Baseline actual-component case failed on the absent action; accepted focused case passes with a loaded ballot and zero pending edits, one supplied refresh call, no liveApi POST, exact retained marks/notes/view/state and disappearance after the read error clears. Exact reversal of the added expression reproduces the complete judge component preimage, preserving initial Retry, pending retry and all other source behavior. This uses the existing modeled-hook harness, not browser/runtime/network acceptance. Scoped component/test lint, project noEmit/nonincremental TypeScript and staged whitespace passed.
