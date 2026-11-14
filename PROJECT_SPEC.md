@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Pending judge edit accessible context — November 13 (batch 120)
+
+Pending-edit articles now include their existing visible format, division, stage and heat context alongside bib and song in the accessible name. This distinguishes conflicts in different rounds sharing a bib and song title without exposing private notes or internal identifiers. Visible text, buttons, recovery predicates and handlers remain unchanged. A focused actual-component harness reproduces the prior naming gap and verifies two conflicting entries with distinct contextual names, retained exact pending/saved values and no writes or view/queue mutation. Browser and assistive-technology outcomes remain unverified.
+
 ## Judge note song context in accessible names — November 13 (batch 119)
 
 The judge note textarea now includes the exact selected song title in its explicit accessible name: Note for bib N on Song. This matches its existing hidden label instead of overriding that context with a bib-only name. The Note toggle keeps its bib-only name. No note cell, save, selection, mark, lock or keyboard handler changes. A real-component harness verifies distinct two-song names and saved note association across first/second/first navigation with zero writes. Browser selectors requiring exact textarea names are updated; actual browser and assistive-technology behavior remain unverified.
