@@ -257,7 +257,7 @@ export default function JudgeBallot({ token }: { token: string }) {
   const lastSaved = data.ballots.flatMap((b) => Object.values(b.cells).map((c) => c.savedAt ?? '')).sort().at(-1);
   const status = data.status === 'archived' ? 'Archived · read only' : checking ? 'Checking saved scores…' : pending.length ? `${pending.length} local pending edit${pending.length === 1 ? '' : 's'}${saving ? ' · saving…' : ''}` : error ? 'Connection interrupted' : 'Saved to shared event' + (lastSaved ? ' · ' + new Date(lastSaved).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '');
   return <LiveShell title={`${data.role === 'head' ? 'Head Judge — ' : ''}${judge?.name ?? 'Judge'}`} identity={`${data.role === 'head' ? 'Event head judge' : 'Judge'} · ${data.setup.name}`} status={status} compact={compactWorkspace} items={['Score']} current={page} navigate={setPage}>
-    {(notice || cacheError || error) && <p className="notice" role="status">{cacheError || error || notice}</p>}
+    {(notice || cacheError || error) && <p className="notice" role="status">{cacheError || error || notice}{error && <> <button type="button" className="quiet-button" onClick={() => void refresh()}>Retry connection</button></>}</p>}
     {pending.length > 0 && <details id="judge-pending-saves" className="pending-panel" open={pending.some((p)=>p.blocked) || undefined}><summary>{pending.length} pending {pending.length === 1 ? 'edit' : 'edits'} · {pendingState}</summary>
       {data.status !== 'active' && <p>This event is read only. Your pending edits remain on this device.</p>}
       {pending.map((p) => {

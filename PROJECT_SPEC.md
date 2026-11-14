@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Loaded judge connection retry — November 14 (batch 121)
+
+A loaded judge ballot now offers Retry connection beside the notice when the shared read has an error. It calls the existing refresh function only; retained ballot and pending edit state remain in place. Initial loading Retry, pending-save retry, deadlines, polling and response ordering are unchanged. The button uses existing native-button styling. A focused actual-component modeled-hook check verifies one refresh call, no POST and retained marks/notes/view/state; clearing the read error removes the action. Browser and assistive-technology behavior remain unverified.
+
 ## Pending judge edit accessible context — November 13 (batch 120)
 
 Pending-edit articles now include their existing visible format, division, stage and heat context alongside bib and song in the accessible name. This distinguishes conflicts in different rounds sharing a bib and song title without exposing private notes or internal identifiers. Visible text, buttons, recovery predicates and handlers remain unchanged. A focused actual-component harness reproduces the prior naming gap and verifies two conflicting entries with distinct contextual names, retained exact pending/saved values and no writes or view/queue mutation. Browser and assistive-technology outcomes remain unverified.
