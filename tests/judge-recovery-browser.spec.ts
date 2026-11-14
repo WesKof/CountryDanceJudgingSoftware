@@ -36,13 +36,13 @@ test('conflicting pending edits identify their exact bib and song and open the c
     const panel = page.locator('.pending-panel');
     await expect(panel.locator(':scope > summary')).toContainText('2 pending edits');
     for (let index = 0; index < 2; index++) {
-      const entry = panel.getByRole('article', { name: `Pending edit for #${subjects[index].number} on ${heat.songs[index].title}`, exact: true });
+      const entry = panel.getByRole('article', { name: `Pending edit for #${subjects[index].number} on ${heat.songs[index].title} · ${round.definition.format} · ${round.definition.division} · ${round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · ${heat.name}`, exact: true });
       await expect(entry).toBeVisible({ timeout: 3000 });
       await expect(entry.getByText(subjects[index].primary, { exact: false })).toBeVisible();
       await expect(entry.getByText('Pending note: PRIVATE_PENDING_' + index, { exact: true })).toBeVisible();
     }
     await page.getByLabel('Assigned heats and songs', { exact: true }).selectOption(heat.songs[0].id);
-    const second = panel.getByRole('article', { name: `Pending edit for #${subjects[1].number} on ${heat.songs[1].title}`, exact: true });
+    const second = panel.getByRole('article', { name: `Pending edit for #${subjects[1].number} on ${heat.songs[1].title} · ${round.definition.format} · ${round.definition.division} · ${round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · ${heat.name}`, exact: true });
     await second.getByRole('button', { name: 'Open score', exact: true }).click();
     await expect(page.getByLabel('Assigned heats and songs', { exact: true })).toHaveValue(heat.songs[1].id);
     await expect(page.locator(`.phone-row[data-bib="${subjects[1].number}"]`)).toBeFocused();
@@ -54,7 +54,7 @@ test('conflicting pending edits identify their exact bib and song and open the c
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       if (width === 390 || width === 1440) await panel.screenshot({ path: `test-results/judge-conflicts-${width}.png` });
     }
-    const first = panel.getByRole('article', { name: `Pending edit for #${subjects[0].number} on ${heat.songs[0].title}`, exact: true });
+    const first = panel.getByRole('article', { name: `Pending edit for #${subjects[0].number} on ${heat.songs[0].title} · ${round.definition.format} · ${round.definition.division} · ${round.definition.kind === 'finals' ? 'Finals' : 'Prelims'} · ${heat.name}`, exact: true });
     await first.getByRole('button', { name: 'Keep my edit after comparison', exact: true }).click();
     await expect(first).toHaveCount(0);
     await expect(second).toBeVisible();
