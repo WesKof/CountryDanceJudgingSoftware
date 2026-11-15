@@ -52,7 +52,7 @@ export function finalsFixture() {
 
 // Real StageDesk render; effects and unrelated child boundaries are deliberately controlled.
 // This does not simulate DOM layout, browser focus, network or server approval behavior.
-export async function harness(view = fixture()) {
+export async function harness(view = fixture(), legacy = false) {
   const env = { view, error: '', reads: 0, page: 1, posts: [], pages: [], selections: /** @type {{key: string, value: string}[]} */([]), scrolls: [], childProps: /** @type {Record<string, Record<string, unknown>>} */({}) }, state = [];
   let index = 0, tree;
   const hooks = {
@@ -65,6 +65,8 @@ export async function harness(view = fixture()) {
   globalThis[key] = { hooks, env, createElement };
   const react = codeURL(`export const {useState,useRef,useEffect}=globalThis[${JSON.stringify(key)}].hooks;`);
   const boundary = codeURL(`const {env,createElement:h}=globalThis[${JSON.stringify(key)}];
+    export const useLive=()=>({data:env.view,error:env.error,refresh:async()=>{env.reads++;return env.view;}});
+    export const LiveResults=()=>null;
     export const useRememberedPage=()=>[env.page,n=>{env.page=n;env.pages.push(n);}];
     export const useNewCorrectionDraft=()=>({target:null,fields:null});export const useRecovery=()=>({});
     export const liveApi=async(token,input)=>{env.posts.push({token,input:structuredClone(input)});return{ok:true};};
@@ -78,14 +80,14 @@ export async function harness(view = fixture()) {
     ['@/lib/live/setup-guidance', new URL('lib/live/setup-guidance.ts', root).href],
   ]);
   const imports = [];
-  let code = ts.transpileModule(readFileSync(new URL('components/live/stage-desk.tsx', root), 'utf8'), {
+  let code = ts.transpileModule(readFileSync(new URL(legacy ? 'components/live/desk.tsx' : 'components/live/stage-desk.tsx', root), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   code = code.replace(/from\s*(['"])([^'"]+)\1/g, (_all, _quote, specifier) => {
     imports.push(specifier);
     if (mapping.has(specifier)) return 'from ' + JSON.stringify(mapping.get(specifier));
     if (specifier === 'react/jsx-runtime') return 'from ' + JSON.stringify(import.meta.resolve(specifier));
-    if (specifier.startsWith('./')) return 'from ' + JSON.stringify(boundary);
+    if (specifier === 'next/link' || specifier.startsWith('./')) return 'from ' + JSON.stringify(boundary);
     throw Error('Unreviewed StageDesk import: ' + specifier);
   });
   const { default: StageDesk } = await import(codeURL(code));
