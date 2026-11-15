@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Legacy organizer connection retry — November 14 (batch 123)
+
+The loaded legacy organizer notice now offers Retry connection while a shared read error exists, calling existing refresh only. Role checks, initial Retry and StageDesk delegation remain unchanged. Mutation/save recovery, legacy scoring and history are unchanged. An optional legacy mode in the existing organizer render harness executes the real desk with controlled children/hooks and verifies retained setup draft/version, correction flag/reason, page and saved view with one refresh and no mutation request. Actual browser/network recovery remains unverified.
+
 ## Organizer stage connection retry — November 14 (batch 122)
 
 Loaded StageDesk views now show a read-error notice with Retry connection calling existing refresh only. Mutation notices and setup-save errors remain separate; initial organizer Retry and legacy desk source are unchanged. The action preserves selected page and unsaved setup draft/version. A focused actual-StageDesk modeled-hook check verifies one refresh, no mutation request, unchanged state and removal after the read error clears. Browser/network recovery remains unverified.
