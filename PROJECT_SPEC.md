@@ -1,5 +1,9 @@
 # Country Dance Judging — master design, specification, and operating reference
 
+## Read-error and local-notice association — November 14 (batch 124)
+
+Judge and legacy organizer views render shared read errors beside their Retry connection action independently from existing local notices. Judge cache-error priority over its local notice remains unchanged; the legacy mutation notice remains visible. Clearing a read error removes only that message/action and retains local feedback. No state, polling, save or mutation handler changes; StageDesk remains unchanged. Two focused modeled component checks cover simultaneous notices and retained state; browser/assistive-technology outcomes remain unverified.
+
 ## Legacy organizer connection retry — November 14 (batch 123)
 
 The loaded legacy organizer notice now offers Retry connection while a shared read error exists, calling existing refresh only. Role checks, initial Retry and StageDesk delegation remain unchanged. Mutation/save recovery, legacy scoring and history are unchanged. An optional legacy mode in the existing organizer render harness executes the real desk with controlled children/hooks and verifies retained setup draft/version, correction flag/reason, page and saved view with one refresh and no mutation request. Actual browser/network recovery remains unverified.
