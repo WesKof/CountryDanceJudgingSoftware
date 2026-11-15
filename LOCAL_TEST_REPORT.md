@@ -1,5 +1,11 @@
 # Local implementation verification and handoff
 
+## November 14 — Read-error action association (batch 124)
+
+From main a2454b2e4fce7bcf92fd37839baee5d9a5139004, judge and legacy organizer read-error text plus Retry connection are separated from their existing local feedback. Judge cacheError/local notice priority and all text/actions are preserved. Two extended existing component cases seed a synthetic local cache/mutation notice in the controlled hook state alongside a read error. Both fail on baseline because retry is paired with the masking local notice. Accepted cases pass both-text visibility, retry association with read text only, one refresh/no POST/state preservation and local-notice retention after readclear. Exact changed-block reversal reproduces both complete production preimages. Harnesses themselves and StageDesk are unchanged.
+
+Scoped four-file lint has zero errors and one existing legacy navigation warning; project noEmit/nonincremental TypeScript and whitespace pass. All258 raw tracked mirror preimages and252 unrelated files remain preserved. Preimages/logs/sealed patch in `work/read-error-context-124-20261114`; master review/integration pending. Modeled hooks/JSX do not establish browser/AT/network outcomes. No browser/runtime/HTTP/fixtures/owner/private/live, global, dependency or schedule actions. Source checkpoints preserve history.
+
 ## November 14 — Legacy organizer connection retry integration (batch 123)
 
 The master reviewed the exact five-file delivery 8d4f80dc855a1f753db87dbd265ca0ce781b9fdf and independently verified all sixteen delivery seals. Merge bb6ff93f3fa0131348f82e369c28b08139f3ff95 has parents baf09ad849cca839d63a951f60bb3f6c6b644684 and the reviewed delivery and retains its exact tree. This completion receipt reuses the baseline naming failure, focused loaded-state retry pass, exact production-expression reversal, scoped lint, project TypeScript and whitespace checks. Three annotated checkpoints, remote objects and peeled targets, guarded five-file mirror parity across 258 tracked pairs, preservation of 253 unrelated old raw files and expected-tip branch cleanup are bound in `work/legacy-read-retry-123-20261114/integration/final-handoff.json`. No application checks, browser, HTTP, runtime, global, owner/private or live-site changes occurred. Source checkpoints preserve repository history.
